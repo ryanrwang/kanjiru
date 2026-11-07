@@ -1,0 +1,179 @@
+/* Word review page (dev only). Builds on ../styles.css; tokens only. */
+
+.review-main { gap: var(--spacing-md); }
+
+.review-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+}
+
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.filter-group .chip { padding: var(--spacing-xs) var(--spacing-sm); }
+
+.review-search {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-full);
+  border: var(--stroke-thick) solid var(--color-border-subtle);
+  background: var(--color-bg-sunken);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.review-search:focus { border-color: var(--color-border-focus); outline: none; }
+
+.review-counts {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.review-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.review-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.word-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-left: var(--spacing-xs) solid var(--color-border-subtle);
+}
+
+.word-card.is-keep  { border-left-color: var(--color-feedback-hit); }
+.word-card.is-maybe { border-left-color: var(--color-feedback-near); }
+.word-card.is-cut   { border-left-color: var(--color-feedback-miss); opacity: var(--opacity-soft); }
+
+.word-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.word-text {
+  font-family: var(--font-family-kanji);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-tight);
+}
+
+.word-reading {
+  display: block;
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+}
+
+.word-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--spacing-xs);
+}
+
+.word-meaning { color: var(--color-text-secondary); }
+
+.word-parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.kanji-parts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-sunken);
+}
+
+.kanji-parts.is-flagged { outline: var(--stroke-thick) solid var(--color-status-danger); }
+
+.kanji-parts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.kanji-parts-row {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.part {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.part-pos {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  line-height: var(--font-lineHeight-tight);
+}
+
+.flag-btn {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+}
+
+.flag-btn[aria-pressed="true"] { color: var(--color-status-danger); font-weight: var(--font-weight-bold); }
+
+.decision-row {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.decision {
+  flex: 1;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  border: var(--stroke-thick) solid var(--color-border-subtle);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-md);
+}
+
+.decision:hover { border-color: var(--color-border-default); }
+
+.decision[data-value="keep"][aria-pressed="true"]  { background: var(--color-feedback-hit);  border-color: transparent; color: var(--color-feedback-text); }
+.decision[data-value="maybe"][aria-pressed="true"] { background: var(--color-feedback-near); border-color: transparent; color: var(--color-feedback-text); }
+.decision[data-value="cut"][aria-pressed="true"]   { background: var(--color-feedback-miss); border-color: transparent; color: var(--color-feedback-text); }
+
+.review-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+.review-empty {
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--color-text-muted);
+}

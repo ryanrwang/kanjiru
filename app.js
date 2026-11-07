@@ -2,17 +2,19 @@
  * Kanjiru — start screen.
  *
  * For now this shows how a game reads, the modes, the skin picker and the
- * hint shop, all built from the catalogues in js/config/. The game screen
- * comes next. Nothing here hard-codes a mode, skin or power: add one to its
- * catalogue and it appears.
+ * hint shop, all built from the catalogues in js/config/ and the text in
+ * js/i18n/. The game screen comes next. Nothing here hard-codes a mode,
+ * skin, power or word of text: add one to its catalogue and it appears.
  */
 import {
   MODES, SLOTS, SKINS, POWERS, ECONOMY, ACHIEVEMENT, validate
 } from './js/registry.js';
+import { t, setLang, nextLanguage } from './js/i18n.js';
 import * as store from './js/store.js';
 
 const TOKENS = window.TOKENS;
 const save = store.load();
+setLang(save.settings.lang);
 validate();
 
 // ── Tiny DOM helper ──────────────────────────────────────────────────
@@ -33,7 +35,9 @@ function el(tag, attrs = {}, ...children) {
   return node;
 }
 
-// ── Look: theme + scheme ─────────────────────────────────────────────
+const pts = (n) => t('currency.amount', { n });
+
+// ── Header: language, scheme, wallet ─────────────────────────────────
 
 const ICONS = {
   sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
@@ -42,21 +46,40 @@ const ICONS = {
 
 function applyLook() {
   TOKENS.applyLook(save.settings.theme, save.settings.scheme);
-  renderSchemeToggle();
+  renderHeader();
 }
 
-function renderSchemeToggle() {
-  const btn = document.getElementById('scheme-toggle');
+function renderHeader() {
+  // Language: the button shows the language it switches to, in its own
+  // script, so someone who can't read the current one can still find it.
+  const next = nextLanguage();
+  const langBtn = document.getElementById('lang-toggle');
+  langBtn.textContent = next.label;
+  langBtn.lang = next.id;
+  langBtn.setAttribute('aria-label', next.switchTo);
+  langBtn.title = next.switchTo;
+
+  const schemeBtn = document.getElementById('scheme-toggle');
   const look = TOKENS.look();
   const dark = look.scheme === 'dark';
   const fixed = TOKENS.schemesOf(look.theme).length < 2;
-  btn.innerHTML = dark ? ICONS.sun : ICONS.moon;
-  btn.disabled = fixed;
-  btn.setAttribute('aria-label', fixed
-    ? 'This skin has one colour scheme only'
-    : dark ? 'Switch to light mode' : 'Switch to dark mode');
-  btn.title = btn.getAttribute('aria-label');
+  schemeBtn.innerHTML = dark ? ICONS.sun : ICONS.moon;
+  schemeBtn.disabled = fixed;
+  const label = fixed ? t('header.schemeFixed') : dark ? t('header.schemeLight') : t('header.schemeDark');
+  schemeBtn.setAttribute('aria-label', label);
+  schemeBtn.title = label;
+
+  const wallet = document.getElementById('wallet');
+  wallet.textContent = `${ECONOMY.currency.icon} ${pts(save.wallet.points)}`;
+  wallet.title = `${t('header.points')} (${t('currency.name')})`;
 }
+
+document.getElementById('lang-toggle').addEventListener('click', () => {
+  const next = nextLanguage().id;
+  store.update((s) => { s.settings.lang = next; });
+  setLang(next);
+  renderAll();
+});
 
 document.getElementById('scheme-toggle').addEventListener('click', () => {
   const next = TOKENS.look().scheme === 'dark' ? 'light' : 'dark';
@@ -73,13 +96,6 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
   }
 });
 
-// ── Wallet ───────────────────────────────────────────────────────────
-
-function renderWallet() {
-  document.getElementById('wallet').textContent =
-    `${ECONOMY.currency.icon} ${save.wallet.points} ${ECONOMY.currency.short}`;
-}
-
 // ── Unlock rules ─────────────────────────────────────────────────────
 
 function isUnlocked(slot, item) {
@@ -87,19 +103,17 @@ function isUnlocked(slot, item) {
 }
 
 function unlockText(unlock) {
-  if (unlock.type === 'points') return `🔒 ${unlock.cost} ${ECONOMY.currency.short}`;
+  if (unlock.type === 'points') return t('looks.lockPoints', { cost: unlock.cost });
   if (unlock.type === 'achievement') {
-    const a = ACHIEVEMENT[unlock.id];
-    return `🔒 ${a ? a.name : unlock.id}`;
+    return t('looks.lockAchievement', { name: t(`achievement.${unlock.id}.name`) });
   }
   return '';
 }
 
 function unlockHint(unlock) {
-  if (unlock.type === 'points') return `Buy for ${unlock.cost} points (shop coming soon)`;
-  if (unlock.type === 'achievement') {
-    const a = ACHIEVEMENT[unlock.id];
-    return a ? `Unlock: ${a.desc}` : 'Locked';
+  if (unlock.type === 'points') return t('looks.buyHint', { cost: unlock.cost });
+  if (unlock.type === 'achievement' && ACHIEVEMENT[unlock.id]) {
+    return t('looks.achievementHint', { desc: t(`achievement.${unlock.id}.desc`) });
   }
   return '';
 }
@@ -118,8 +132,8 @@ const DEMO = [
 function renderHero() {
   return el('section', { class: 'card hero', 'aria-labelledby': 'hero-title' },
     el('p', { class: 'tagline', id: 'hero-title' },
-      'Guess the kanji from its parts.',
-      el('small', {}, 'Each guess colours its parts: right spot, wrong spot, or not in the answer.')
+      t('hero.title'),
+      el('small', {}, t('hero.body'))
     ),
     el('div', { class: 'demo', 'aria-hidden': 'true' },
       DEMO.map((row) => el('div', { class: 'demo-row' },
@@ -128,9 +142,8 @@ function renderHero() {
       ))
     ),
     el('p', { class: 'demo-legend' },
-      el('span', {}, el('span', { class: 'legend-dot is-hit-bg' }), 'Right part, right spot'),
-      el('span', {}, el('span', { class: 'legend-dot is-near-bg' }), 'Right part, wrong spot'),
-      el('span', {}, el('span', { class: 'legend-dot is-miss-bg' }), 'Not in the answer')
+      ['hit', 'near', 'miss'].map((state) =>
+        el('span', {}, el('span', { class: `legend-dot is-${state}-bg` }), t(`hero.${state}`)))
     )
   );
 }
@@ -138,13 +151,12 @@ function renderHero() {
 function renderModes() {
   return el('section', { class: 'section', 'aria-labelledby': 'modes-title' },
     el('h2', { class: 'section-title', id: 'modes-title' },
-      'Play', el('span', { class: 'section-note' }, 'Game screen coming next')),
+      t('play.title'), el('span', { class: 'section-note' }, t('play.note'))),
     el('div', { class: 'mode-grid' },
       MODES.map((mode) => el('button', { class: 'card mode-card', type: 'button', disabled: true },
         el('span', { class: 'mode-kanji kanji', lang: 'ja', 'aria-hidden': 'true' }, mode.numeral),
-        el('span', { class: 'mode-name' }, mode.name),
-        el('span', { class: 'mode-meta' },
-          `${mode.guesses} guesses · ×${mode.points} ${ECONOMY.currency.short}`)
+        el('span', { class: 'mode-name' }, t(`mode.${mode.id}.name`)),
+        el('span', { class: 'mode-meta' }, t('play.meta', { guesses: mode.guesses, mult: mode.points }))
       ))
     )
   );
@@ -152,14 +164,14 @@ function renderModes() {
 
 function themeSwatch(item) {
   const unlocked = isUnlocked('theme', item);
-  const t = TOKENS.resolve(item.id, TOKENS.look().scheme).color;
-  const selected = save.settings.theme === item.id;
+  const colours = TOKENS.resolve(item.id, TOKENS.look().scheme).color;
+  const name = t(`skin.theme.${item.id}`);
   return el('button', {
     class: `swatch${unlocked ? '' : ' is-locked'}`,
     type: 'button',
-    'aria-pressed': String(selected),
+    'aria-pressed': String(save.settings.theme === item.id),
     'aria-disabled': unlocked ? null : 'true',
-    title: unlocked ? item.name : unlockHint(item.unlock),
+    title: unlocked ? name : unlockHint(item.unlock),
     onclick: () => {
       if (!unlocked) return;
       store.update((s) => { s.settings.theme = item.id; });
@@ -167,29 +179,30 @@ function themeSwatch(item) {
       renderLooks();
     }
   },
-    el('span', { class: 'swatch-preview', style: { background: t.bg.page } },
-      [t.text.accent, t.feedback.hit, t.feedback.near, t.feedback.miss].map((colour) =>
-        el('span', { class: 'swatch-dot', style: { background: colour } }))
+    el('span', { class: 'swatch-preview', style: { background: colours.bg.page } },
+      [colours.text.accent, colours.feedback.hit, colours.feedback.near, colours.feedback.miss].map((c) =>
+        el('span', { class: 'swatch-dot', style: { background: c } }))
     ),
-    el('span', { class: 'swatch-name' }, item.name),
+    el('span', { class: 'swatch-name' }, name),
     unlocked ? null : el('span', { class: 'swatch-lock' }, unlockText(item.unlock))
   );
 }
 
 function skinChip(slot, item) {
   const unlocked = isUnlocked(slot, item);
+  const name = t(`skin.${slot}.${item.id}`);
   return el('button', {
     class: `chip${unlocked ? '' : ' is-locked'}`,
     type: 'button',
     'aria-pressed': String(save.settings[slot] === item.id),
     'aria-disabled': unlocked ? null : 'true',
-    title: unlocked ? item.name : unlockHint(item.unlock),
+    title: unlocked ? name : unlockHint(item.unlock),
     onclick: () => {
       if (!unlocked) return;
       store.update((s) => { s.settings[slot] = item.id; });
       renderLooks();
     }
-  }, item.name, unlocked ? null : ` ${unlockText(item.unlock)}`);
+  }, name, unlocked ? null : ` ${unlockText(item.unlock)}`);
 }
 
 let looksSection = null;
@@ -197,41 +210,43 @@ let looksSection = null;
 function renderLooks() {
   const fresh = el('section', { class: 'section', 'aria-labelledby': 'looks-title' },
     el('h2', { class: 'section-title', id: 'looks-title' },
-      'Looks', el('span', { class: 'section-note' }, 'Mix colours, tiles and effects')),
+      t('looks.title'), el('span', { class: 'section-note' }, t('looks.note'))),
     SLOTS.map((slot) => el('div', { class: 'look-slot' },
-      el('span', { class: 'look-slot-name' }, slot.name),
+      el('span', { class: 'look-slot-name' }, t(`slot.${slot.id}`)),
       slot.id === 'theme'
         ? el('div', { class: 'swatch-row' }, SKINS.theme.map(themeSwatch))
         : el('div', { class: 'chip-row' }, SKINS[slot.id].map((item) => skinChip(slot.id, item)))
     ))
   );
-  if (looksSection) looksSection.replaceWith(fresh);
+  if (looksSection && looksSection.isConnected) looksSection.replaceWith(fresh);
   looksSection = fresh;
   return fresh;
 }
 
 function whenText(when) {
-  if (when.includes('before') && when.includes('during')) return 'Before or during a game';
-  return when.includes('before') ? 'Before your first guess' : 'During a game';
+  if (when.includes('before') && when.includes('during')) return t('powers.whenBoth');
+  return when.includes('before') ? t('powers.whenBefore') : t('powers.whenDuring');
 }
 
 function renderPowers() {
   return el('section', { class: 'section', 'aria-labelledby': 'powers-title' },
     el('h2', { class: 'section-title', id: 'powers-title' },
-      'Hints & powers', el('span', { class: 'section-note' }, 'Earn or buy with points')),
+      t('powers.title'), el('span', { class: 'section-note' }, t('powers.note'))),
     el('div', { class: 'power-list' },
       POWERS.map((p) => el('div', { class: 'card power' },
         el('span', { class: 'power-icon', 'aria-hidden': 'true' }, p.icon),
         el('div', { class: 'power-body' },
           el('div', { class: 'power-name' },
-            el('span', {}, p.name),
+            el('span', {}, t(`power.${p.id}.name`)),
             el('span', { class: 'power-cost' },
-              p.cost === null ? 'Earned only' : `${p.cost} ${ECONOMY.currency.short}`)),
-          el('p', { class: 'power-desc' }, p.desc),
+              p.cost === null ? t('powers.earnedOnly') : t('powers.cost', { cost: p.cost }))),
+          el('p', { class: 'power-desc' }, t(`power.${p.id}.desc`)),
           el('p', { class: 'power-when' },
-            whenText(p.when),
-            p.minLength > 1 ? ` · ${p.minLength}+ kanji modes` : '',
-            ` · You have ${save.inventory[p.id] || 0}`)
+            [
+              whenText(p.when),
+              p.minLength > 1 ? t('powers.minLength', { n: p.minLength }) : null,
+              t('powers.have', { n: save.inventory[p.id] || 0 })
+            ].filter(Boolean).join(' · '))
         )
       ))
     )
@@ -240,6 +255,10 @@ function renderPowers() {
 
 // ── Start ────────────────────────────────────────────────────────────
 
+function renderAll() {
+  renderHeader();
+  app.replaceChildren(renderHero(), renderModes(), renderLooks(), renderPowers());
+}
+
 applyLook();
-renderWallet();
-app.append(renderHero(), renderModes(), renderLooks(), renderPowers());
+renderAll();

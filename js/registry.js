@@ -10,8 +10,18 @@ import { SLOTS, SKINS, DEFAULT_LOOK } from './config/skins.js';
 import { POWERS } from './config/powers.js';
 import { ECONOMY } from './config/economy.js';
 import { ACHIEVEMENTS } from './config/achievements.js';
+import { has, missingStrings } from './i18n.js';
 
 export { MODES, SLOTS, SKINS, DEFAULT_LOOK, POWERS, ECONOMY, ACHIEVEMENTS };
+
+// Where each catalogue entry's text lives in js/i18n/*.js.
+export const TEXT_KEYS = {
+  mode: (id) => [`mode.${id}.name`],
+  slot: (id) => [`slot.${id}`],
+  skin: (slot, id) => [`skin.${slot}.${id}`],
+  power: (id) => [`power.${id}.name`, `power.${id}.desc`],
+  achievement: (id) => [`achievement.${id}.name`, `achievement.${id}.desc`]
+};
 
 const byId = (list) => Object.fromEntries(list.map((item) => [item.id, item]));
 
@@ -114,6 +124,18 @@ export function validate() {
   ECONOMY.streakRewards.forEach((r) => {
     if (r.power && !POWER[r.power]) say(`streak reward at ${r.days} days gives unknown power "${r.power}"`);
   });
+
+  // Text: every catalogue entry needs its English text, and every other
+  // language needs every English key.
+  const needText = [
+    ...MODES.flatMap((m) => TEXT_KEYS.mode(m.id)),
+    ...SLOTS.flatMap((s) => TEXT_KEYS.slot(s.id)),
+    ...Object.entries(SKINS).flatMap(([slot, list]) => list.flatMap((item) => TEXT_KEYS.skin(slot, item.id))),
+    ...POWERS.flatMap((p) => TEXT_KEYS.power(p.id)),
+    ...ACHIEVEMENTS.flatMap((a) => TEXT_KEYS.achievement(a.id))
+  ];
+  needText.forEach((key) => { if (!has('en', key)) say(`no English text for ${key} in js/i18n/en.js`); });
+  missingStrings().forEach((gap) => say(`missing translation ${gap}`));
 
   problems.forEach((msg) => console.warn('[kanjiru config]', msg));
   return problems;

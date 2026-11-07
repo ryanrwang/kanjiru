@@ -5,7 +5,8 @@
  *
  * Shape (v1)
  *   v             schema version
- *   settings      { theme, tiles, effect, scheme }   scheme null = follow the device
+ *   settings      { theme, tiles, effect, scheme, lang }
+ *                 scheme and lang null = follow the device
  *   wallet        { points }
  *   inventory     { [powerId]: count }
  *   unlocked      { [slotId]: [skinId, …] }           free skins aren't listed
@@ -33,7 +34,7 @@ const MIGRATIONS = {
 export function fresh() {
   return {
     v: VERSION,
-    settings: { ...DEFAULT_LOOK, scheme: null },
+    settings: { ...DEFAULT_LOOK, scheme: null, lang: null },
     wallet: { points: ECONOMY.startingPoints },
     inventory: {},
     unlocked: {},
