@@ -1,0 +1,45 @@
+{
+  "about": "Hand-fixed part breakdowns. tools/build_data.py uses these instead of its own split. Each part is [glyph, position], or [glyph, position, [KanjiVG stroke numbers]] when the glyph needs a drawing; glyphs must be palette tiles or their forms (data/parts.json), positions one of left, right, top, bottom, outer, inner, whole, none. Say why, so the next person knows what KanjiVG got wrong.",
+  "kanji": {
+    "万": {
+      "parts": [["一", "top"], ["力", "bottom"]],
+      "why": "The two strokes under the line draw 力; KanjiVG leaves them loose."
+    },
+    "三": {
+      "parts": [["二", "top"], ["一", "bottom"]],
+      "why": "Three loose strokes otherwise; 二 is a tile."
+    },
+    "円": {
+      "parts": [["冂", "outer"], ["丨", "inner"], ["一", "inner"]],
+      "why": "The stroke and line sit inside 冂; KanjiVG gives no positions, so they came out none."
+    },
+    "年": {
+      "parts": [["𠂉", "top"], ["干", "bottom"], ["丨", "bottom"]],
+      "why": "KanjiVG splits 干 around the other strokes, which left loose strokes and an enclosure."
+    },
+    "実": {
+      "parts": [["宀", "top"], ["一", "bottom"], ["夫", "bottom"]],
+      "why": "The bottom is 夫 under one more line; KanjiVG leaves the lines loose."
+    },
+    "寒": {
+      "parts": [["宀", "top"], ["共", "bottom"], ["一", "bottom"], ["冫", "bottom"]],
+      "why": "The middle is 共 with an extra line; KanjiVG has it as loose strokes and a split 三."
+    },
+    "声": {
+      "parts": [["士", "top"], ["尸", "bottom"], ["丨", "bottom"]],
+      "why": "KanjiVG leaves the bottom as four loose strokes; it reads as 尸 with a stroke down its left."
+    },
+    "勤": {
+      "parts": [["艹", "left"], ["口", "left"], ["王", "left"], ["力", "right"]],
+      "why": "KanjiVG's 菫 isn't a tile and its bottom is loose strokes; it draws 口 over 王."
+    },
+    "無": {
+      "parts": [["𠂉", "top"], ["卌", "top", [3, 4, 5, 6, 7]], ["一", "top"], ["灬", "bottom"]],
+      "why": "KanjiVG leaves the top as eight loose strokes. 卌 isn't in JIS, so its strokes are listed for the drawing."
+    },
+    "舞": {
+      "parts": [["𠂉", "top"], ["卌", "top"], ["一", "top"], ["夕", "bottom"], ["㐄", "bottom"]],
+      "why": "Same top as 無, which KanjiVG leaves as loose strokes."
+    }
+  }
+}

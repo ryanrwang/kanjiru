@@ -1,8 +1,8 @@
 # Data sources and licences
 
-`data/candidates.json` is built by `tools/build_data.py` from the sources below. Each one is credited here with the exact version used. The script also writes this list into `meta.sources` of the JSON.
+`data/candidates.json` and `data/parts.json` are built by `tools/build_data.py` from the sources below. Each one is credited here with the exact version used. The script also writes this list into `meta.sources` of `candidates.json`.
 
-Because it adapts CC BY-SA material, `candidates.json` is shared under **CC BY-SA 4.0** (<https://creativecommons.org/licenses/by-sa/4.0/>). KanjiVG's CC BY-SA 3.0 lets adaptations use a later version of the same licence.
+Because they adapt CC BY-SA material, both files are shared under **CC BY-SA 4.0** (<https://creativecommons.org/licenses/by-sa/4.0/>). KanjiVG's CC BY-SA 3.0 lets adaptations use a later version of the same licence.
 
 ## KANJIDIC2
 
@@ -18,7 +18,7 @@ Because it adapts CC BY-SA material, `candidates.json` is shared under **CC BY-S
 - **URL:** <https://github.com/KanjiVG/kanjivg/releases/download/r20260714/kanjivg-20260714-main.zip> (project: <https://kanjivg.tagaini.net>)
 - **Version:** release r20260714 (14 July 2026), the `main` zip (non-variant SVG files only)
 - **Licence:** Creative Commons Attribution-ShareAlike 3.0: <https://creativecommons.org/licenses/by-sa/3.0/>
-- **Used for:** each kanji's component tree (`kvg:element`, `kvg:position`, `kvg:part`, `kvg:original`), which gives `parts` and `tree`. The stroke drawings themselves are not used.
+- **Used for:** each kanji's component tree (`kvg:element`, `kvg:position`, `kvg:part`, `kvg:number`) and its strokes (`kvg:type` and the paths), which give the `parts` and their positions. The stroke paths are also copied into `data/parts.json` as `svg`, to draw the parts that fonts may lack.
 
 ## JMdict (via jmdict-simplified)
 
@@ -48,6 +48,11 @@ Because it adapts CC BY-SA material, `candidates.json` is shared under **CC BY-S
 - **Version:** the pages say "Updated: November 21, 2010". The snapshots are from July and August 2020, the last ones the archive holds (later captures are server errors). Counts: N5 79, N4 166, N3 367, N2 367, N1 1232.
 - **Licence:** Creative Commons Attribution ("CC BY", no version given). Waller's "Use my data!" page says that everything on the site that isn't for sale is CC BY, with credit to the site: <https://web.archive.org/web/20251114165345/http://www.tanos.co.uk/jlpt/sharing/>
 - **Used for:** each kanji's `jlpt` level, and so which kanji can be answers (N5 to N3) and which kanji a word may use.
+
+## Noto Sans JP and Noto Serif JP coverage (Google Fonts)
+
+- **URL:** <https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400&family=Noto+Serif+JP:wght@700&display=swap>, fetched as a browser so it lists each font's `unicode-range`
+- **Used for:** knowing which palette glyphs those fonts can draw (`font: false` in `data/parts.json`). Nothing from it is copied into the data. The fonts themselves are SIL Open Font License 1.1, and the app loads them from Google Fonts.
 
 ## Crediting in the app
 
