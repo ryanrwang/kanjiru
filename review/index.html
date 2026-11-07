@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Word review · Kanjiru</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <script src="../tokens.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="review.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1 class="brand">
+      <span class="brand-kanji" lang="ja">選</span>
+      <span class="brand-name">Word review</span>
+    </h1>
+    <div class="header-actions">
+      <span class="pill" id="save-status">Loading…</span>
+    </div>
+  </header>
+
+  <main class="app-main review-main">
+    <section class="card review-controls" aria-label="Filters">
+      <div class="filter-group" id="filter-length" role="group" aria-label="Length"></div>
+      <div class="filter-group" id="filter-status" role="group" aria-label="Status"></div>
+      <div class="filter-group" id="filter-level" role="group" aria-label="JLPT level"></div>
+      <input class="review-search" id="search" type="search" placeholder="Search word, reading or meaning" autocomplete="off">
+      <p class="review-counts" id="counts"></p>
+    </section>
+
+    <div class="review-bulk">
+      <button class="chip" type="button" id="bulk-keep">Keep all pending on this page</button>
+      <button class="chip" type="button" id="download">Download review.json</button>
+    </div>
+
+    <ol class="review-list" id="list"></ol>
+
+    <nav class="review-pager" id="pager" aria-label="Pages"></nav>
+  </main>
+
+  <script type="module" src="review.js"></script>
+</body>
+</html>
