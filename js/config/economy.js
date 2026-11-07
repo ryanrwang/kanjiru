@@ -4,7 +4,8 @@
  * Each mode's `points` multiplier (modes.js) applies on top.
  */
 export const ECONOMY = {
-  currency: { name: 'Koban', short: 'pts', icon: '🪙' },   // 小判, the old gold coin
+  // 小判, the old gold coin. Its name and "{n} pts" wording are in js/i18n/*.js.
+  currency: { icon: '🪙' },
 
   startingPoints: 100,
 

@@ -49,7 +49,10 @@ button:disabled { cursor: default; }
 a { color: var(--color-link-default); }
 a:hover { color: var(--color-link-hover); }
 
-[lang="ja"], .kanji { font-family: var(--font-family-kanji); }
+/* Kanji shown as kanji (tiles, the brand, example words) use the serif.
+   Only marked elements: the page itself may be lang="ja" for the Japanese
+   interface, which keeps the sans UI font. */
+body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 /* ── Layout ────────────────────────────────────────────────────────── */
 
@@ -91,7 +94,13 @@ a:hover { color: var(--color-link-hover); }
 .header-actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
+}
+
+/* On phones there's room for one name only: the one in the page's language. */
+@media (max-width: 419px) {
+  html[lang="en"] .brand-kanji,
+  html:not([lang="en"]) .brand-name { display: none; }
 }
 
 .app-main {
@@ -126,6 +135,13 @@ a:hover { color: var(--color-link-hover); }
 .icon-btn:active { background: var(--color-interactive-active); }
 .icon-btn:disabled { opacity: var(--opacity-disabled); }
 .icon-btn svg { width: var(--spacing-lg); height: var(--spacing-lg); }
+
+/* Language toggle: text instead of an icon, in the target language's script. */
+.icon-btn.lang-btn {
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
 
 .pill {
   display: inline-flex;

@@ -31,11 +31,24 @@ Then open `http://localhost:8095/apps/kanjiru/` on the PC, or `http://<LAN IP>:8
 | `js/config/achievements.js` | Achievements as stat + threshold |
 | `js/registry.js` | One import for all catalogues, plus a start-up check that their ids agree |
 | `js/store.js` | The save in localStorage: versioned, with migrations |
-| `tools/build_data.py` | Downloads the dictionaries and writes `data/candidates.json` |
+| `js/i18n.js` | Interface languages: `t()`, `setLang()`, `LANGUAGES`, missing-text check |
+| `js/i18n/en.js`, `js/i18n/ja.js` | All interface text, English (the reference) and Japanese |
+| `tools/build_data.py` | Downloads the dictionaries and writes `data/candidates.json` (settings at the top; see `tools/README.md`) |
 | `data/candidates.json` | Every candidate answer, with kanji info and part breakdowns |
+| `data/ATTRIBUTION.md` | Exact source versions and licences; the app's About screen must credit them |
+| `review/` | Dev-only word review page: Keep / Maybe / Cut per word, flag a kanji's parts. Saves to `data/review.json` through `review.php`, which only runs under `php -S` |
+| `data/review.json` | The user's review decisions. Never overwrite it from a script |
+
+## Word data
+- Rebuild: `python -I tools/build_data.py` from this folder. Sources are pinned; downloads go to `tools/sources/` (ignored by Git).
+- Review: open `http://localhost:8095/apps/kanjiru/review/` with the PHP server running.
+- Waller's kanji lists come from Internet Archive snapshots, because tanos.co.uk is offline.
+- Known part-breakdown problems to solve before the game uses them: loose strokes that aren't components (本, 未 and 末 all become 木), contents of an enclosure marked `none` instead of `inner` (国, 間), positions relative to a subgroup (命), variant forms (氵 vs 水, `orig`), unprintable `CDP-…` component names (原, 願, 武, 源), and atomic answers (金, 車, 雨).
 
 ## Rules
 - **Everything is a catalogue.** Modes, skins, powers, achievements and point values live in `js/config/`. Code reads them through `js/registry.js` and never hard-codes a list, a length, a price or an id. Growing the game means adding entries.
+- **No text in code or catalogues.** Every word the player sees comes from `t('key')` in `js/i18n.js`, with the text in `js/i18n/en.js` and `js/i18n/ja.js`. Catalogue text is keyed by id (`mode.k1.name`, `skin.theme.ai`, `power.sweep.desc`, `achievement.streak-7.name`). A new catalogue entry needs its text in every language; `validate()` warns when any is missing. A new language is a new file plus an entry in `LANGUAGES`.
+- **Language:** `settings.lang` in the save (null = follow the device). It sets `<html lang>`. Kanji meant to look like kanji get `lang="ja"` or `.kanji` for the serif; plain Japanese UI text stays in the sans font. Dictionary meanings are English only for now.
 - **Powers are data, effects are code.** A power names an `effect` the engine implements once. A new power that reuses an effect with new `params` needs no code. A new effect goes in `KNOWN_EFFECTS` in `js/registry.js` and in the engine.
 - **Ids are permanent.** Saves store mode, skin, power and achievement ids. Never rename one; add a new entry and retire the old.
 - **The save is versioned.** Changing its shape means bumping `VERSION` in `js/store.js` and adding a migration. Adding a key needs nothing: missing keys are filled from `fresh()`.
