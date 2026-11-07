@@ -2,6 +2,11 @@
 
 A daily kanji puzzle in the spirit of Wordle: guess the kanji (or a 2–4 kanji word) from its parts. Each guess colours its parts: right part in the right spot, right part in the wrong spot, or not in the answer.
 
+## Start here
+- **`docs/DESIGN.md`**: every game decision so far, marked Decided, Proposed or Open, with the reasons. Confirm anything Proposed with the user before building on it.
+- **`docs/ROADMAP.md`**: the steps to launch, their order, and the prompt that starts each one. Tick a step off when it merges, and update both docs when a decision changes.
+- **Threads share this folder.** Two sessions here at once will switch each other's Git branches, so run one at a time or give each its own worktree.
+
 ## Tech Stack
 - **Frontend:** vanilla JS (ES modules), no build step. `tokens.js` is a classic script loaded in `<head>`; everything else is a module from `app.js`.
 - **Backend:** PHP, only for small endpoints (the device-transfer code, later). The game itself runs in the browser.
