@@ -1,0 +1,54 @@
+name: Deploy to Bluehost
+
+# Every push to main uploads the changed files to public_html/apps/kanjiru/.
+# Needs the FTP_USERNAME and FTP_PASSWORD repo secrets: the same FTP login
+# the other apps use, whose root folder is public_html.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Never run two deploys at once
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Actions are pinned to exact commits so a moved tag can't swap in code
+    # that sees the FTP password.
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          # The FTP step doesn't need GitHub access, so don't leave the token behind
+          persist-credentials: false
+
+      - name: Upload changed files to public_html/apps/kanjiru
+        uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287 # v4.4.0
+        with:
+          # The hosting server's own name, which its FTPS certificate
+          # (*.hostmonster.com) covers, so strict checking can confirm the
+          # server before the password is sent. If the host moves the account
+          # and deploys fail with a certificate error, put the new name here.
+          server: host2027.hostmonster.com
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          security: strict
+          local-dir: ./
+          server-dir: ./apps/kanjiru/
+          # Dev-only files never go to the server: the data build scripts,
+          # the word review page (it writes files) and its working data.
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .claude/**
+            cache/**
+            tools/**
+            review/**
+            data/candidates.json
+            data/review.json
+            **/*.md

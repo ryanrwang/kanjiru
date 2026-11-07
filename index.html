@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Kanjiru · 感じる</title>
+  <meta name="description" content="A daily kanji puzzle: guess the kanji from its parts.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+  <!-- Tokens first: sets the colours and the saved skin before first paint. -->
+  <script src="tokens.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1 class="brand">
+      <span class="brand-kanji" lang="ja">感じる</span>
+      <span class="brand-name">Kanjiru</span>
+    </h1>
+    <div class="header-actions">
+      <span class="pill" id="wallet" title="Your points"></span>
+      <button class="icon-btn" id="scheme-toggle" type="button"></button>
+    </div>
+  </header>
+
+  <main class="app-main" id="app"></main>
+
+  <footer class="app-footer">
+    <a href="/apps/" title="Back to Apps" class="rw-back-link">
+      <img src="/images/icon-rw.svg" alt="Back to Apps" class="rw-back-logo">
+    </a>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

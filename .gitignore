@@ -1,0 +1,23 @@
+# Server-generated
+cache/
+error_log
+
+# Source dictionaries downloaded by tools/build_data.py (large, re-downloadable)
+tools/sources/
+
+# Python
+__pycache__/
+*.pyc
+
+# Claude Code local config
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor
+*.swp
+*.swo
+*~
