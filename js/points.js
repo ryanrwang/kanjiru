@@ -1,16 +1,20 @@
 /*
- * The Points page (#points, opened by the points in the header): the
- * wallet, the looks with examples, the hints and powers, and the
- * achievements. Buying happens in place, in two taps: Buy, then the confirm
+ * The Points page (#points, opened by the points in the header; the header
+ * shows 漢 › Points): the wallet, the looks with examples, the hints and
+ * powers, and the achievements. Buying takes two taps: Buy, then a modal
  * that names the price and what's left (rules in js/shop.js).
  *
- *   const page = openPoints(root, { onBack, onLook, onWallet });
+ *   const page = openPoints(root, { onLook, onWallet });
  *   page.refresh();   // the scheme changed
  *   page.destroy();
  *
- *   onBack()     leave the page
  *   onLook()     a look changed: apply it
  *   onWallet()   the points changed: redraw the header
+ *
+ * Every look has an example, locked or not: colours as three tiles in the
+ * skin's own colours, a tile reveal as three tiles revealing, a win effect
+ * playing over a solved row. A reveal or effect plays when it first comes
+ * into view, when it's tapped or hovered, and when it's picked.
  */
 import { POWERS, SLOTS, SKINS, ECONOMY, ACHIEVEMENTS, ACHIEVEMENT } from './registry.js';
 import { t } from './i18n.js';
@@ -22,14 +26,23 @@ import { localDate } from './engine/daily.js';
 import { amounts, skinsFor } from './play/rewards.js';
 import { bump } from './toast.js';
 
-const BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
 const pts = (n) => t('currency.amount', { n });
 const sep = () => t('reward.sep');
 
 // How a guess reads in a look: the preview at the top of Looks, and three
-// tiles in each colour swatch.
+// tiles in each look's example.
 const PREVIEW = [['口', 'miss'], ['日', 'near'], ['寸', 'hit'], ['門', 'near'], ['日', 'hit']];
 const SWATCH = [['日', 'hit'], ['土', 'near'], ['寸', 'miss']];
+const SOLVED = [['日', 'hit'], ['土', 'hit'], ['寸', 'hit']];
+const DRAWN = '時';   // the answer Brush draw writes out
+
+// Where each win effect's pieces start: petals across the top (x, and y for
+// the still picture under reduced motion), sparks in two bursts (x, y).
+const PETALS = [[8, 20], [26, 60], [44, 30], [62, 70], [80, 40], [92, 10]];
+const BURSTS = [[30, 45], [70, 35]];
+const SPARKS = 8;
+
+const hoverable = () => window.matchMedia && window.matchMedia('(hover: hover)').matches;
 
 function whenText(when) {
   if (when.includes('before') && when.includes('during')) return t('powers.whenBoth');
@@ -49,17 +62,72 @@ function meter(now) {
     el('span', { class: 'meter-fill', style: { width: `${Math.round(share * 100)}%` } }));
 }
 
+// Starts an example's animation again from the top.
+function play(stage) {
+  stage.classList.remove('is-playing');
+  void stage.offsetWidth;
+  stage.classList.add('is-playing');
+}
+
+const miniTiles = (tiles) => tiles.map(([part, mark], i) => {
+  const tile = el('span', { class: `tile is-${mark}`, lang: 'ja' }, part);
+  tile.style.setProperty('--i', i);
+  return tile;
+});
+
+// The confirm before buying, in a modal: the price, and what's left after.
+let confirmSheet = null;
+function confirmBuy({ icon, name, cost, have, onYes }) {
+  if (!confirmSheet) {
+    confirmSheet = el('dialog', { class: 'sheet confirm-sheet', 'aria-labelledby': 'confirm-title' });
+    confirmSheet.addEventListener('click', (event) => { if (event.target === confirmSheet) confirmSheet.close(); });
+    document.body.append(confirmSheet);
+  }
+  const yes = el('button', {
+    class: 'btn btn-primary', type: 'button',
+    onclick: () => { confirmSheet.close(); onYes(); }
+  }, t('shop.confirmYes', { cost }));
+  confirmSheet.replaceChildren(el('div', { class: 'sheet-body' },
+    el('header', { class: 'power-sheet-head' },
+      el('span', { class: 'power-icon', 'aria-hidden': 'true' }, icon),
+      el('h2', { class: 'sheet-title', id: 'confirm-title' }, t('shop.confirmTitle', { name }))),
+    el('p', {}, t('shop.confirm', { cost, have, left: have - cost, name })),
+    el('div', { class: 'btn-row' }, yes,
+      el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => confirmSheet.close() }, t('shop.cancel')))));
+  confirmSheet.showModal();
+  yes.focus();
+}
+
 export function openPoints(root, ctx) {
-  // offer: the locked look whose details show; confirm: the item asking
-  // "Spend …?"; done: { key, text } after a purchase or a change.
-  const ui = { offer: null, confirm: null, done: null };
+  // offer: the locked look whose details show; done: { key, text } after
+  // a purchase or a change; playing: the look whose example plays on the
+  // next draw.
+  const ui = { offer: null, done: null, playing: null };
   const page = el('section', { class: 'page points-page', 'aria-labelledby': 'points-title' });
   let replay = false;   // the preview plays its tile reveal on the next draw
+
+  // Each example plays once by itself, the first time it's on screen.
+  const seen = new Set();
+  const watcher = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      watcher.unobserve(entry.target);
+      seen.add(entry.target.dataset.play);
+      play(entry.target);
+    });
+  }, { threshold: 1 }) : null;
 
   function render(focusKey = null) {
     const save = store.get();
     const values = stats(save.history, { today: localDate() });
-    page.replaceChildren(head(), wallet(save, values), looks(save, values), powers(save), achievements(save, values));
+    page.replaceChildren(wallet(save, values), looks(save, values), powers(save), achievements(save, values));
+    ui.playing = null;
+    if (watcher) {
+      watcher.disconnect();
+      page.querySelectorAll('[data-play]').forEach((stage) => {
+        if (!seen.has(stage.dataset.play)) watcher.observe(stage);
+      });
+    }
     if (focusKey) {
       const target = page.querySelector(`[data-key="${focusKey}"] [data-focus]`)
         || page.querySelector(`[data-key="${focusKey}"] button:not(:disabled)`)
@@ -68,16 +136,7 @@ export function openPoints(root, ctx) {
     }
   }
 
-  // ── Head and wallet ────────────────────────────────────────────────
-
-  function head() {
-    const back = el('button', {
-      class: 'icon-btn', type: 'button', title: t('game.home'), 'aria-label': t('game.home'), onclick: ctx.onBack
-    });
-    back.innerHTML = BACK;
-    return el('header', { class: 'page-head' },
-      back, el('h2', { class: 'page-title', id: 'points-title' }, t('points.title')));
-  }
+  // ── Wallet ─────────────────────────────────────────────────────────
 
   function stat(label, value) {
     return el('div', { class: 'wallet-stat' }, el('dt', {}, label), el('dd', {}, value));
@@ -106,24 +165,9 @@ export function openPoints(root, ctx) {
     ctx.onWallet();
   }
 
-  // ── Buying, in two taps ────────────────────────────────────────────
-
-  function confirmRow(key, { cost, have, name }, pay) {
-    return el('div', { class: 'shop-confirm' },
-      el('p', {}, t('shop.confirm', { cost, have, left: have - cost, name })),
-      el('div', { class: 'btn-row' },
-        el('button', { class: 'btn btn-primary btn-small', type: 'button', 'data-focus': '', onclick: pay },
-          t('shop.confirmYes', { cost })),
-        el('button', {
-          class: 'btn btn-ghost btn-small', type: 'button',
-          onclick: () => { ui.confirm = null; render(key); }
-        }, t('shop.cancel'))));
-  }
-
-  function buyButton(key, cost, why) {
+  function buyButton(cost, why, onBuy) {
     return el('button', {
-      class: 'btn btn-secondary btn-small', type: 'button', disabled: !!why,
-      onclick: () => { ui.confirm = key; ui.done = null; render(key); }
+      class: 'btn btn-secondary btn-small', type: 'button', disabled: !!why, onclick: onBuy
     }, t('shop.buyFor', { cost }));
   }
 
@@ -142,7 +186,6 @@ export function openPoints(root, ctx) {
   function use(slot, item) {
     store.update((s) => { s.settings[slot] = item.id; });
     ui.offer = null;
-    ui.confirm = null;
     ui.done = null;
     if (slot === 'theme') ctx.onLook();
     if (slot === 'tiles') replay = true;
@@ -152,7 +195,6 @@ export function openPoints(root, ctx) {
   // A locked look: its details open under its row (offer), or close.
   function toggle(key) {
     ui.offer = ui.offer === key ? null : key;
-    ui.confirm = null;
     ui.done = null;
     render(key);
   }
@@ -169,42 +211,65 @@ export function openPoints(root, ctx) {
     return row;
   }
 
-  function swatch(item, save) {
-    const key = `skin:theme:${item.id}`;
-    const unlocked = isUnlocked('theme', item, save);
-    const on = save.settings.theme === item.id;
-    const c = window.TOKENS.resolve(item.id, window.TOKENS.look().scheme).color;
-    const name = t(`skin.theme.${item.id}`);
-    const state = on ? t('looks.inUse') : unlocked ? '' : lockText(item.unlock);
-    return el('button', {
-      class: `swatch${unlocked ? '' : ' is-locked'}${ui.offer === key ? ' is-open' : ''}`,
-      type: 'button', 'data-key': key,
-      'aria-pressed': String(on),
-      'aria-expanded': unlocked ? null : String(ui.offer === key),
-      'aria-label': state ? `${name}${sep()}${state}` : name,
-      onclick: () => (unlocked ? use('theme', item) : toggle(key))
-    },
-      el('span', { class: 'swatch-preview', 'aria-hidden': 'true', style: { background: c.bg.page, borderColor: c.border.subtle } },
+  // A look's example. Colours: three tiles in the skin's own colours, on
+  // its own page colour. A reveal or effect: the current colours, moving.
+  function example(slot, item, key) {
+    if (slot === 'theme') {
+      const c = window.TOKENS.resolve(item.id, window.TOKENS.look().scheme).color;
+      return el('span', { class: 'swatch-preview', 'aria-hidden': 'true', style: { background: c.bg.page, borderColor: c.border.subtle } },
         SWATCH.map(([part, mark]) => el('span', {
           class: 'swatch-tile', lang: 'ja', style: { background: c.feedback[mark], color: c.feedback.text }
-        }, part))),
-      el('span', { class: 'swatch-name', 'aria-hidden': 'true' }, name),
-      state ? el('span', { class: `swatch-state${on ? ' is-on' : ''}`, 'aria-hidden': 'true' }, state) : null);
+        }, part)));
+    }
+    let stage;
+    if (slot === 'tiles') {
+      stage = el('span', { class: 'swatch-preview reveal-stage', 'data-tiles': item.id }, miniTiles(SWATCH));
+    } else if (item.id === 'draw') {
+      stage = el('span', { class: 'swatch-preview fx-stage', 'data-effect': item.id },
+        el('span', { class: 'fx-kanji kanji', lang: 'ja' }, DRAWN));
+    } else {
+      let fx = [];
+      if (item.id === 'petals') {
+        fx = PETALS.map(([x, y], i) => el('span', { class: 'fx-petal', style: { '--i': i, '--x': x, '--y': y } }));
+      } else if (item.id === 'hanabi') {
+        fx = BURSTS.flatMap(([x, y], b) => Array.from({ length: SPARKS }, (_, i) => el('span', {
+          class: 'fx-spark', style: { '--b': b, '--x': x, '--y': y, '--a': `${(360 / SPARKS) * i}deg` }
+        })));
+      }
+      stage = el('span', { class: 'swatch-preview fx-stage', 'data-effect': item.id },
+        miniTiles(SOLVED), fx.length ? el('span', { class: 'fx' }, fx) : null);
+    }
+    stage.setAttribute('aria-hidden', 'true');
+    stage.dataset.play = key;
+    if (ui.playing === key) stage.classList.add('is-playing');
+    return stage;
   }
 
-  function chip(slot, item, save) {
-    const key = `skin:${slot.id}:${item.id}`;
-    const unlocked = isUnlocked(slot.id, item, save);
+  // A look: its example, its name, and whether it's in use or how to get it.
+  function lookCard(slot, item, save) {
+    const key = `skin:${slot}:${item.id}`;
+    const unlocked = isUnlocked(slot, item, save);
     const usable = unlocked && !item.soon;
-    const name = t(`skin.${slot.id}.${item.id}`);
-    const note = !unlocked ? lockText(item.unlock) : item.soon ? t('shop.soon') : '';
-    return el('button', {
-      class: `chip${usable ? '' : ' is-locked'}${ui.offer === key ? ' is-open' : ''}`,
+    const on = save.settings[slot] === item.id;
+    const name = t(`skin.${slot}.${item.id}`);
+    const state = on ? t('looks.inUse') : !unlocked ? lockText(item.unlock) : item.soon ? t('shop.soon') : '';
+    const shown = example(slot, item, key);
+    const card = el('button', {
+      class: `swatch${usable ? '' : ' is-locked'}${ui.offer === key ? ' is-open' : ''}`,
       type: 'button', 'data-key': key,
-      'aria-pressed': String(save.settings[slot.id] === item.id),
+      'aria-pressed': String(on),
       'aria-expanded': usable ? null : String(ui.offer === key),
-      onclick: () => (usable ? use(slot.id, item) : toggle(key))
-    }, name, note ? el('span', { class: 'chip-note' }, note) : null);
+      'aria-label': state ? `${name}${sep()}${state}` : name,
+      onclick: () => {
+        ui.playing = key;
+        return usable ? use(slot, item) : toggle(key);
+      }
+    },
+      shown,
+      el('span', { class: 'swatch-name', 'aria-hidden': 'true' }, name),
+      state ? el('span', { class: `swatch-state${on ? ' is-on' : ''}`, 'aria-hidden': 'true' }, state) : null);
+    if (slot !== 'theme' && hoverable()) card.addEventListener('mouseenter', () => play(shown));
+    return card;
   }
 
   // The open locked look of a slot: how to get it, and Buy when it's for sale.
@@ -215,9 +280,19 @@ export function openPoints(root, ctx) {
     const offer = skinOffer(slot.id, item, save);
     const name = t(`skin.${slot.id}.${item.id}`);
     const unlock = item.unlock;
-    const confirming = ui.confirm === key && !offer.why;
     const lines = [];
     let action = null;
+    const pay = () => {
+      if (!buySkin(slot.id, item.id)) return;
+      store.update((s) => { s.settings[slot.id] = item.id; });
+      ui.offer = null;
+      ui.playing = key;
+      ui.done = { key: `slot:${slot.id}`, text: t('shop.boughtSkin', { name, left: store.points() }) };
+      if (slot.id === 'theme') ctx.onLook();
+      if (slot.id === 'tiles') replay = true;
+      render(key);
+      paid(unlock.cost);
+    };
     if (offer.owned) lines.push(item.soon ? t('shop.ownedSoon') : t('shop.owned'));
     else if (unlock.type === 'achievement' && ACHIEVEMENT[unlock.id]) {
       const a = ACHIEVEMENT[unlock.id];
@@ -228,25 +303,17 @@ export function openPoints(root, ctx) {
       }
     } else {
       if (offer.why) lines.push(whyText(offer));
-      if (!item.soon && !confirming) action = buyButton(key, unlock.cost, offer.why);
+      if (!item.soon) {
+        action = buyButton(unlock.cost, offer.why, () => confirmBuy({
+          icon: slot.icon, name, cost: unlock.cost, have: offer.have, onYes: pay
+        }));
+      }
     }
-    const pay = () => {
-      if (!buySkin(slot.id, item.id)) return;
-      store.update((s) => { s.settings[slot.id] = item.id; });
-      ui.confirm = null;
-      ui.offer = null;
-      ui.done = { key: `slot:${slot.id}`, text: t('shop.boughtSkin', { name, left: store.points() }) };
-      if (slot.id === 'theme') ctx.onLook();
-      if (slot.id === 'tiles') replay = true;
-      render(key);
-      paid(unlock.cost);
-    };
     return el('div', { class: 'offer', 'data-key': key },
       el('p', { class: 'offer-name' },
         el('span', {}, name),
         el('span', { class: 'offer-price' }, unlock.type === 'points' ? pts(unlock.cost) : t('shop.byAchievement'))),
       lines.map((line) => el('p', { class: 'offer-line' }, line)),
-      confirming ? confirmRow(key, { cost: unlock.cost, have: offer.have, name }, pay) : null,
       action ? el('div', { class: 'btn-row' }, action) : null);
   }
 
@@ -258,9 +325,7 @@ export function openPoints(root, ctx) {
         preview(save),
         SLOTS.map((slot) => el('div', { class: 'look-slot', role: 'group', 'aria-labelledby': `slot-${slot.id}` },
           el('h3', { class: 'look-slot-name', id: `slot-${slot.id}` }, t(`slot.${slot.id}`)),
-          slot.id === 'theme'
-            ? el('div', { class: 'swatch-grid' }, SKINS.theme.map((item) => swatch(item, save)))
-            : el('div', { class: 'chip-row' }, SKINS[slot.id].map((item) => chip(slot, item, save))),
+          el('div', { class: 'swatch-grid' }, SKINS[slot.id].map((item) => lookCard(slot.id, item, save))),
           offerPanel(slot, save, values),
           doneLine(`slot:${slot.id}`)))));
   }
@@ -271,10 +336,8 @@ export function openPoints(root, ctx) {
     const key = `power:${p.id}`;
     const offer = powerOffer(p.id, save);
     const name = t(`power.${p.id}.name`);
-    const confirming = ui.confirm === key && !offer.why;
     const pay = () => {
       if (!buyPower(p.id)) return;
-      ui.confirm = null;
       ui.done = { key, text: t('shop.bought', { name, n: store.held()[p.id] || 0, left: store.points() }) };
       render(key);
       paid(p.cost);
@@ -289,10 +352,11 @@ export function openPoints(root, ctx) {
         el('p', { class: 'power-desc' }, t(`power.${p.id}.desc`)),
         el('p', { class: 'power-when' },
           [whenText(p.when), p.minLength > 1 ? t('powers.minLength', { n: p.minLength }) : null].filter(Boolean).join(sep())),
-        confirming ? confirmRow(key, { cost: p.cost, have: offer.have, name }, pay) : null,
         doneLine(key),
-        confirming ? null : el('div', { class: 'power-buy' },
-          p.cost === null ? null : buyButton(key, p.cost, offer.why),
+        el('div', { class: 'power-buy' },
+          p.cost === null ? null : buyButton(p.cost, offer.why, () => confirmBuy({
+            icon: p.icon, name, cost: p.cost, have: offer.have, onYes: pay
+          })),
           why ? el('span', { class: 'power-why' }, why) : null)));
   }
 
@@ -338,5 +402,11 @@ export function openPoints(root, ctx) {
 
   root.replaceChildren(page);
   render();
-  return { refresh: () => render(), destroy() {} };
+  return {
+    refresh: () => render(),
+    destroy() {
+      if (watcher) watcher.disconnect();
+      if (confirmSheet && confirmSheet.open) confirmSheet.close();
+    }
+  };
 }

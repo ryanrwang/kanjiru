@@ -19,7 +19,7 @@ export default {
     unit: 'pt'
   },
 
-  // 遊び方（プレイカードの下）：例で説明
+  // 遊び方（プレイページの最初）：例で説明
   howto: {
     title: '遊び方',
     lead: 'パーツからことばを当てよう。',
@@ -29,7 +29,7 @@ export default {
     miss: '答えにないパーツ'
   },
 
-  // プレイカード：今日のデイリー、むずかしい・ガイドのスイッチ、もっと遊ぶ
+  // プレイカード：今日のデイリー、むずかしい・ガイドのスイッチ、もう一度遊ぶ
   play: {
     soon: '近日公開',
     loading: '読み込み中…',
@@ -54,7 +54,7 @@ export default {
     start: 'プレイ',
     continue: '続ける',
     result: '結果を見る',
-    more: 'もっと遊ぶ',
+    more: 'もう一度遊ぶ',
     nextDaily: '次のデイリーまで'
   },
 
@@ -190,7 +190,7 @@ export default {
     copied: 'コピーしました。好きな場所に貼り付けてください。',
     copyManually: '上のテキストを選択して、コピーしてください。',
     nextDaily: '次のデイリーまで',
-    practice: 'もっと遊ぶ',
+    practice: 'もう一度遊ぶ',
     again: '次の問題'
   },
 
@@ -233,6 +233,7 @@ export default {
   shop: {
     buyFor: '買う・{cost}pt',
     confirm: '{name}に{cost}ptを使いますか？　所持{have}pt、残りは{left}ptになります。',
+    confirmTitle: '{name}を買いますか？',
     confirmYes: '{cost}ptで買う',
     cancel: 'キャンセル',
     have: '所持 {n}/{hold}',

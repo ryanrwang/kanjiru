@@ -37,7 +37,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `.htaccess` | Gzips the JSON data and has it rechecked every visit (the site's root `.htaccess` does pages, CSS and JS) |
 | `tokens.js` | Design tokens, skins' colours (`THEMES`) and `TOKENS.applyLook()` |
 | `styles.css` | All styles, using token variables only |
-| `app.js` | The header, the play page (play card with the level switches, How to play), data loading, and the routes (`''` play page, `#points`, `#main` daily, `#main/practice` keep playing) |
+| `app.js` | The header (a breadcrumb on the Points page), the play page (How to play, then the play card with the level switches), data loading, and the routes (`''` play page, `#points`, `#main` daily, `#main/practice` keep playing) |
 | `js/config/modes.js` | Game modes: the main daily (4–6 parts, 1–4 kanji); k1–k4 retired |
 | `js/config/levels.js` | Levels: Normal, plus the Hard and Guided switches on the play card (`settingsLevel()`); Easy retired |
 | `js/config/skins.js` | Skin catalogue: colours, tile reveal, win effect |
@@ -48,7 +48,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/registry.js` | One import for all catalogues, plus a start-up check that their ids agree |
 | `js/store.js` | The save in localStorage: versioned (v2), with migrations, plus export, import and the merge rules (`MERGE`). Games on the go are in `playing`; points and hints held are the `ledger` (`points()`, `held()`, `enter()`) |
 | `js/ledger.js` | The ledger: every gain and spend of points or hints as an entry with its own id, the balance, the v1 migration and the merge that joins entries |
-| `js/points.js` | The Points page (`#points`, opened by the points in the header): the wallet, Looks with previews, Hints & powers and Achievements, with two-tap buying. `openPoints(root, ctx)` |
+| `js/points.js` | The Points page (`#points`, opened by the points in the header, which then reads 漢 › Points): the wallet, Looks with an example of every look, Hints & powers and Achievements, with Buy confirmed in a modal. `openPoints(root, ctx)` |
 | `js/shop.js` | The buying rules: `isUnlocked()`, `powerOffer()`, `skinOffer()`, `buyPower()`, `buySkin()` |
 | `js/toast.js` | Toasts over everything (`toast()`) and the "+N pts" tag on a balance that changed (`bump()`) |
 | `js/settings.js` | Settings panel (gear in the header): language, appearance, moving devices (send, receive and the save text, with Merge / Replace) and debug mode (answer dots on the keys, add points) |

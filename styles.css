@@ -76,6 +76,10 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 }
 
 .brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  min-width: 0;
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   line-height: var(--font-lineHeight-tight);
@@ -97,6 +101,23 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 }
 
 .brand-name { letter-spacing: var(--font-tracking-wide); }
+
+/* On another page the brand is a breadcrumb, 漢 › Points: the mark goes
+   home, the page's name follows. */
+.brand-mark {
+  display: none;
+  color: var(--color-text-accent);
+  font-weight: var(--font-weight-black);
+}
+
+.app-header.is-crumb .brand-mark { display: inline; }
+.app-header.is-crumb .brand-kanji,
+.app-header.is-crumb .brand-name { display: none; }
+
+.crumb-sep {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+}
 
 .header-actions {
   display: flex;
@@ -232,6 +253,7 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 .play-card.is-soon .play-seal { opacity: var(--opacity-soft); }
 
 .play-heading {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
@@ -244,7 +266,16 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   line-height: var(--font-lineHeight-snug);
 }
 
+/* Where the daily stands, and on its right, the time to the next one. */
+.play-status {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
 .play-line {
+  min-width: 0;
   color: var(--color-text-secondary);
   line-height: var(--font-lineHeight-snug);
 }
@@ -263,7 +294,8 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 }
 
 .play-level-title,
-.sheet-section-title {
+.sheet-section-title,
+.howto-title {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--font-tracking-caps);
@@ -288,50 +320,23 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 }
 
 .play-countdown {
-  margin-top: calc(var(--spacing-sm) * -1);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  text-align: center;
-}
-
-/* ── Play page: how to play ────────────────────────────────────────── */
-
-.howto-head {
+  flex: 0 0 auto;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-radius: var(--radius-xl);
-  cursor: pointer;
-  list-style: none;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  color: var(--color-text-secondary);
+  text-align: end;
 }
 
-.howto-head::-webkit-details-marker { display: none; }
+/* ── Play page: how to play, its intro ─────────────────────────────── */
 
-.howto-title {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-bold);
-}
-
-/* A chevron that points down when closed, up when open. */
-.howto-chevron {
-  width: var(--spacing-sm);
-  height: var(--spacing-sm);
-  margin-right: var(--spacing-xs);
-  border-right: var(--stroke-thick) solid var(--color-text-muted);
-  border-bottom: var(--stroke-thick) solid var(--color-text-muted);
-  transform: translateY(calc(var(--stroke-thick) * -1)) rotate(45deg);
-  transition: transform var(--transition-base) var(--transition-ease);
-}
-
-.howto[open] .howto-chevron { transform: translateY(var(--stroke-thick)) rotate(-135deg); }
-
-.howto-body {
+.howto {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  padding: 0 var(--spacing-lg) var(--spacing-lg);
+  padding: var(--spacing-lg);
 }
 
 .howto-lead {
@@ -1972,19 +1977,6 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   gap: var(--spacing-xl);
 }
 
-.page-head {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  margin: calc(var(--spacing-md) * -1) 0 calc(var(--spacing-md) * -1) calc(var(--spacing-sm) * -1);
-}
-
-.page-title {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--font-lineHeight-snug);
-}
-
 /* The wallet: the points, big, and three small counts under them. */
 .wallet-hero {
   display: flex;
@@ -2115,7 +2107,8 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
 .swatch:hover { border-color: var(--color-border-default); }
 .swatch.is-open { border-color: var(--color-border-strong); }
 .swatch[aria-pressed="true"] { border-color: var(--color-border-focus); }
-.swatch.is-locked .swatch-preview { opacity: var(--opacity-soft); }
+/* A locked look's example is dimmed until you open it to see it. */
+.swatch.is-locked:not(.is-open) .swatch-preview { opacity: var(--opacity-soft); }
 
 /* Three tiles in the skin's own colours, on its own page colour. */
 .swatch-preview {
@@ -2151,36 +2144,185 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
 .swatch-state { color: var(--color-text-muted); }
 .swatch-state.is-on { color: var(--color-text-accent); font-weight: var(--font-weight-bold); }
 
-.chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-sm);
-}
-
-.chip {
-  display: inline-flex;
+/* The examples of a tile reveal or a win effect: the current colours, on
+   the page colour. Each plays when it gets .is-playing (js/points.js). */
+.reveal-stage,
+.fx-stage {
+  position: relative;
   align-items: center;
-  gap: var(--spacing-xs);
-  min-height: var(--spacing-xl);
-  padding: var(--spacing-xs) var(--spacing-md);
-  border-radius: var(--radius-full);
-  border: var(--stroke-thick) solid var(--color-border-subtle);
+  overflow: hidden;
+  background: var(--color-bg-page);
+  border-color: var(--color-border-subtle);
+}
+
+.reveal-stage .tile,
+.fx-stage .tile {
+  flex: 0 1 var(--layout-cellXs);
+  width: auto;
+  height: auto;
+  min-width: 0;
+  aspect-ratio: 1;
+  border-width: var(--stroke-thin);
+  border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
-  transition: border-color var(--transition-fast) var(--transition-ease);
 }
 
-.chip:hover { border-color: var(--color-border-default); }
-.chip.is-open { border-color: var(--color-border-strong); }
-.chip[aria-pressed="true"] {
-  border-color: var(--color-border-focus);
-  background: var(--color-interactive-selected);
+/* Tile reveals: Flip (as on the board), Ink bleed (the colour spreads from
+   a drop in the middle) and Hanko stamp (pressed down like a seal). Step 6
+   builds the board's Ink bleed and Hanko from these. */
+.reveal-stage .tile {
+  position: relative;
+  isolation: isolate;
 }
-.chip.is-locked { color: var(--color-text-secondary); }
 
-.chip-note {
-  font-weight: var(--font-weight-regular);
-  color: var(--color-text-muted);
+.reveal-stage.is-playing .tile {
+  animation: tile-flip var(--transition-reveal) var(--transition-ease) both;
+  animation-delay: calc(var(--i, 0) * var(--transition-base));
+}
+
+/* Ink takes longer than a flip: the drop, then the spread. */
+.reveal-stage[data-tiles="ink"].is-playing .tile {
+  animation-name: tile-ink;
+  animation-duration: var(--transition-long);
+}
+
+.reveal-stage[data-tiles="ink"].is-playing .tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--mark-bg);
+  animation: ink-spread var(--transition-long) var(--transition-ink) both;
+  animation-delay: calc(var(--i, 0) * var(--transition-base));
+}
+
+.reveal-stage[data-tiles="stamp"].is-playing .tile {
+  animation-name: tile-stamp;
+  animation-timing-function: var(--transition-bounce);
+}
+
+@keyframes tile-ink {
+  0%, 30% {
+    background-color: var(--color-tile-bg);
+    border-color: var(--color-tile-border);
+    color: var(--color-tile-text);
+  }
+  45%, 99% {
+    background-color: var(--color-tile-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+  100% {
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+}
+
+@keyframes ink-spread {
+  0%   { clip-path: circle(0% at 50% 60%); }
+  30%  { clip-path: circle(12% at 50% 60%); }
+  100% { clip-path: circle(80% at 50% 60%); }
+}
+
+@keyframes tile-stamp {
+  0%   { transform: scale(1.5) rotate(-8deg); opacity: var(--opacity-hidden); }
+  60%  { transform: scale(0.9) rotate(0deg); opacity: var(--opacity-full); }
+  100% { transform: scale(1) rotate(0deg); opacity: var(--opacity-full); }
+}
+
+/* Win effects, over a solved row: Brush draw writes the answer out from
+   its top left, Petal fall drops petals across it, Hanabi bursts twice. */
+.fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.fx-kanji {
+  height: var(--layout-cellXs);
+  font-size: var(--font-size-xl);
+  line-height: var(--layout-cellXs);
+  color: var(--color-text-primary);
+}
+
+.fx-stage.is-playing .fx-kanji {
+  animation: brush-draw var(--transition-long) var(--transition-ink) both;
+}
+
+@keyframes brush-draw {
+  0%   { clip-path: polygon(0 0, 0 0, 0 0); }
+  100% { clip-path: polygon(0 0, 200% 0, 0 200%); }
+}
+
+.fx-petal {
+  position: absolute;
+  top: calc(var(--spacing-sm) * -1);
+  left: calc(var(--x) * 1%);
+  width: var(--spacing-sm);
+  height: var(--spacing-sm);
+  border-radius: 0 var(--radius-full);
+  background: var(--color-effect-petal);
+  opacity: var(--opacity-hidden);
+}
+
+.fx-stage.is-playing .fx-petal {
+  animation: petal-fall calc(var(--transition-long) * 2) var(--transition-ease) both;
+  animation-delay: calc(var(--i) * var(--transition-slow));
+}
+
+@keyframes petal-fall {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: var(--opacity-hidden); }
+  15%  { opacity: var(--opacity-full); }
+  50%  { transform: translate(var(--spacing-sm), var(--spacing-lg)) rotate(120deg); }
+  85%  { opacity: var(--opacity-full); }
+  100% { transform: translate(calc(var(--spacing-sm) * -1), var(--spacing-2xl)) rotate(240deg); opacity: var(--opacity-hidden); }
+}
+
+.fx-spark {
+  position: absolute;
+  top: calc(var(--y) * 1%);
+  left: calc(var(--x) * 1%);
+  width: var(--stroke-thick);
+  height: var(--spacing-sm);
+  border-radius: var(--radius-full);
+  background: var(--color-effect-spark);
+  opacity: var(--opacity-hidden);
+  transform-origin: 50% 0;
+}
+
+.fx-spark:nth-child(3n)   { background: var(--color-effect-petal); }
+.fx-spark:nth-child(3n+1) { background: var(--color-action-primary-bg); }
+
+.fx-stage.is-playing .fx-spark {
+  animation: spark-out var(--transition-long) var(--transition-bounce) both;
+  animation-delay: calc(var(--b) * var(--transition-slow));
+}
+
+@keyframes spark-out {
+  0%   { transform: rotate(var(--a)) translateY(0) scaleY(0.2); opacity: var(--opacity-full); }
+  70%  { opacity: var(--opacity-full); }
+  100% { transform: rotate(var(--a)) translateY(var(--spacing-md)) scaleY(1); opacity: var(--opacity-hidden); }
+}
+
+/* Without motion: the reveals show their end, the effects a still picture. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-stage.is-playing .tile,
+  .reveal-stage.is-playing .tile::before,
+  .fx-stage.is-playing .fx-kanji,
+  .fx-stage.is-playing .fx-petal,
+  .fx-stage.is-playing .fx-spark { animation: none; }
+
+  .fx-petal {
+    top: calc(var(--y) * 1%);
+    opacity: var(--opacity-strong);
+  }
+
+  .fx-spark {
+    transform: rotate(var(--a)) translateY(var(--spacing-xs));
+    opacity: var(--opacity-strong);
+  }
 }
 
 /* A locked look's details, under its row: how to get it, and Buy. */
@@ -2348,7 +2490,6 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   font-size: var(--font-size-xs);
 }
 
-.offer .shop-confirm { padding: 0; }
 
 /* ── Back-to-apps mark ─────────────────────────────────────────────── */
 

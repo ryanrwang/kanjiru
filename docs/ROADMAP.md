@@ -153,7 +153,7 @@ Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first. Work on a new branch.
 1. Tile reveal styles keyed by settings.tiles: Flip (a basic one is in styles.css, `tile-flip`), Ink bleed (ink spreading through the tile) and Hanko stamp (pressed like a seal).
 2. Win effects keyed by settings.effect: Brush draw (the answer drawn stroke by stroke from KanjiVG; add stroke paths for answer kanji to the data build, keeping size in check), Petal fall and Hanabi.
 3. Textures for Urushi (lacquer sheen) and Kinpaku (gold-leaf shimmer).
-4. Previews in Looks on the Points page.
+4. The Points page already plays an example of every look (sketches in styles.css for the unbuilt ones): keep each true to the real effect.
 5. Structure it so a new effect is one catalogue entry plus one small module or CSS block.
 6. Smooth on a mid-range phone, and off under prefers-reduced-motion.
 

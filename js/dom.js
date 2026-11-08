@@ -4,7 +4,8 @@
  *   el('button', { class: 'btn', type: 'button', onclick: go }, t('play'))
  *
  * Attributes set to null, undefined or false are left off; true sets an
- * empty attribute. on… attributes become event listeners. Children may be
+ * empty attribute. on… attributes become event listeners; style takes an
+ * object, custom properties (--i) too. Children may be
  * nodes, text, arrays (nested to any depth), or null/false (skipped).
  */
 export function el(tag, attrs = {}, ...children) {
@@ -12,7 +13,13 @@ export function el(tag, attrs = {}, ...children) {
   Object.entries(attrs).forEach(([key, value]) => {
     if (value === null || value === undefined || value === false) return;
     if (key === 'class') node.className = value;
-    else if (key === 'style') Object.assign(node.style, value);
+    else if (key === 'style') {
+      // Custom properties (--i) need setProperty; the rest assign as usual.
+      Object.entries(value).forEach(([name, v]) => {
+        if (name.startsWith('--')) node.style.setProperty(name, v);
+        else node.style[name] = v;
+      });
+    }
     else if (key.startsWith('on')) node.addEventListener(key.slice(2), value);
     else node.setAttribute(key, value === true ? '' : value);
   });

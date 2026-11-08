@@ -52,7 +52,21 @@ function renderHeader() {
   settingsBtn.innerHTML = GEAR;
   settingsBtn.setAttribute('aria-label', t('settings.open'));
   settingsBtn.title = t('settings.open');
-  document.getElementById('brand').title = t('header.home');
+  // Home names the game; another page shows where you are: 漢 › Points.
+  const brand = document.getElementById('brand');
+  const p = page();
+  const crumb = p.name === 'points' ? t('points.title') : null;
+  brand.title = t('header.home');
+  // Shown as 漢 alone, the link is named for where it goes.
+  if (crumb) brand.setAttribute('aria-label', t('header.home'));
+  else brand.removeAttribute('aria-label');
+  brand.parentElement.querySelectorAll('.crumb').forEach((node) => node.remove());
+  document.querySelector('.app-header').classList.toggle('is-crumb', !!crumb);
+  if (crumb) {
+    brand.after(
+      el('span', { class: 'crumb crumb-sep', 'aria-hidden': 'true' }, '›'),
+      el('span', { class: 'crumb crumb-page', id: `${p.name}-title` }, crumb));
+  }
 
   // The points open the Points page. A change since they last showed rises
   // from them, once they're on screen (a game hides the header).
@@ -63,7 +77,7 @@ function renderHeader() {
   wallet.replaceChildren(amount);
   wallet.title = t('header.points');
   wallet.setAttribute('aria-label', t('header.wallet', { amount: pts(now) }));
-  if (page().name === 'points') wallet.setAttribute('aria-current', 'page');
+  if (p.name === 'points') wallet.setAttribute('aria-current', 'page');
   else wallet.removeAttribute('aria-current');
   if (!document.body.classList.contains('is-game')) {
     if (shownPoints !== null && now !== shownPoints) bump(amount, now - shownPoints);
@@ -203,17 +217,20 @@ function playCard(mode) {
       el('div', { class: 'play-heading' },
         el('h2', { class: 'play-title', id: `play-${mode.id}` },
           status ? t('play.daily', { n: status.puzzle }) : t(`mode.${mode.id}.name`)),
-        el('p', { class: `play-line${done && status.entry.won ? ' is-won' : ''}` }, line))),
+        // Where the daily stands, and once it's done, the time to the next.
+        el('div', { class: 'play-status' },
+          el('p', { class: `play-line${done && status.entry.won ? ' is-won' : ''}` }, line),
+          done ? el('p', { class: 'play-countdown' },
+            el('span', {}, t('play.nextDaily')),
+            el('span', { class: 'countdown-time', 'data-countdown': '' }, clock(msToNextDaily()))) : null))),
     can && !going ? levelSwitches(done || !status ? t('play.levelNext') : t('play.level')) : null,
-    actions.length ? el('div', { class: 'play-actions' }, actions) : null,
-    done ? el('p', { class: 'play-countdown' }, t('play.nextDaily'), ' ',
-      el('span', { class: 'countdown-time', 'data-countdown': '' }, clock(msToNextDaily()))) : null);
+    actions.length ? el('div', { class: 'play-actions' }, actions) : null);
 }
 
 // How a game reads, worked through: the answer is 時間, whose parts in
 // writing order are 日 土 寸 門 日. The cells don't show where 時 ends;
 // like Wordle's letters, a part is green in its cell and yellow in another.
-// Open until the player has finished a game.
+// It opens the play page, always, as its intro.
 const DEMO = {
   rows: [
     [['口', 'miss'], ['日', 'near'], ['寸', 'hit'], ['木', 'miss'], ['月', 'miss']],
@@ -224,21 +241,17 @@ const DEMO = {
 };
 
 function howTo() {
-  const played = Object.values(save.history).some((games) => Object.keys(games || {}).length);
-  return el('details', { class: 'card howto', open: !played },
-    el('summary', { class: 'howto-head' },
-      el('h2', { class: 'howto-title' }, t('howto.title')),
-      el('span', { class: 'howto-chevron', 'aria-hidden': 'true' })),
-    el('div', { class: 'howto-body' },
-      el('p', { class: 'howto-lead' }, t('howto.lead')),
-      el('p', { class: 'howto-text' }, t('howto.body')),
-      el('div', { class: 'demo', 'aria-hidden': 'true' },
-        DEMO.rows.map((row) => el('div', { class: 'demo-row' },
-          el('span', { class: 'demo-slot' }, row.map(([part, state]) => el('span', { class: `tile is-cell is-${state}`, lang: 'ja' }, part))),
-          row.every(([, state]) => state === 'hit') ? el('span', { class: 'demo-answer kanji', lang: 'ja' }, DEMO.answer) : null))),
-      el('ul', { class: 'demo-legend' },
-        ['hit', 'near', 'miss'].map((state) =>
-          el('li', {}, el('span', { class: `legend-dot is-${state}-bg` }), t(`howto.${state}`))))));
+  return el('section', { class: 'card howto', 'aria-labelledby': 'howto-title' },
+    el('h2', { class: 'howto-title', id: 'howto-title' }, t('howto.title')),
+    el('p', { class: 'howto-lead' }, t('howto.lead')),
+    el('p', { class: 'howto-text' }, t('howto.body')),
+    el('div', { class: 'demo', 'aria-hidden': 'true' },
+      DEMO.rows.map((row) => el('div', { class: 'demo-row' },
+        el('span', { class: 'demo-slot' }, row.map(([part, state]) => el('span', { class: `tile is-cell is-${state}`, lang: 'ja' }, part))),
+        row.every(([, state]) => state === 'hit') ? el('span', { class: 'demo-answer kanji', lang: 'ja' }, DEMO.answer) : null))),
+    el('ul', { class: 'demo-legend' },
+      ['hit', 'near', 'miss'].map((state) =>
+        el('li', {}, el('span', { class: `legend-dot is-${state}-bg` }), t(`howto.${state}`)))));
 }
 
 let cards = null;
@@ -258,7 +271,7 @@ function renderCards(focusId = null) {
 }
 
 function renderPlay() {
-  app.replaceChildren(renderCards(), howTo());
+  app.replaceChildren(howTo(), renderCards());
   // The countdown ticks; at midnight the new daily takes the card.
   const day = localDate();
   playTimer = setInterval(() => {
@@ -322,7 +335,6 @@ function renderAll() {
   if (p.name === 'game') renderGame(p);
   else if (p.name === 'points') {
     view = openPoints(app, {
-      onBack: home,
       onLook: () => { save = store.get(); applyLook(); },
       onWallet: renderHeader
     });

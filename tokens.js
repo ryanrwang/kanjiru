@@ -217,6 +217,11 @@
         bg:     c.gray[0],
         border: c.gray[300],
         text:   c.gray[900]
+      },
+      // The win effects' examples on the Points page: petals and sparks.
+      effect: {
+        petal: c.sakura[300],
+        spark: c.kin[300]
       }
     },
 

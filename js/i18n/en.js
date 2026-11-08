@@ -22,7 +22,7 @@ export default {
     unit: 'pts'
   },
 
-  // How to play, under the play card: a worked example.
+  // How to play, the play page's intro: a worked example.
   howto: {
     title: 'How to play',
     lead: 'Guess the word from its parts.',
@@ -32,7 +32,7 @@ export default {
     miss: 'Not in the answer'
   },
 
-  // The play card: today's daily, the Hard and Guided switches, then keep playing.
+  // The play card: today's daily, the Hard and Guided switches, then play again.
   play: {
     soon: 'Coming soon',
     loading: 'Loading…',
@@ -57,7 +57,7 @@ export default {
     start: 'Play',
     continue: 'Continue',
     result: 'See result',
-    more: 'Keep playing',
+    more: 'Play again',
     nextDaily: 'Next daily in'
   },
 
@@ -192,7 +192,7 @@ export default {
     copied: 'Copied. Paste it anywhere.',
     copyManually: 'Select the text above and copy it.',
     nextDaily: 'Next daily in',
-    practice: 'Keep playing',
+    practice: 'Play again',
     again: 'Next puzzle'
   },
 
@@ -235,6 +235,7 @@ export default {
   shop: {
     buyFor: 'Buy · {cost} pts',
     confirm: 'Spend {cost} of your {have} pts on {name}? You’ll have {left} left.',
+    confirmTitle: 'Buy {name}?',
     confirmYes: 'Buy for {cost} pts',
     cancel: 'Cancel',
     have: 'Held {n}/{hold}',
