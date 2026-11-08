@@ -28,7 +28,7 @@ export const RULES = {
   // The share text after a game: one square per part, per guess, and a
   // mark when the game used a hint or power (the free meaning doesn't count).
   share: {
-    marks: { hit: '🟩', near: '🟨', other: '🟦', miss: '⬜' },
+    marks: { hit: '🟩', near: '🟨', other: '🟨', miss: '⬜' },
     hints: '💡'
   }
 };

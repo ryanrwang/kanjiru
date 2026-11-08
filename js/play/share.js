@@ -11,16 +11,17 @@
  * share.daily / share.practice in js/i18n/*.js.
  */
 
-// One line per guess; the kanji of a longer word are split by spaces.
-export function shareGrid(state, marks) {
+// One line per guess. split: a space between the kanji of a longer word
+// (only where the board showed them apart: levels.js showSplit).
+export function shareGrid(state, marks, split = true) {
   return state.guesses
-    .map((g) => g.slots.map((slot) => slot.tiles.map((tile) => marks[tile.mark] || marks.miss).join('')).join(' '))
+    .map((g) => g.slots.map((slot) => slot.tiles.map((tile) => marks[tile.mark] || marks.miss).join('')).join(split ? ' ' : ''))
     .join('\n');
 }
 
 // t: the i18n t(). share: rules.js share. url: added on its own line, if given.
 // The level's name comes from t('level.<id>.name').
-export function shareText({ state, mode, t, share, url = '' }) {
+export function shareText({ state, mode, t, share, url = '', split = true }) {
   const score = state.status === 'won' ? state.guesses.length : 'X';
   const head = t(state.daily ? 'share.daily' : 'share.practice', {
     numeral: mode.numeral,
@@ -29,5 +30,5 @@ export function shareText({ state, mode, t, share, url = '' }) {
     score: `${score}/${mode.guesses}`,
     hints: state.powers.length ? ` ${share.hints}` : ''
   });
-  return [head, shareGrid(state, share.marks), url].filter(Boolean).join('\n');
+  return [head, shareGrid(state, share.marks, split), url].filter(Boolean).join('\n');
 }

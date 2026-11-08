@@ -3,8 +3,8 @@
  * or a random practice one.
  *
  * The schedule is data/game/answers.json, written by tools/compile_game.py:
- * `epoch` is the date of puzzle 1, and each answer length has its answers
- * in a fixed shuffled order. Puzzle n plays answer n (wrapping round when
+ * `epoch` is the date of puzzle 1, and each list (a mode's `answers`) has
+ * its answers in a fixed shuffled order. Puzzle n plays answer n (wrapping round when
  * the list runs out). Dates are local, so the daily rolls over at the
  * player's midnight.
  */
@@ -36,7 +36,8 @@ export function puzzleDate(epoch, n) {
   return addDays(epoch, n - 1);
 }
 
-export const answersFor = (data, mode) => (data.answers && data.answers[String(mode.length)]) || [];
+// A mode's answers: its list in answers.json (modes.js answers).
+export const answersFor = (data, mode) => (data.answers && data.answers[mode.answers || String(mode.length)]) || [];
 
 // The daily for a mode on a date, or null (no dailies in this mode, no
 // answers yet, or before the epoch).

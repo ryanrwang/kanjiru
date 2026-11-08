@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { createEngine } from '../js/engine/game.js';
 import { daily } from '../js/engine/daily.js';
-import { MODES, POWERS, SKINS, LEVELS, validate } from '../js/registry.js';
+import { MODES, POWERS, SKINS, LEVELS, LEVEL, settingsLevel, validate } from '../js/registry.js';
 import { fixtureData, testConfig } from './helpers.js';
 
 test('a new 5-kanji mode and a new power need only catalogue entries', () => {
@@ -66,4 +66,18 @@ test('validate() finds no problems in the real catalogues', () => {
     console.warn = warn;
     delete globalThis.window;
   }
+});
+
+test('the Settings switches pick an offered level for each mix', () => {
+  assert.equal(settingsLevel(false, false), 'normal');
+  assert.equal(settingsLevel(true, false), 'hard');
+  assert.equal(settingsLevel(false, true), 'guided');
+  assert.equal(settingsLevel(true, true), 'guided-hard');
+  [[false, false], [true, false], [false, true], [true, true]].forEach(([hard, guided]) => {
+    const level = LEVEL[settingsLevel(hard, guided)];
+    assert.ok(level.offered && level.hard === hard && level.guided === guided);
+    assert.equal(level.realKanji, hard);
+    assert.equal(level.showSplit, guided);
+  });
+  assert.ok(!LEVEL.easy.offered, 'Easy is retired');
 });

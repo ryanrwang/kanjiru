@@ -38,8 +38,13 @@ CANDIDATES = {
         {"word": "日本", "length": 2, "reading": "にほん", "meanings": ["Japan"]},
         {"word": "明日", "length": 2, "reading": "あした", "meanings": ["tomorrow"]},
         {"word": "本日", "length": 2, "reading": "ほんじつ", "meanings": ["today"]},
+        {"word": "時間", "length": 2, "reading": "じかん", "meanings": ["time"]},
     ],
 }
+
+# One list per length, any number of parts: the tests below check the
+# schedule, not the part rule (that's test_lists_*).
+TEST_LISTS = {"1": {"lengths": (1,), "parts": (1, 99)}, "2": {"lengths": (2,), "parts": (1, 99)}}
 
 EPOCH = "2026-11-01"
 BEFORE = datetime.date(2026, 10, 1)   # nothing played yet
@@ -49,8 +54,8 @@ def review(*keep, cut=()):
     return {"decisions": {**{w: "keep" for w in keep}, **{w: "cut" for w in cut}}, "parts": {}}
 
 
-def compile_(rev, previous=None, today=BEFORE, epoch=EPOCH):
-    return cg.compile_answers(CANDIDATES, rev, previous, today, epoch)
+def compile_(rev, previous=None, today=BEFORE, epoch=EPOCH, lists=TEST_LISTS):
+    return cg.compile_answers(CANDIDATES, rev, previous, today, epoch, lists)
 
 
 class Answers(unittest.TestCase):
@@ -65,6 +70,22 @@ class Answers(unittest.TestCase):
         self.assertEqual(doc["answers"]["1"], ["明"])
         self.assertEqual(doc["answers"]["2"], ["日本"])
         self.assertEqual(doc["words"], {"日本": ["にほん", ["Japan"]]})
+
+    def test_lists_take_keep_words_by_parts_and_length(self):
+        # 明 has 2 parts, 日本 3 (日 + 木 一), 時間 4 (日 寺 + 門 日).
+        rule = {"main": {"lengths": (1, 2, 3, 4), "parts": (4, 6)}}
+        doc, report = compile_(review("明", "日本", "時間"), lists=rule)
+        self.assertEqual(doc["answers"], {"main": ["時間"]})
+        self.assertEqual(doc["words"], {"時間": ["じかん", ["time"]]})
+        self.assertEqual(report["lists"]["main"]["by_length"], {2: 1})
+
+    def test_lists_check_the_number_of_kanji(self):
+        doc, _ = compile_(review("明", "日本", "時間"), lists={"one": {"lengths": (1,), "parts": (1, 9)}})
+        self.assertEqual(doc["answers"], {"one": ["明"]})
+        self.assertEqual(doc["words"], {})
+
+    def test_the_real_main_list_wants_4_to_6_parts(self):
+        self.assertEqual(cg.LISTS["main"]["parts"], (4, 6))
 
     def test_lookalikes_leave_the_one_kanji_answers(self):
         doc, report = compile_(review("明", "未", "末"))
@@ -89,9 +110,9 @@ class Answers(unittest.TestCase):
         today = datetime.date(2026, 11, 2)
         later, report = compile_(review("明", "海", "間", cut=["時"]), previous=first, today=today)
         self.assertEqual(later["answers"]["1"][:3], played)
-        self.assertEqual(report["lengths"][1]["locked"], 3)
+        self.assertEqual(report["lists"]["1"]["locked"], 3)
         self.assertIn("間", later["answers"]["1"][3:])
-        self.assertEqual(report["lengths"][1]["locked_not_kept"], ["時"])
+        self.assertEqual(report["lists"]["1"]["locked_not_kept"], ["時"])
 
     def test_future_days_are_reshuffled_as_words_are_added(self):
         first, _ = compile_(review("明", "海"))
@@ -102,7 +123,7 @@ class Answers(unittest.TestCase):
         first, _ = compile_(review("明", "海", "時"))
         later, report = compile_(review("明", "海", "時"), previous=first,
                                  today=datetime.date(2026, 11, 20), epoch="2026-12-01")
-        self.assertEqual(report["lengths"][1]["locked"], 0)
+        self.assertEqual(report["lists"]["1"]["locked"], 0)
         self.assertEqual(later["epoch"], "2026-12-01")
 
 
@@ -131,14 +152,14 @@ class Files(unittest.TestCase):
             tmp = Path(tmp)
             (tmp / "candidates.json").write_text(json.dumps(CANDIDATES, ensure_ascii=False), encoding="utf-8")
             rev = tmp / "review.json"
-            rev.write_text(json.dumps(review("明")), encoding="utf-8")
+            rev.write_text(json.dumps(review("明", "時間"), ensure_ascii=False), encoding="utf-8")
             before = rev.read_bytes()
             out = tmp / "game"
             code = cg.main(["--candidates", str(tmp / "candidates.json"), "--review", str(rev),
                             "--out", str(out), "--today", "2026-10-01"])
             self.assertEqual(code, 0)
             self.assertEqual(rev.read_bytes(), before)
-            self.assertEqual(json.loads((out / "answers.json").read_text(encoding="utf-8"))["answers"]["1"], ["明"])
+            self.assertEqual(json.loads((out / "answers.json").read_text(encoding="utf-8"))["answers"], {"main": ["時間"]})
             self.assertIn("明", json.loads((out / "kanji.json").read_text(encoding="utf-8"))["kanji"])
 
 

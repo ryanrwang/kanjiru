@@ -246,6 +246,22 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   text-align: center;
 }
 
+/* Parts guesses: a group of cells per kanji, the answer beside the
+   solved row. */
+.demo.is-parts { gap: var(--spacing-xs); }
+.demo.is-parts .demo-row { gap: var(--spacing-md); }
+.demo.is-parts .demo-place { width: var(--layout-cell); }
+
+.demo-slot {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.demo-answer {
+  font-size: var(--font-size-xl);
+  line-height: var(--font-lineHeight-tight);
+}
+
 .demo-legend {
   display: flex;
   flex-wrap: wrap;
@@ -283,14 +299,16 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .tile.is-hit,
 .tile.is-near,
+.tile.is-other,
 .tile.is-miss {
   border-color: transparent;
   color: var(--color-feedback-text);
 }
 
-.tile.is-hit  { background: var(--color-feedback-hit); }
-.tile.is-near { background: var(--color-feedback-near); }
-.tile.is-miss { background: var(--color-feedback-miss); }
+.tile.is-hit   { background: var(--color-feedback-hit); }
+.tile.is-near  { background: var(--color-feedback-near); }
+.tile.is-other { background: var(--color-feedback-other); }
+.tile.is-miss  { background: var(--color-feedback-miss); }
 
 .is-hit-bg  { background: var(--color-feedback-hit); }
 .is-near-bg { background: var(--color-feedback-near); }
@@ -435,13 +453,7 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 }
 .chip.is-locked { color: var(--color-text-muted); }
 
-/* ── Level picker ──────────────────────────────────────────────────── */
-
-.level-picker {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
+/* ── Level line (Hard and Guided live in Settings) ─────────────────── */
 
 .level-desc {
   font-size: var(--font-size-xs);
@@ -449,10 +461,6 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   color: var(--color-text-secondary);
 }
 
-.level-points {
-  font-weight: var(--font-weight-bold);
-  white-space: nowrap;
-}
 
 /* ── Hints and powers ──────────────────────────────────────────────── */
 
@@ -599,6 +607,30 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
 }
+
+/* Settings switches (Hard, Guided): a checkbox and its name and note. */
+.switch-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+}
+
+.switch {
+  flex: 0 0 auto;
+  width: var(--spacing-lg);
+  height: var(--spacing-lg);
+  margin: 0;
+  accent-color: var(--color-action-primary-bg);
+}
+
+.switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.switch-name { font-weight: var(--font-weight-bold); }
 
 .sheet-note {
   font-size: var(--font-size-xs);
@@ -836,13 +868,13 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 /* Each mark's colour as a variable too, for the reveal below. */
 .tile.is-hit  { --mark-bg: var(--color-feedback-hit); }
 .tile.is-near { --mark-bg: var(--color-feedback-near); }
+.tile.is-other { --mark-bg: var(--color-feedback-other); }
 .tile.is-miss { --mark-bg: var(--color-feedback-miss); }
 
 /* ── Board ─────────────────────────────────────────────────────────── */
 
 /* At Normal and Hard, fitBoard() in js/play/screen.js sizes the board:
-   data-cell and data-frame pick layout tokens (largest that fit), and
-   data-layout puts the kanji frame beside the rows or above them. */
+   data-cell and data-frame pick layout tokens (the largest that fit). */
 .board {
   --board-cell: var(--layout-cell);
   --board-font: var(--font-size-lg);
@@ -880,6 +912,12 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   --board-kanji: var(--font-size-3xl);
 }
 
+.board[data-cell="xl"] {
+  --board-cell: var(--layout-cellXl);
+  --board-font: var(--font-size-2xl);
+  --board-kanji: var(--font-size-3xl);
+}
+
 .board[data-frame="sm"] {
   --board-frame: var(--layout-frameSm);
   --frame-1: var(--font-size-lg);
@@ -889,28 +927,6 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   --frame-inner: var(--font-size-xs);
 }
 
-.board[data-frame="md"] {
-  --board-frame: var(--layout-frameMd);
-  --frame-1: var(--font-size-2xl);
-  --frame-2: var(--font-size-xl);
-  --frame-3: var(--font-size-lg);
-  --frame-4: var(--font-size-md);
-  --frame-inner: var(--font-size-xl);
-  --frame-inset: var(--spacing-lg);
-  --frame-solved: var(--font-size-display);
-}
-
-.board[data-frame="lg"] {
-  --board-frame: var(--layout-frameLg);
-  --frame-1: var(--font-size-3xl);
-  --frame-2: var(--font-size-2xl);
-  --frame-3: var(--font-size-xl);
-  --frame-4: var(--font-size-lg);
-  --frame-cover: var(--font-size-hero);
-  --frame-inner: var(--font-size-2xl);
-  --frame-inset: var(--spacing-xl);
-  --frame-solved: var(--font-size-hero);
-}
 
 .board-grid,
 .board-rows {
@@ -933,18 +949,11 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--layout-cell);
+  min-width: var(--layout-cell);
   height: var(--layout-cell);
   font-size: var(--font-size-2xl);
   line-height: var(--font-lineHeight-tight);
 }
-
-.row-kanji.is-empty {
-  border: var(--stroke-thick) dashed var(--color-border-default);
-  border-radius: var(--radius-md);
-}
-
-.board-row.is-next .row-kanji { color: var(--color-text-accent); }
 
 .row-tiles {
   flex: 0 1 auto;
@@ -973,14 +982,11 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   white-space: nowrap;
 }
 
-/* Parts levels: the rows, centred, each with a column on the right of its
-   cells: the kanji it makes, or how many kanji fit. Every row is as wide
-   as the others, so the cells line up under the places. */
+/* Parts levels: the rows, centred, like Wordle's grid. Every row is as
+   wide as the others, so the cells line up under the frames and places. */
 .board.is-parts {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  gap: var(--spacing-md);
 }
 
 .board.is-parts .board-grid { align-items: flex-start; }
@@ -1015,24 +1021,6 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   align-items: flex-end;
 }
 
-.row-side {
-  flex: 0 0 auto;
-  width: var(--board-cell);
-}
-
-.board.is-parts .row-kanji {
-  height: var(--board-cell);
-  font-size: var(--board-kanji);
-}
-
-.row-count {
-  font-size: var(--font-size-xs);
-  line-height: var(--font-lineHeight-snug);
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
 .row-meaning {
   flex: 1 1 var(--spacing-3xl);
   min-width: 0;
@@ -1045,8 +1033,7 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   overflow: hidden;
 }
 
-/* The next guess, not scored yet. A part missing from this puzzle's
-   palette gets a red edge: that kanji can't be guessed here. */
+/* The next guess, not scored yet. */
 .tile.is-pending { border-style: dashed; }
 
 /* Parts levels: the next row's cells are buttons; the selected one takes
@@ -1065,40 +1052,35 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   background: transparent;
   border-color: var(--color-border-subtle);
 }
-.tile.is-absent {
-  border-color: var(--color-status-danger);
-  color: var(--color-text-muted);
+/* Hard: the kanji a row's parts make, hanging off its right edge so the
+   cells stay centred (fitBoard leaves room for it on both sides). */
+.board.has-made .board-row { position: relative; }
+
+.row-made {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: var(--spacing-2xl);
+  margin-left: var(--spacing-sm);
+  transform: translateY(-50%);
+  font-size: var(--font-size-md);
+  line-height: var(--font-lineHeight-tight);
+  color: var(--color-text-secondary);
 }
 
-.board-dots {
-  display: flex;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs) 0 var(--spacing-xs) var(--spacing-md);
-}
-
-.board-dot {
-  width: var(--spacing-sm);
-  height: var(--spacing-sm);
-  border-radius: var(--radius-full);
-  background: var(--color-border-default);
-}
-
-/* The kanji frame (parts levels): the answer's shape, filled in with the
+/* The kanji frames above the rows, laid out like a row so each centres
+   over its kanji's cells. Guided: the answer's shape, filled in with the
    parts found green. Top and bottom span it; left, inner and right share
    the middle; an outer part covers it all, with the inner inset.
-   Beside the rows, it lines up with the first row. Above them, it's laid
-   out like a row, each kanji's frame centred over its cells. */
+   Otherwise (.is-flat): only a solved kanji, as wide as its cells. */
 .board-frames:empty { display: none; }
 
 .board.is-parts .board-frames {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
+  padding-bottom: var(--spacing-xs);
 }
 
-.board[data-layout="above"] .board-frames { padding-bottom: var(--spacing-xs); }
-
-.board[data-layout="above"] .frame-slot {
+.frame-slot {
   flex: 0 0 auto;
   min-width: 0;
   display: flex;
@@ -1108,19 +1090,13 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   width: calc(var(--board-cell) * var(--n, 1) + var(--spacing-xs) * (var(--n, 1) - 1) + var(--spacing-sm) * var(--g, 0));
 }
 
-.board[data-layout="beside"] .board-frames .row-side { display: none; }
-
-/* Longer words: how many kanji still fit, under each kanji's frame. */
+/* How many kanji still fit, under each kanji's frame. */
 .frame-count {
   font-size: var(--font-size-xs);
   line-height: var(--font-lineHeight-snug);
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-.board[data-layout="beside"].has-shape .board-frames {
-  margin-top: calc(var(--spacing-lg) + var(--spacing-xs));
 }
 
 .kanji-frame {
@@ -1190,22 +1166,62 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   line-height: var(--font-lineHeight-tight);
 }
 
+.board.is-flat .board-frames .row-tiles { column-gap: var(--spacing-xs); }
+
+.board.is-flat .kanji-frame.is-solved {
+  width: 100%;
+  height: var(--board-cell);
+  font-size: var(--board-kanji);
+}
+
 .frame-part.is-new,
 .kanji-frame.is-new {
   animation: kanji-in var(--transition-base) var(--transition-bounce) both;
 }
 
-/* Parts levels: one place's parts at a time, picked here or by tapping a
-   cell. Longer words have more places, so the buttons stay on one line
-   each and share the rows they need. */
-.place-tabs { gap: var(--spacing-xs); }
-
-.place-tab {
-  flex: 1 1 auto;
-  justify-content: center;
-  padding: var(--spacing-sm);
-  white-space: nowrap;
+/* Parts levels: the parts as a keyboard pinned to the bottom, as in
+   Wordle. Keys stretch to fill each row; Delete and Guess close it. */
+.picker.is-keyboard {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0 var(--spacing-md);
+  background: var(--color-bg-page);
 }
+
+.picker.is-keyboard .picker-choices { gap: var(--spacing-xs); }
+
+.picker.is-keyboard .palette {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--layout-cell), 1fr));
+  gap: var(--spacing-xs);
+}
+
+.picker.is-keyboard .palette-tile { width: auto; }
+
+.keyboard-place {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.keyboard-keys {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.keyboard-keys .btn-primary { flex: 1; }
+
+.key-delete svg {
+  width: var(--spacing-lg);
+  height: var(--spacing-lg);
+}
+
+.hints-btn.is-open { color: var(--color-text-accent); }
+
+/* A game fills the screen like Wordle: the site header steps aside. */
+body.is-game .app-header { display: none; }
 
 /* Tile reveal (settings.tiles). Flip is the default; a tile style from
    js/config/skins.js gets its own block keyed by [data-tiles] (step 6).
@@ -1417,120 +1433,11 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .picker:empty { display: none; }
 
-.entry {
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-.entry.is-parts .btn-primary { flex: 1; }
-
-/* 20px text: phones don't zoom into it when it's tapped. */
-.entry-input {
-  flex: 1;
-  min-width: 0;
-  padding: var(--spacing-xs) var(--spacing-md);
-  border: var(--stroke-thick) solid var(--color-border-default);
-  border-radius: var(--radius-full);
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
-  font-family: var(--font-family-kanji);
-  font-size: var(--font-size-lg);
-}
-
-.entry-input::placeholder {
-  font-family: var(--font-family-ui);
-  font-size: var(--font-size-md);
-  color: var(--color-text-muted);
-}
-
-.entry-input:focus-visible {
-  outline: var(--stroke-thick) solid var(--color-border-focus);
-  outline-offset: 0;
-  border-color: transparent;
-}
-
-.strip-hint {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-}
-
-.strip {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.strip-head {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
-.strip-picked {
-  display: inline-flex;
-  gap: var(--spacing-xs);
-  font-size: var(--font-size-lg);
-  line-height: var(--font-lineHeight-tight);
-  color: var(--color-text-primary);
-}
-
-.strip-count { flex: 1; }
-
-/* Two rows, and a sliver of the third so it's clear the list scrolls. */
-.strip-kanji {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
-  max-height: calc(var(--layout-cell) * 2 + var(--spacing-md) + var(--spacing-xs));
-  overflow-y: auto;
-  padding: var(--spacing-xs);
-  margin: calc(var(--spacing-xs) * -1);
-}
-
-.strip-btn {
-  width: var(--layout-cell);
-  height: var(--layout-cell);
-  border-radius: var(--radius-md);
-  border: var(--stroke-thin) solid var(--color-border-subtle);
-  background: var(--color-bg-surface);
-  font-size: var(--font-size-xl);
-  line-height: var(--font-lineHeight-tight);
-  transition: border-color var(--transition-fast) var(--transition-ease);
-}
-
-.strip-btn:hover:not(:disabled) { border-color: var(--color-border-strong); }
-
-.strip-btn.is-chosen {
-  border-color: var(--color-border-focus);
-  background: var(--color-interactive-selected);
-  box-shadow: 0 0 0 var(--stroke-thin) var(--color-border-focus);
-}
-
-.strip-btn:disabled {
-  opacity: var(--opacity-disabled);
-  text-decoration: line-through;
-}
-
-/* The palette: tiles by stroke count, each group led by its number. */
+/* The palette: the keys, fewest strokes first. */
 .palette {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-xs);
-}
-
-.palette-group { display: contents; }
-
-.palette-strokes {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--spacing-md);
-  height: var(--layout-cell);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-muted);
 }
 
 .palette-tile {

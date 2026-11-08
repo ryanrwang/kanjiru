@@ -1,42 +1,68 @@
 /*
- * Difficulty levels. The player picks one on the start screen
- * (save.settings.level), and a game keeps the level it started with. Every
- * level plays the same daily, so puzzle numbers and streaks are shared.
+ * How the game plays. Everyone plays the same daily; Settings has two
+ * switches, Hard and Guided, and each mix of them is a level here
+ * (settingsLevel() picks it; save.settings.level keeps the id). A game
+ * keeps the level it started with, and its history entry records it.
+ *
+ * The game (docs/DESIGN.md, "The puzzle"): one cell per part of the answer,
+ * in writing order, across all its kanji, like a word's letters in Wordle.
+ * Green: the right part in the right cell. Yellow: in the word, another
+ * cell. Grey: not in the word. The cells don't show where one kanji ends.
  *
  * To add a level: an entry here, plus its name and description under
  * level.<id> in js/i18n/*.js.
  *
  * Fields
  *   id           stable key used in saves and history (never rename)
+ *   offered      a choice now. Retired levels stay so old games still read
+ *   hard         its Settings switches (offered levels): Hard and Guided
+ *   guided
  *   guess        what a guess is:
- *                  'kanji'  a kanji (a word in longer modes): picked from the
- *                           strip of kanji the picked parts make, or typed
- *                  'parts'  one part per empty cell. Each kanji of the answer
- *                           shows as many cells as it has parts
- *   places       'parts' guesses only: each cell is a place in the answer's
- *                shape (left, right, top …), shown on the board. A part is
- *                green in its place and yellow in another place, as for
- *                'kanji' guesses. false: green wherever it sits, no yellow
- *   realKanji    'parts' guesses only: the parts must make a real kanji, one
- *                with exactly these parts (in these places, with places).
- *                ('kanji' guesses always do.)
- *   countLeft    'parts' guesses only: the board shows how many kanji still
- *                fit everything the player has seen, after every guess
+ *                  'parts'  one part per cell
+ *                  'kanji'  a kanji or word (the retired Easy)
+ *   order        'parts' guesses: cells are the answer's parts in writing
+ *                order (above). false: each kanji is scored on its own
+ *   places       'parts' guesses not in order: each cell is a place in its
+ *                kanji (unused by the offered levels)
+ *   realKanji    'parts' guesses must make real kanji: in order, split any
+ *                way into jōyō kanji
+ *   useHints     like Wordle's hard mode: greens stay in their cells, and
+ *                every part found is used again
+ *   showSplit    the board shows each kanji's cells apart, their places and
+ *                a frame per kanji, and dims the keys that can't go in the
+ *                selected cell (the keyboard never changes size)
+ *   countLeft    under each kanji's frame, how many kanji still fit
  *   paletteScale the mode's palette size (modes.js palette) times this,
- *                rounded: fewer parts make each guess test more of them
+ *                rounded: 28 keys for everyone
  *   meanings     guessed kanji show their meaning on the board
  *   freeMeaning  the mode's free meaning (modes.js freeMeaning) applies;
  *                false = only the Meaning hint shows it
  *   points       multiplier on every point earned at this level
  */
+const PARTS = {
+  guess: 'parts', order: true, places: false, paletteScale: 0.7, meanings: false, freeMeaning: false
+};
+
 export const LEVELS = [
-  { id: 'easy', guess: 'kanji', places: false, realKanji: true, countLeft: false, paletteScale: 1,
-    meanings: true, freeMeaning: true, points: 0.5 },
-  { id: 'normal', guess: 'parts', places: true, realKanji: false, countLeft: true, paletteScale: 0.7,
-    meanings: false, freeMeaning: false, points: 1 },
-  { id: 'hard', guess: 'parts', places: true, realKanji: true, countLeft: false, paletteScale: 1,
-    meanings: false, freeMeaning: false, points: 1.5 }
+  { id: 'normal', offered: true, hard: false, guided: false, ...PARTS,
+    realKanji: false, useHints: false, showSplit: false, countLeft: false, points: 1 },
+  { id: 'hard', offered: true, hard: true, guided: false, ...PARTS,
+    realKanji: true, useHints: true, showSplit: false, countLeft: false, points: 1.5 },
+  { id: 'guided', offered: true, hard: false, guided: true, ...PARTS,
+    realKanji: false, useHints: false, showSplit: true, countLeft: true, points: 0.75 },
+  { id: 'guided-hard', offered: true, hard: true, guided: true, ...PARTS,
+    realKanji: true, useHints: true, showSplit: true, countLeft: true, points: 1.125 },
+  // Retired: Easy guessed whole kanji from a strip.
+  { id: 'easy', offered: false, hard: false, guided: false, guess: 'kanji', order: false, places: false,
+    realKanji: true, useHints: false, showSplit: false, countLeft: false, paletteScale: 1,
+    meanings: true, freeMeaning: true, points: 0.5 }
 ];
 
 // New players start here.
 export const DEFAULT_LEVEL = 'normal';
+
+// The offered level for the Settings switches.
+export function settingsLevel(hard, guided) {
+  const level = LEVELS.find((l) => l.offered && l.hard === !!hard && l.guided === !!guided);
+  return level ? level.id : DEFAULT_LEVEL;
+}

@@ -7,12 +7,12 @@
  * add one to its catalogue and it appears.
  *
  * Routes (the URL hash, so the phone's back gesture works):
- *   (none)          the start screen
- *   #k1             a mode's daily (js/play/screen.js)
- *   #k1/practice    a practice game in that mode
+ *   (none)            the start screen
+ *   #main             a mode's daily (js/play/screen.js)
+ *   #main/practice    another puzzle after it ("keep playing")
  */
 import {
-  MODES, MODE, LEVELS, LEVEL, SLOTS, SKINS, POWERS, ECONOMY, ACHIEVEMENT, validate
+  MODES, MODE, SLOTS, SKINS, POWERS, ECONOMY, ACHIEVEMENT, validate
 } from './js/registry.js';
 import { t, setLang, nextLanguage } from './js/i18n.js';
 import { el } from './js/dom.js';
@@ -155,46 +155,31 @@ const playable = (mode) => !!(mode.playable && game.data && answersFor(game.data
 
 const app = document.getElementById('app');
 
-// A worked example for each kind of guess (levels.js guess): answer 明
-// (日 left, 月 right). Parts rows show their kanji at a realKanji level,
-// or once solved, and their cells' places at a level with places.
+// A worked example: answer 時間, whose parts in writing order are
+// 日 土 寸 門 日. The cells don't show where 時 ends (Normal); like
+// Wordle's letters, a part is green in its cell and yellow in another.
 const DEMO = {
-  kanji: [
-    { guess: '間', parts: [['門', 'miss'], ['日', 'near']] },
-    { guess: '時', parts: [['日', 'hit'], ['寺', 'miss']] },
-    { guess: '明', parts: [['日', 'hit'], ['月', 'hit']] }
+  rows: [
+    [['口', 'miss'], ['日', 'near'], ['寸', 'hit'], ['木', 'miss'], ['月', 'miss']],
+    [['日', 'hit'], ['土', 'hit'], ['寸', 'hit'], ['日', 'near'], ['門', 'near']],
+    [['日', 'hit'], ['土', 'hit'], ['寸', 'hit'], ['門', 'hit'], ['日', 'hit']]
   ],
-  parts: [
-    { guess: '好', parts: [['女', 'miss'], ['子', 'miss']] },
-    { guess: '肌', parts: [['月', 'near'], ['几', 'miss']] },
-    { guess: '明', parts: [['日', 'hit'], ['月', 'hit']] }
-  ],
-  places: ['left', 'right']
+  answer: '時間'
 };
 
 let heroSection = null;
 
 function renderHero() {
-  const level = LEVEL[currentLevel()];
-  const parts = level.guess === 'parts';
-  const legend = (parts && !level.places ? ['hit', 'miss'] : ['hit', 'near', 'miss']).map((state) => [state, `hero.${state}`]);
-  const rows = DEMO[level.guess].map((row) => (parts && !level.places
-    ? { ...row, parts: row.parts.map(([part, state]) => [part, state === 'near' ? 'hit' : state]) } : row));
+  const legend = ['hit', 'near', 'miss'].map((state) => [state, `hero.${state}`]);
   const fresh = el('section', { class: 'card hero', 'aria-labelledby': 'hero-title' },
     el('p', { class: 'tagline', id: 'hero-title' },
       t('hero.title'),
-      el('small', {}, t(parts ? 'hero.partsBody' : 'hero.body'))
+      el('small', {}, t('hero.partsBody'))
     ),
-    el('div', { class: 'demo', 'aria-hidden': 'true' },
-      parts && level.places ? el('div', { class: 'demo-row demo-places' },
-        el('span', { class: 'demo-guess' }),
-        DEMO.places.map((pos) => el('span', { class: 'demo-place' }, t(`pos.${pos}`)))) : null,
-      rows.map((row) => {
-        const shown = !parts || level.realKanji || row.parts.every(([, state]) => state === 'hit');
-        return el('div', { class: 'demo-row' },
-          el('span', { class: 'demo-guess kanji', lang: 'ja' }, shown ? row.guess : ''),
-          row.parts.map(([part, state]) => el('span', { class: `tile is-${state}`, lang: 'ja' }, part)));
-      })
+    el('div', { class: 'demo is-parts', 'aria-hidden': 'true' },
+      DEMO.rows.map((row) => el('div', { class: 'demo-row' },
+        el('span', { class: 'demo-slot' }, row.map(([part, state]) => el('span', { class: `tile is-cell is-${state}`, lang: 'ja' }, part))),
+        row.every(([, state]) => state === 'hit') ? el('span', { class: 'demo-answer kanji', lang: 'ja' }, DEMO.answer) : null))
     ),
     el('p', { class: 'demo-legend' },
       legend.map(([state, key]) =>
@@ -219,9 +204,11 @@ function dailyText(status) {
   return started ? t('play.dailyStarted', { n: puzzle, level, guesses }) : t('play.dailyNew', { n: puzzle });
 }
 
+// The daily comes first; once it's done (or with no daily), keep playing.
 function modeCard(mode) {
   const can = playable(mode);
   const status = can ? dailyStatus(game.data, mode) : null;
+  const more = can && (!status || !!status.entry);
   const note = can ? dailyText(status)
     : !mode.playable || game.data ? t('play.soon')
       : game.error ? t('play.loadFailed') : t('play.loading');
@@ -231,33 +218,23 @@ function modeCard(mode) {
     el('span', { class: 'mode-meta' }, t('play.meta', { guesses: mode.guesses, mult: mode.points })),
     el('span', { class: 'mode-status' }, note),
     can ? el('div', { class: 'mode-actions' },
-      status ? el('button', { class: 'btn btn-primary btn-small', type: 'button', onclick: () => go(mode.id) },
-        status.entry ? t('play.result') : status.started ? t('play.continue') : t('play.daily')) : null,
-      el('button', { class: 'btn btn-secondary btn-small', type: 'button', onclick: () => go(`${mode.id}/practice`) },
-        t('play.practice'))) : null
+      more ? el('button', { class: 'btn btn-primary btn-small', type: 'button', onclick: () => go(`${mode.id}/practice`) },
+        t('play.practice')) : null,
+      status ? el('button', { class: `btn ${more ? 'btn-secondary' : 'btn-primary'} btn-small`, type: 'button', onclick: () => go(mode.id) },
+        status.entry ? t('play.result') : status.started ? t('play.continue') : t('play.daily')) : null) : null
   );
 }
 
-// The level for new games (save.settings.level). A game already begun
-// keeps its own, unless it has no moves yet (js/play/session.js).
-function levelPicker() {
-  const current = currentLevel();
-  return el('div', { class: 'level-picker' },
-    el('span', { class: 'look-slot-name', id: 'level-label' }, t('play.level')),
-    el('div', { class: 'chip-row', role: 'group', 'aria-labelledby': 'level-label' },
-      LEVELS.map((level) => el('button', {
-        class: 'chip', type: 'button',
-        'aria-pressed': String(level.id === current),
-        onclick: () => {
-          if (level.id === current) return;
-          store.update((s) => { s.settings.level = level.id; });
-          renderHero();
-          renderModes();
-        }
-      }, t(`level.${level.id}.name`)))),
-    el('p', { class: 'level-desc' },
-      t(`level.${current}.desc`), ' ',
-      el('span', { class: 'level-points' }, t('play.levelPoints', { mult: LEVEL[current].points }))));
+// The level new games start at, set by the Hard and Guided switches in
+// Settings (js/settings.js). A game already begun keeps its own, unless it
+// has no moves yet (js/play/session.js).
+function levelLine() {
+  return el('p', { class: 'level-desc' },
+    t('play.levelNow', { level: t(`level.${currentLevel()}.name`) }), ' ',
+    el('button', {
+      class: 'btn btn-ghost btn-small', type: 'button',
+      onclick: () => openSettings({ onChange: reloadSave })
+    }, t('play.levelChange')));
 }
 
 let modesSection = null;
@@ -266,8 +243,8 @@ function renderModes() {
   const fresh = el('section', { class: 'section', 'aria-labelledby': 'modes-title' },
     el('h2', { class: 'section-title', id: 'modes-title' },
       t('play.title'), el('span', { class: 'section-note' }, t('play.note'))),
-    levelPicker(),
-    el('div', { class: 'mode-grid' }, MODES.map(modeCard))
+    levelLine(),
+    el('div', { class: 'mode-grid' }, MODES.filter((m) => m.listed).map(modeCard))
   );
   if (modesSection && modesSection.isConnected) modesSection.replaceWith(fresh);
   modesSection = fresh;
@@ -416,6 +393,7 @@ function renderAll() {
   renderHeader();
   if (screen) { screen.destroy(); screen = null; }
   const r = route();
+  document.body.classList.toggle('is-game', !!r);
   if (r) renderGame(r);
   else renderStart();
 }

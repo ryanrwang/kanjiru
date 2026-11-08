@@ -1,6 +1,10 @@
 /*
- * Settings panel, opened from the gear in the header. For now it has one
- * job: moving progress to another device.
+ * Settings panel, opened from the gear in the header.
+ *
+ *   Game       two switches, Hard and Guided, which pick the level of new
+ *              games (js/config/levels.js settingsLevel)
+ *
+ * And moving progress to another device:
  *
  *   Send       a one-time code from api/transfer.php, with a countdown
  *   Receive    enter a code from the other device
@@ -12,10 +16,11 @@
  * (rules in MERGE, js/store.js). The choice comes before the code is used,
  * so cancelling doesn't waste it.
  *
- * openSettings({ onChange }) calls onChange() after a save arrives, so the
- * page can redraw with the new progress, looks and language.
+ * openSettings({ onChange }) calls onChange() after a save arrives or a
+ * switch changes, so the page can redraw.
  */
 import { t, has } from './i18n.js';
+import { LEVEL, DEFAULT_LEVEL, settingsLevel } from './registry.js';
 import { el } from './dom.js';
 import * as store from './store.js';
 import { sendSave, receiveSave, normalizeCode } from './transfer.js';
@@ -70,6 +75,7 @@ function render() {
       el('h2', { class: 'sheet-title', id: 'settings-title' }, t('settings.title')),
       close
     ),
+    renderGame(),
     el('p', { class: 'sheet-intro' }, t('transfer.intro')),
     store.isPersistent() ? null : el('p', { class: 'transfer-status is-error' }, t('transfer.notSaving')),
     renderSend(),
@@ -83,6 +89,40 @@ function render() {
     : focused && dialog.querySelector(`[data-id="${focused}"]`);
   if (target) target.focus();
   startCountdown();
+}
+
+// ── Game: Hard and Guided ────────────────────────────────────────────
+
+function savedLevel() {
+  const level = LEVEL[store.get().settings.level];
+  return level && level.offered ? level : LEVEL[DEFAULT_LEVEL];
+}
+
+function renderGame() {
+  const level = savedLevel();
+  const toggle = (key, on, mult) => el('label', { class: 'switch-row' },
+    el('input', {
+      class: 'switch', type: 'checkbox', 'data-id': `level-${key}`, checked: on,
+      'aria-labelledby': `switch-${key}-name`, 'aria-describedby': `switch-${key}-note`,
+      onchange: (event) => setSwitch(key, event.target.checked)
+    }),
+    el('span', { class: 'switch-text' },
+      el('span', { class: 'switch-name', id: `switch-${key}-name` }, t(`settings.${key}.name`)),
+      el('span', { class: 'sheet-note', id: `switch-${key}-note` }, t(`settings.${key}.body`, { mult }))));
+  return el('section', { class: 'sheet-section', 'aria-labelledby': 'game-settings-title' },
+    el('h3', { class: 'sheet-section-title', id: 'game-settings-title' }, t('settings.game.title')),
+    el('p', { class: 'sheet-note' }, t('settings.game.body')),
+    toggle('hard', level.hard, LEVEL[settingsLevel(true, false)].points),
+    toggle('guided', level.guided, LEVEL[settingsLevel(false, true)].points));
+}
+
+function setSwitch(key, on) {
+  const level = savedLevel();
+  const hard = key === 'hard' ? on : level.hard;
+  const guided = key === 'guided' ? on : level.guided;
+  store.update((s) => { s.settings.level = settingsLevel(hard, guided); });
+  onChange();
+  render();
 }
 
 function section(id, ...content) {

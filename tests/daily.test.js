@@ -78,3 +78,12 @@ test('history keys: puzzle numbers for dailies, "p…" for practice', () => {
 test('the countdown to the next daily', () => {
   assert.equal(msToNextDaily(new Date(2026, 10, 7, 23, 0, 0)), 3600000);
 });
+
+test('the main mode plays its own list, with answers of any length', () => {
+  const mixed = fixtureData({ answers: { main: ['日本', '明'] }, epoch: '2026-11-01' });
+  assert.equal(MODE.main.length, null);
+  assert.equal(daily(mixed, MODE.main, '2026-11-01').answer, '日本');
+  assert.equal(daily(mixed, MODE.main, '2026-11-02').answer, '明');
+  assert.equal(daily(mixed, MODE.k1, '2026-11-01'), null, 'a retired mode has no list');
+  assert.ok(['日本', '明'].includes(practice(mixed, MODE.main, { rng: () => 0 }).answer));
+});

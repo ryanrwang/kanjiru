@@ -20,9 +20,10 @@ export const ECONOMY = {
   // counted from the mode's own rows, so an extra-guess row never pays.
   solve: { base: 80, perUnusedGuess: 20 },
 
-  // Daily puzzles pay more than practice ones.
+  // The daily, and every puzzle played after it ("keep playing"). They pay
+  // the same: more puzzles earn normally, with no limit.
   dailyMultiplier: 1,
-  practiceMultiplier: 0.5,
+  practiceMultiplier: 1,
 
   // Paid each time a daily streak reaches these lengths.
   streakRewards: [

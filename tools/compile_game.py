@@ -3,8 +3,9 @@
   * kanji.json: every joyo kanji (every kanji a player may guess) with its
     strokes, JLPT level, frequency, meanings, readings and parts.
   * answers.json: the daily schedule. `epoch` is the date of puzzle 1, and
-    each answer length has its answers in a fixed shuffled order; `words`
-    has the reading and meanings of each answer of 2+ kanji.
+    each list in LISTS (one per mode: js/config/modes.js `answers`) has its
+    answers in a fixed shuffled order; `words` has the reading and meanings
+    of each answer of 2+ kanji.
 
 Answers are only the words marked Keep on the review page (data/review.json,
 read only). With no Keep words, the answer lists are empty and the summary
@@ -46,6 +47,14 @@ SHUFFLE_SEED = "kanjiru"
 # Days after today whose answers are locked too (time zones ahead of this
 # computer may already be on tomorrow).
 LOCK_AHEAD_DAYS = 1
+
+# The answer lists, one per mode (js/config/modes.js `answers`). A Keep word
+# goes in each list whose rules it meets: how many kanji it has, and how
+# many parts (palette tiles) they have in all. "main" is the daily: 4-6
+# parts, like Wordle's five letters, in 1 to 4 kanji.
+LISTS = {
+    "main": {"lengths": (1, 2, 3, 4), "parts": (4, 6)},
+}
 
 # Kanji with the same parts in the same places as another joyo kanji (未/末)
 # can't be told apart by scoring, so they leave the one-kanji answers.
@@ -108,48 +117,66 @@ def puzzle_number(epoch: str, day: datetime.date) -> int:
     return (day - datetime.date.fromisoformat(epoch)).days + 1
 
 
+def part_count(candidates: dict, word: str) -> int | None:
+    """How many parts (palette tiles) a word's kanji have in all, or None
+    when a kanji has no breakdown."""
+    kanji = candidates["kanji"]
+    if any(ch not in kanji for ch in word):
+        return None
+    return sum(len(kanji[ch]["parts"]) for ch in word)
+
+
 def compile_answers(candidates: dict, review: dict | None, previous: dict | None,
-                    today: datetime.date, epoch: str = EPOCH) -> tuple[dict, dict]:
+                    today: datetime.date, epoch: str = EPOCH, lists: dict = LISTS) -> tuple[dict, dict]:
     """Returns (answers.json content, report for the summary)."""
     decisions = (review or {}).get("decisions") or {}
     keep = {word for word, decision in decisions.items() if decision == "keep"}
     by_word = {w["word"]: w for w in candidates["words"]}
     twins = set() if ALLOW_LOOKALIKE_ANSWERS else lookalikes(candidates)
 
-    lengths = sorted({w["length"] for w in candidates["words"]})
     prev_answers = (previous or {}).get("answers") or {}
     prev_words = (previous or {}).get("words") or {}
     same_epoch = (previous or {}).get("epoch") == epoch
     locked_count = max(0, puzzle_number(epoch, today) + LOCK_AHEAD_DAYS)
 
+    def fits(word: str, rule: dict) -> bool:
+        info = by_word[word]
+        parts = part_count(candidates, word)
+        low, high = rule["parts"]
+        return (info["length"] in rule["lengths"] and parts is not None and low <= parts <= high
+                and not (info["length"] == 1 and word in twins))
+
     report = {
         "keep": len(keep),
         "not_candidates": sorted(w for w in keep if w not in by_word),
         "lookalikes": sorted(w for w in keep if w in by_word and by_word[w]["length"] == 1 and w in twins),
-        "lengths": {},
+        "lists": {},
     }
     answers, words = {}, {}
-    for length in lengths:
-        wanted = {w for w in keep if w in by_word and by_word[w]["length"] == length
-                  and not (length == 1 and w in twins)}
-        previous_list = prev_answers.get(str(length), []) if same_epoch else []
+    for name, rule in lists.items():
+        wanted = {w for w in keep if w in by_word and fits(w, rule)}
+        previous_list = prev_answers.get(name, []) if same_epoch else []
         locked = previous_list[:min(locked_count, len(previous_list))]
         rest = sorted(wanted - set(locked))
-        random.Random(f"{SHUFFLE_SEED}:{length}").shuffle(rest)
-        answers[str(length)] = locked + rest
-        report["lengths"][length] = {
+        random.Random(f"{SHUFFLE_SEED}:{name}").shuffle(rest)
+        answers[name] = locked + rest
+        lengths = defaultdict(int)
+        for word in answers[name]:
+            lengths[len(word)] += 1
+        report["lists"][name] = {
             "answers": len(locked) + len(rest),
             "locked": len(locked),
             "locked_not_kept": sorted(w for w in locked if w not in wanted),
+            "by_length": dict(sorted(lengths.items())),
         }
-        if length > 1:
-            for word in answers[str(length)]:
+        for word in answers[name]:
+            if len(word) > 1 and word not in words:
                 info = by_word.get(word)
                 words[word] = [info.get("reading", ""), info.get("meanings", [])] if info else prev_words.get(word, ["", []])
 
     doc = {
         "about": "The daily schedule: puzzle n (n = days since epoch + 1) plays answer n of its "
-                 "length, wrapping round. Only words marked Keep on the review page. Written by "
+                 "mode's list, wrapping round. Only words marked Keep on the review page. Written by "
                  "tools/compile_game.py; words gives each 2+ kanji answer's [reading, meanings].",
         "epoch": epoch,
         "answers": answers,
@@ -178,6 +205,12 @@ def answers_text(doc: dict) -> str:
     lines.append('"words":{' + (f"\n{word_lines}\n" if word_lines else "") + "}")
     lines.append("}")
     return "\n".join(lines) + "\n"
+
+
+def write_text(path: Path, text: str) -> None:
+    """UTF-8 with \n line ends on every system (Python 3.9 has no write_text newline)."""
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
 
 
 def read_json(path: Path):
@@ -211,8 +244,8 @@ def main(argv: list[str] | None = None) -> int:
     text = answers_text(doc)
 
     args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "kanji.json").write_text(kanji_text, encoding="utf-8", newline="\n")
-    (args.out / "answers.json").write_text(text, encoding="utf-8", newline="\n")
+    write_text(args.out / "kanji.json", kanji_text)
+    write_text(args.out / "answers.json", text)
 
     print(f"kanji.json: {len(candidates['kanji'])} kanji, {size_note(kanji_text)}")
     print(f"answers.json: {size_note(text)}, epoch {doc['epoch']} "
@@ -224,10 +257,11 @@ def main(argv: list[str] | None = None) -> int:
               "Mark words Keep on the review page, then run this again.")
     else:
         print(f"\nKeep words: {report['keep']}")
-    for length, info in report["lengths"].items():
+    for name, info in report["lists"].items():
         days = info["answers"]
         note = "a year of dailies" if days >= DAYS_IN_A_YEAR else f"{DAYS_IN_A_YEAR - days} short of a year"
-        print(f"  {length} kanji: {days} answers ({note}); {info['locked']} locked as already played")
+        mix = ", ".join(f"{n} kanji: {c}" for n, c in info["by_length"].items())
+        print(f"  {name}: {days} answers ({note}; {mix or 'none'}); {info['locked']} locked as already played")
         if info["locked_not_kept"]:
             print(f"    still scheduled though no longer Keep (day already played): {' '.join(info['locked_not_kept'])}")
     if report["lookalikes"]:

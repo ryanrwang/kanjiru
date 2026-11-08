@@ -45,16 +45,22 @@ function fromHistory(engine, start, entry) {
   return { ...state, status: entry.won ? 'won' : 'lost', powers: (entry.powers || []).slice() };
 }
 
-// The level new games start at: the player's pick, or the default.
+// The level new games start at: the player's Settings (an offered level),
+// or the default.
 export function currentLevel() {
   const id = store.get().settings.level;
-  return LEVEL[id] ? id : DEFAULT_LEVEL;
+  return LEVEL[id] && LEVEL[id].offered ? id : DEFAULT_LEVEL;
 }
 
-// A saved game with no moves yet moves to the level picked since.
+// A saved game with no moves yet moves to the level picked since. One on
+// the go at a retired level (Easy) starts again, at the current level.
 function atLevel(saved) {
   const level = currentLevel();
-  if (!saved || !saved.start || (saved.log || []).length || saved.start.level === level) return saved;
+  if (!saved || !saved.start) return saved;
+  const moved = (saved.log || []).length > 0;
+  const offered = LEVEL[saved.start.level] && LEVEL[saved.start.level].offered;
+  if (moved && !offered) return null;
+  if (moved || saved.start.level === level) return saved;
   return { ...saved, start: { ...saved.start, level } };
 }
 

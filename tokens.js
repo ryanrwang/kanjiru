@@ -207,6 +207,9 @@
       feedback: {
         hit:  c.feedback.hit,
         near: c.feedback.near,
+        // In another kanji of the word: yellow too, like a letter in the
+        // wrong spot. Its own token, so a colour-blind mode can split it.
+        other: c.feedback.near,
         miss: c.feedback.miss,
         text: c.white
       },
@@ -279,11 +282,10 @@
       cellSm:    s[32],
       cellMd:    s[48],
       cellLg:    s[56],
-      // The kanji built from found parts, picked the same way.
+      cellXl:    s[64],
+      // The kanji built from found parts, above each kanji's cells.
       frameSm:   s[64],
-      frame:     s[80],
-      frameMd:   s[96],
-      frameLg:   s[128]
+      frame:     s[80]
     },
 
     radius: {
