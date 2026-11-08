@@ -94,6 +94,9 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
         el('p', { class: 'answer-readings' }, readingNodes(info.reading)))),
     el('div', { class: 'answer-parts' },
       el('span', { class: 'answer-label' }, t('result.parts')), answerParts),
+    // EDRDG asks for its credit where its words show.
+    el('p', { class: 'result-source' }, t('result.source'), ' ',
+      el('a', { href: '#about' }, t('result.credits'))),
 
     el('dl', { class: 'result-stats' },
       game.exact ? el('div', { class: 'result-stat' },

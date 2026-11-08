@@ -461,6 +461,10 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 }
 .btn-secondary:hover:not(:disabled) { background: var(--color-action-secondary-hover); }
 
+/* A link drawn as a button (About in Settings) keeps the button's look. */
+a.btn { text-decoration: none; }
+a.btn-secondary:hover { color: var(--color-action-secondary-text); }
+
 .btn-ghost { color: var(--color-text-secondary); }
 .btn-ghost:hover:not(:disabled) { background: var(--color-interactive-hover); }
 
@@ -590,7 +594,10 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   height: var(--spacing-lg);
   margin: 0;
   border-radius: var(--radius-full);
-  background: var(--color-border-default);
+  /* Off: a sunken track with a strong edge and a strong knob, so the edge
+     stands out 3:1 on any card and the knob 3:1 on the track, in every look. */
+  background: var(--color-bg-sunken);
+  box-shadow: inset 0 0 0 var(--stroke-thin) var(--color-border-strong);
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
@@ -605,13 +612,16 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   width: var(--spacing-md);
   height: var(--spacing-md);
   border-radius: var(--radius-full);
-  background: var(--color-action-primary-text);
+  background: var(--color-border-strong);
   box-shadow: var(--shadow-sm);
   transition: transform var(--transition-fast) var(--transition-ease);
 }
 
-.switch:checked { background: var(--color-action-primary-bg); }
-.switch:checked::before { transform: translateX(var(--spacing-md)); }
+.switch:checked { background: var(--color-action-primary-bg); box-shadow: none; }
+.switch:checked::before {
+  background: var(--color-action-primary-text);
+  transform: translateX(var(--spacing-md));
+}
 .switch:disabled { cursor: default; }
 .switch:focus-visible { border-radius: var(--radius-full); }
 
@@ -642,10 +652,11 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .segment:hover:not(:disabled) { color: var(--color-text-primary); }
 
+/* The picked one has an edge, so it stands out 3:1 from the track. */
 .segment[aria-pressed="true"] {
   background: var(--color-bg-surface);
   color: var(--color-text-primary);
-  box-shadow: var(--shadow-sm);
+  box-shadow: inset 0 0 0 var(--stroke-thin) var(--color-border-strong), var(--shadow-sm);
 }
 
 .segment:disabled { opacity: var(--opacity-disabled); }
@@ -1815,6 +1826,12 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   color: var(--color-text-accent);
 }
 
+/* The dictionary credit, small, under the answer (EDRDG's terms). */
+.result-source {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
 /* Like the play card: the buttons share the width, and stack when narrow. */
 .result-actions .btn {
   flex: 1 1 var(--layout-cardMin);
@@ -1902,7 +1919,8 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   padding: 0 var(--spacing-xs);
   border-radius: var(--radius-full);
   background: var(--color-bg-raised);
-  color: var(--color-status-success);
+  /* The skin's accent: green fell under 4.5:1 on some skins' sheets. */
+  color: var(--color-text-accent);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   white-space: nowrap;
@@ -2539,3 +2557,101 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   .toast,
   .result-points.is-new { animation: none; }
 }
+
+/* ── Home-screen tip (app.js) and steps (js/install.js) ────────────── */
+
+.install-tip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+}
+
+.install-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-snug);
+}
+
+.install-why { color: var(--color-text-secondary); }
+
+.install-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin: 0;
+  padding-left: var(--spacing-lg);
+  line-height: var(--font-lineHeight-snug);
+}
+
+/* In Settings, between the sheet's notes and its sub-titles. */
+.sheet-section .install-steps { font-size: var(--font-size-sm); }
+
+.install-note {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.install-tip .btn-row { margin-top: var(--spacing-xs); }
+
+/* ── About page (js/about.js) ──────────────────────────────────────── */
+
+.about-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+}
+
+.about-by { font-size: var(--font-size-xs); }
+
+.about-lead {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-snug);
+}
+
+.about-text {
+  color: var(--color-text-secondary);
+  line-height: var(--font-lineHeight-normal);
+}
+
+.about-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+}
+
+.credit-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.credit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md);
+}
+
+.credit-name { font-weight: var(--font-weight-bold); }
+
+.credit-by,
+.credit-links { font-size: var(--font-size-xs); }
+
+.credit-by { color: var(--color-text-secondary); }
+.credit-use { line-height: var(--font-lineHeight-snug); }
+
+.credit-links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--spacing-xs);
+  overflow-wrap: anywhere;
+}
+
+.credit-sep { color: var(--color-text-muted); }

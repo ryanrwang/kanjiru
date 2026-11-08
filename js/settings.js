@@ -3,6 +3,8 @@
  *
  *   Language    the interface language (follows the device until picked)
  *   Appearance  light, dark, or the device's (a skin with one scheme fixes it)
+ *   Home screen how to add Kanjiru to it (js/install.js), with the browser's
+ *               own Install button where it offers one; gone once installed
  *   Move your progress to another device:
  *     Send       a one-time code from api/transfer.php, with a countdown
  *     Receive    enter a code from the other device
@@ -10,6 +12,7 @@
  *                that needs no server
  *   Debug       for testing: the answer on the game's keys (js/play/screen.js)
  *               and points to add, as their own ledger entries ('debug')
+ *   About       a link to the About page and its credits (js/about.js)
  *
  * The Hard and Guided switches are on the play card (app.js).
  *
@@ -27,6 +30,7 @@ import { ECONOMY } from './registry.js';
 import { el, switchRow, segmented } from './dom.js';
 import * as store from './store.js';
 import { sendSave, receiveSave, normalizeCode } from './transfer.js';
+import { installed, platform, canPrompt, promptInstall, onInstallChange, installSteps } from './install.js';
 
 const ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
@@ -52,6 +56,7 @@ export function openSettings(options = {}) {
     dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
     dialog.addEventListener('close', stopCountdown);
     document.body.append(dialog);
+    onInstallChange(() => { if (dialog.open) render(); });
   }
   ui.status = {};
   ui.ask = null;
@@ -81,6 +86,7 @@ function render() {
     ),
     renderLanguage(),
     renderScheme(),
+    renderInstall(),
     el('section', { class: 'sheet-section', 'aria-labelledby': 'transfer-title' },
       el('h3', { class: 'sheet-section-title', id: 'transfer-title' }, t('transfer.title')),
       el('p', { class: 'sheet-note' }, t('transfer.intro')),
@@ -88,7 +94,8 @@ function render() {
       renderSend(),
       renderReceive(),
       renderText()),
-    renderDebug()
+    renderDebug(),
+    renderAbout()
   ));
 
   // Keep the scroll and keyboard focus where they were; when the choice
@@ -134,6 +141,41 @@ function renderScheme() {
       onPick: (id) => { store.update((s) => { s.settings.scheme = id === 'auto' ? null : id; }); changed(); }
     }),
     fixed ? el('p', { class: 'sheet-note sheet-row-note' }, t('settings.scheme.fixed', { name: t(`skin.theme.${look.theme}`) })) : null);
+}
+
+// ── Home screen ──────────────────────────────────────────────────────
+
+// This phone's steps, or both phones' on a computer; the save text below
+// is the backup either way.
+function renderInstall() {
+  if (installed()) return null;
+  const p = platform();
+  const both = p === 'other';
+  return el('section', { class: 'sheet-section', 'aria-labelledby': 'install-title' },
+    el('h3', { class: 'sheet-section-title', id: 'install-title' }, t('install.title')),
+    el('p', { class: 'sheet-note' }, t(`install.why.${p}`)),
+    (both ? ['ios', 'android'] : [p]).map((q) => (both
+      ? el('div', { class: 'sheet-sub', role: 'group', 'aria-labelledby': `install-${q}-title` },
+        el('h4', { class: 'sheet-sub-title', id: `install-${q}-title` }, t(`install.${q}.name`)),
+        installSteps(q))
+      : installSteps(q))),
+    canPrompt() ? el('div', { class: 'btn-row' },
+      el('button', {
+        class: 'btn btn-primary', type: 'button', 'data-id': 'install',
+        onclick: async () => { await promptInstall(); render(); }
+      }, t('install.button'))) : null,
+    el('p', { class: 'sheet-note' }, t('install.backup')));
+}
+
+// ── About ────────────────────────────────────────────────────────────
+
+function renderAbout() {
+  return el('section', { class: 'sheet-section sheet-row', 'aria-labelledby': 'about-link-title' },
+    el('h3', { class: 'sheet-section-title', id: 'about-link-title' }, t('about.title')),
+    el('a', {
+      class: 'btn btn-secondary btn-small', href: '#about', 'data-id': 'about',
+      onclick: () => dialog.close()
+    }, t('about.open')));
 }
 
 // ── Debug ────────────────────────────────────────────────────────────

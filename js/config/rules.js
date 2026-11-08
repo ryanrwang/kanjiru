@@ -25,6 +25,11 @@ export const RULES = {
   // Practice answers skip the most recent ones played in that mode.
   practice: { avoidRecent: 30 },
 
+  // The play page's tip to add Kanjiru to the home screen (js/install.js):
+  // on a phone, once there's progress to lose. "Not now" puts it off this
+  // many days. iOS clears an unvisited site's saves after 7.
+  installTip: { laterDays: 14 },
+
   // The share text after a game: one square per part, per guess, and a
   // mark when the game used a hint or power (the free meaning doesn't count).
   // show: false hides it on the result card for now (2026-11-08).

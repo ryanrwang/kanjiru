@@ -7,10 +7,13 @@
  * in js/config/ and the text in js/i18n/: add an entry and it appears.
  *
  * Pages (the URL hash, so the phone's back gesture works):
- *   (none)            the play page: a play card per listed mode, with the
- *                     Hard and Guided switches on it, then how to play
+ *   (none)            the play page: how to play, then a play card per
+ *                     listed mode with the Hard and Guided switches on it,
+ *                     then, on a phone, a tip to add it to the home screen
  *   #points           the Points page (js/points.js): the wallet, looks,
  *                     hints and achievements, and buying
+ *   #about            the About page (js/about.js): the game, your progress
+ *                     and the credits; opened from Settings
  *   #main             a mode's daily (js/play/screen.js)
  *   #main/practice    another puzzle after it ("keep playing")
  */
@@ -20,6 +23,8 @@ import { el, switchRow } from './js/dom.js';
 import * as store from './js/store.js';
 import { openSettings } from './js/settings.js';
 import { openPoints } from './js/points.js';
+import { openAbout } from './js/about.js';
+import { tipDue, platform, canPrompt, promptInstall, onInstallChange, installSteps } from './js/install.js';
 import { toast, bump } from './js/toast.js';
 import { loadData } from './js/engine/data.js';
 import { createEngine } from './js/engine/game.js';
@@ -46,6 +51,8 @@ function applyLook() {
 }
 
 let shownPoints = null;   // the points the header last showed on screen
+// Pages other than home, and their names in the breadcrumb.
+const CRUMBS = { points: 'points.title', about: 'about.title' };
 
 function renderHeader() {
   const settingsBtn = document.getElementById('settings-open');
@@ -55,7 +62,7 @@ function renderHeader() {
   // Home names the game; another page shows where you are: 漢 › Points.
   const brand = document.getElementById('brand');
   const p = page();
-  const crumb = p.name === 'points' ? t('points.title') : null;
+  const crumb = CRUMBS[p.name] ? t(CRUMBS[p.name]) : null;
   brand.title = t('header.home');
   // Shown as 漢 alone, the link is named for where it goes.
   if (crumb) brand.setAttribute('aria-label', t('header.home'));
@@ -136,10 +143,11 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 // Loaded once in the background; the play page draws straight away and its
 // cards fill in when it arrives.
 
-const game = { data: null, engine: null, glyph: null, error: false };
+const game = { data: null, engine: null, glyph: null, error: false, moved: 0 };
 
 const ready = loadData().then((data) => {
-  store.useEpoch(data.epoch);   // dailies from an earlier epoch become keep-playing games
+  // First: dailies from an earlier epoch become keep-playing games.
+  game.moved = store.useEpoch(data.epoch);
   game.data = data;
   game.engine = createEngine(data);
   game.glyph = glyphMaker(data.tiles);
@@ -254,6 +262,40 @@ function howTo() {
         el('li', {}, el('span', { class: `legend-dot is-${state}-bg` }), t(`howto.${state}`)))));
 }
 
+// Adding Kanjiru to the home screen (js/install.js): on a phone, once there's
+// progress to keep, under the play card. Not now puts it off a while.
+function installTip() {
+  if (!tipDue(store.get())) return null;
+  const p = platform();
+  const later = () => {
+    store.update((s) => { s.settings.installLater = localDate(); });
+    renderTip();
+    const next = app.querySelector('.play-actions .btn');
+    if (next) next.focus();
+  };
+  return el('section', { class: 'card install-tip', 'aria-labelledby': 'install-tip-title' },
+    el('h2', { class: 'install-title', id: 'install-tip-title' }, t('install.title')),
+    el('p', { class: 'install-why' }, t(`install.why.${p}`)),
+    installSteps(p),
+    el('p', { class: 'install-note' }, t('install.tipBackup')),
+    el('div', { class: 'btn-row' },
+      canPrompt() ? el('button', { class: 'btn btn-primary', type: 'button', onclick: () => promptInstall() }, t('install.button')) : null,
+      el('button', { class: 'btn btn-ghost', type: 'button', onclick: later }, t('install.later'))));
+}
+
+let tip = null;
+function renderTip() {
+  const fresh = installTip();
+  if (tip && tip.isConnected) {
+    if (fresh) tip.replaceWith(fresh);
+    else tip.remove();
+  } else if (fresh && cards && cards.isConnected) cards.after(fresh);
+  tip = fresh;
+}
+
+// The install prompt arrived, or the app was installed.
+onInstallChange(() => { if (page().name === 'play') renderTip(); });
+
 let cards = null;
 let playTimer = 0;
 
@@ -272,6 +314,8 @@ function renderCards(focusId = null) {
 
 function renderPlay() {
   app.replaceChildren(howTo(), renderCards());
+  tip = null;
+  renderTip();
   // The countdown ticks; at midnight the new daily takes the card.
   const day = localDate();
   playTimer = setInterval(() => {
@@ -287,7 +331,7 @@ let wentIn = false;       // reached a page from the play page, so Back can go b
 
 function page() {
   const [first, kind] = location.hash.replace(/^#/, '').split('/');
-  if (first === 'points') return { name: 'points' };
+  if (first === 'points' || first === 'about') return { name: first };
   const mode = MODE[first];
   return mode ? { name: 'game', mode, kind: kind === 'practice' ? 'practice' : 'daily' } : { name: 'play' };
 }
@@ -338,7 +382,8 @@ function renderAll() {
       onLook: () => { save = store.get(); applyLook(); },
       onWallet: renderHeader
     });
-  } else renderPlay();
+  } else if (p.name === 'about') view = openAbout(app);
+  else renderPlay();
 }
 
 window.addEventListener('hashchange', () => {
@@ -350,5 +395,11 @@ window.addEventListener('hashchange', () => {
 catchUp();
 applyLook();
 renderAll();
-// The play cards wait for the data.
-ready.then(() => { if (page().name === 'play') renderCards(); });
+// The play cards wait for the data. Dailies it moved to keep playing
+// (useEpoch, on the first visit after launch) change the Points page's
+// streak and stats, so it redraws too.
+ready.then(() => {
+  const now = page().name;
+  if (now === 'play') renderCards();
+  else if (now === 'points' && game.moved && view) view.refresh();
+});
