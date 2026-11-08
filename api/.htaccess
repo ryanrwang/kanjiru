@@ -1,0 +1,16 @@
+# The transfer codes live in codes/, which the web must never read.
+# transfer.php also writes a deny-all .htaccess into that folder; this rule
+# covers the folder even before it exists. (RedirectMatch, not mod_rewrite,
+# so the site's own https/www rewrite rules still apply here.)
+RedirectMatch 404 /api/codes(/.*)?$
+
+# PHP may write an error_log here; keep it private too.
+<FilesMatch "^error_log$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>

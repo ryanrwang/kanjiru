@@ -57,6 +57,72 @@ export default {
     have: 'You have {n}'
   },
 
+  settings: {
+    open: 'Settings',
+    title: 'Settings',
+    close: 'Close'
+  },
+
+  transfer: {
+    intro: 'Your progress is saved in this browser. To play on another device, move it there.',
+    notSaving: 'This browser isn’t saving progress (private browsing?), so anything you receive lasts only until you close the page.',
+    send: {
+      title: 'Send to another device',
+      body: 'Get a one-time code, then enter it on your other device.',
+      button: 'Get a code',
+      again: 'Get a new code',
+      busy: 'Getting a code…',
+      codeLabel: 'Your code: {code}',
+      expires: 'Works once · expires in {time}',
+      expired: 'That code has expired. Get a new one.'
+    },
+    receive: {
+      title: 'Receive from another device',
+      body: 'On your other device, open Settings and tap “Get a code”. Then enter the code here.',
+      label: 'Transfer code',
+      placeholder: 'Code',
+      button: 'Receive',
+      busy: 'Receiving…'
+    },
+    ask: {
+      title: 'This device has progress of its own. What should happen to it?',
+      merge: 'Merge both',
+      mergeDesc: 'Keeps the games from both devices and recounts streaks. Points and hints take the higher of the two.',
+      replace: 'Replace this device',
+      replaceDesc: 'This device’s own progress is lost.',
+      cancel: 'Cancel'
+    },
+    done: {
+      received: 'Progress received.',
+      merged: 'Progress merged: the games from both devices are kept.'
+    },
+    text: {
+      title: 'Save text (backup)',
+      body: 'Your whole save as text. Keep a copy somewhere safe, or paste one in. No code needed.',
+      copy: 'Copy save text',
+      paste: 'Paste save text',
+      load: 'Load',
+      copied: 'Copied. Paste it somewhere safe.',
+      copyManually: 'Select the text above and copy it.',
+      copyLabel: 'Your save text',
+      pasteLabel: 'Paste a save text here'
+    },
+    errors: {
+      offline: 'Couldn’t reach the server. Check your connection and try again.',
+      server: 'Something went wrong on the server. Try again in a moment.',
+      method: 'Something went wrong. Try again.',
+      'bad-request': 'Something went wrong. Try again.',
+      'too-large': 'This save is too big to send by code. Use the save text instead.',
+      'bad-save': 'This save couldn’t be read. Use the save text instead.',
+      'bad-code': 'Enter the code shown on your other device.',
+      'not-found': 'No transfer has that code. Check it, or get a new one: each code works once.',
+      expired: 'That code has expired. Get a new one on the other device.',
+      'rate-limited': 'Too many tries. Wait a few minutes, then try again.',
+      'not-a-save': 'That isn’t a Kanjiru save.',
+      'newer-version': 'That save is from a newer version of Kanjiru. Reload this page, then send it again.'
+    }
+  },
+
   mode: {
     k1: { name: 'One kanji' },
     k2: { name: 'Two kanji' },
