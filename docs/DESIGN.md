@@ -108,15 +108,23 @@ After playing step 3, the user found it worked as a kanji finder, not a part gue
 | Normal (the default) | Any parts, one per cell | Cells show places; a count of the kanji that still fit; 70% of the tiles (28 for one kanji) | Only from the Meaning hint |
 | Hard | Parts that make a real kanji in those places, one per cell | Cells show places; all the tiles | Only from the Meaning hint |
 
-- **Decided — Cells:** the next row has one empty cell per part of the answer, so the part count is known from the start. Tapping a part fills the first empty cell; tapping a filled cell empties it. Clear empties them all.
+- **Decided — Cells:** each row has one cell per part of the answer, so the part count is known from the start. Clear empties the next row's cells.
+- **Decided — Every row, like Wordle (after playing):** at Normal and Hard the board shows all the rows from the start, with the cells centred, and no guess counter or dots. Guess and Clear sit below the parts. On a phone this takes more height, so Guess may need a short scroll.
+- **Decided — Parts by place (after playing):** a cell only takes parts that some jōyō kanji has in its place (`tilesForPlace()` in `js/engine/palette.js`), so the left cell picks from left-side parts, and so on.
+- **Proposed — One place at a time:** almost every tile can sit on either side (23–27 of Normal's 28 tiles fit both left and right), so showing every place's group at once would nearly double the palette. Instead a row of place buttons (左 右) above the parts picks which place's parts show, and it follows the selected cell.
+- **Proposed — Selecting cells:** one cell of the next row is selected. A tapped part fills it, then the next empty cell is selected; tapping a cell selects it, so its part can be swapped. (Before: a part filled the first empty cell, and tapping a filled cell emptied it.)
+- **Proposed — Part colours by place:** in a place's parts, a part tried in that place shows the mark it got there, so green means "right here". Otherwise a part in the answer shows yellow, and one ruled out shows grey.
+- **Decided — Kanji frame (after playing):** above the board, a frame in the answer's shape fills in with each part found green, in its place, whether by a guess or a power. A dot stands for each part still hidden. A solved kanji shows whole, on green.
+- **Proposed — Frame layout:** top and bottom span the frame; left, inner and right share the middle; an outer part (門, 辶) covers it all, with the inner inset. A place with several parts stacks them (土 over 寸 for 時). The frame catches up once the row has flipped.
 - **Decided — Cells are places (`places`):** each cell stands for one of the answer's part positions, in order, and a line above the board names them (左 右, or 左 右 右 for 時). That gives the answer's shape away, like Wordle's five boxes, and lets a part be green in its place or yellow in another, by the same rules as kanji guesses. Repeated parts work like Wordle's letters: three 木 picked for 森 are all green. All cells green wins. The engine is `scoreParts()` in `js/engine/score.js`.
 - **Decided — Why places:** after playing, the user found parts-only guessing was a guessing game without Wordle's puzzle. Places bring back yellow, and with it the deducing.
 - **Decided — Kanji that fit (`countLeft`, Normal only):** each guess says how many kanji still fit everything seen so far: same shape, buildable from the palette, none swept away, the revealed strokes, layout and parts, and the same marks for every guess (`engine.fits()`). The next row shows the count before the first guess, and again when a power changes it.
+- **Proposed — Count column:** the count is a number on the right of each row, under a "fit" heading, so the cells stay centred.
 - **Decided — Fewer parts at Normal (`paletteScale` 0.7):** 28 tiles for one kanji instead of 40, so each guess tests more of them. Hard keeps 40.
 - **Decided — Normal takes any parts:** they don't have to make a kanji. **Hard** turns away parts that make no jōyō kanji in those places ("No kanji has those parts in those places").
 - **Decided — No free meaning at Normal or Hard:** only the Meaning hint shows it (`freeMeaning: false`).
 - **Decided — Layout hint at Normal and Hard:** the cells already show the layout, so the hint says it has nothing new to show.
-- **Proposed — Kanji on the rows:** at Hard each row shows the kanji its parts make (the easiest when several share them, such as 員 and 唄). At Normal a row shows a kanji only once it's solved. Neither shows meanings, so guesses stay about parts.
+- **Proposed — Kanji on the rows:** at Hard each row shows the kanji its parts make (the easiest when several share them, such as 員 and 唄), on the left of its cells. At Normal a row shows a kanji only once it's solved. Neither shows meanings, so guesses stay about parts.
 - **Proposed — Look-alikes:** parts that are exactly the answer's, in the same places, win, even when a look-alike shares them (未 and 末).
 - **Proposed — Points:** each level multiplies points, on top of the mode and daily or practice: Easy ×0.5, Normal ×1, Hard ×1.5 (`levels.js` `points`). Normal stays ×1 because the economy was tuned at ×1.
 - **Proposed — One daily for every level:** a mode has one daily, whatever the level, so puzzle numbers and streaks are shared. A game keeps the level it started at (in its start, `save.playing`), and its history entry records it. A game with no moves yet moves to a level picked since.
@@ -137,7 +145,7 @@ After playing step 3, the user found it worked as a kanji finder, not a part gue
 
 ## The game screen (step 3)
 
-- **Board, proposed:** the rows guessed so far, then the next row, then one dot per row left. Empty rows would push the palette off a phone's screen.
+- **Board at Easy, proposed:** the rows guessed so far, then the next row, then one dot per row left, and a guess counter in the head. Normal and Hard show every row instead ("Levels", above).
 - **Reveal:** each new row flips tile by tile (`settings.tiles`; Flip for now, step 6 adds the rest). Off under reduced motion.
 - **Hints:** at Easy, the free meaning after guess 3 (with a note until then); at every level, a bar of the mode's powers with the count held. Tapping one opens a sheet that says what it does and why it can't be used now, if so. Using one spends it from the inventory.
 - **Saving:** the game on the go is saved as its start and log after every move (`save.playing`), so a reload carries on. A finished daily is recorded to history and can't be played again; its result shows until the next daily.

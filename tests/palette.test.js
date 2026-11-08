@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPalette, buildable, narrow } from '../js/engine/palette.js';
+import { buildPalette, buildable, narrow, tilesForPlace } from '../js/engine/palette.js';
 import { seeded } from '../js/engine/random.js';
 import { RULES } from '../js/registry.js';
 import { fixtureData } from './helpers.js';
@@ -72,4 +72,17 @@ test('narrow: kanji that can still be made, easiest first, and the tiles that co
   for (let i = 1; i < all.kanji.length; i += 1) {
     assert.ok((k[all.kanji[i - 1]].jlpt || 0) >= (k[all.kanji[i]].jlpt || 0));
   }
+});
+
+test('tilesForPlace: the palette tiles some kanji has in that place, in palette order', () => {
+  const data = fixtureData();
+  const pal = ['日', '月', '門', '木', '土', '寸'];
+  assert.deepEqual(tilesForPlace(data, pal, 'outer'), ['門']);
+  // 日 is left in 明 and 時, and inside 間; 月 is right in 明.
+  assert.ok(tilesForPlace(data, pal, 'left').includes('日'));
+  assert.ok(tilesForPlace(data, pal, 'inner').includes('日'));
+  assert.ok(!tilesForPlace(data, pal, 'left').includes('門'));
+  const right = tilesForPlace(data, pal, 'right');
+  ['月', '土', '寸'].forEach((id) => assert.ok(right.includes(id), id));
+  assert.deepEqual(right, pal.filter((id) => right.includes(id)));
 });

@@ -901,7 +901,25 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   white-space: nowrap;
 }
 
-.row-meaning.is-count { font-variant-numeric: tabular-nums; }
+/* Parts levels: every row, with the cells centred, the row's kanji on
+   their left and how many kanji fit on their right. */
+.board.is-parts .board-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  column-gap: var(--spacing-sm);
+}
+
+.board.is-parts .row-kanji { justify-self: end; }
+.board.is-parts .row-tiles { flex-wrap: nowrap; }
+
+.row-count {
+  justify-self: start;
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 .row-meaning {
   flex: 1 1 var(--spacing-3xl);
@@ -919,14 +937,22 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
    palette gets a red edge: that kanji can't be guessed here. */
 .tile.is-pending { border-style: dashed; }
 
-/* Parts levels: the next row's cells. A filled cell is a button that
-   takes its part out. */
+/* Parts levels: the next row's cells are buttons; the selected one takes
+   the next part tapped. Rows not reached yet are faint. */
 .tile.is-filled {
   border-style: solid;
-  border-color: var(--color-border-focus);
-  cursor: pointer;
+  border-color: var(--color-border-strong);
 }
-.tile.is-filled:hover { background: var(--color-interactive-selected); }
+.board-row.is-next button.tile:hover { background: var(--color-interactive-selected); }
+.tile.is-active {
+  border-style: solid;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 var(--stroke-thick) var(--color-border-focus);
+}
+.tile.is-blank {
+  background: transparent;
+  border-color: var(--color-border-subtle);
+}
 .tile.is-absent {
   border-color: var(--color-status-danger);
   color: var(--color-text-muted);
@@ -943,6 +969,96 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   height: var(--spacing-sm);
   border-radius: var(--radius-full);
   background: var(--color-border-default);
+}
+
+/* The kanji frame (parts levels): the answer's shape, filled in with the
+   parts found green. Top and bottom span it; left, inner and right share
+   the middle; an outer part covers it all, with the inner inset. */
+.board-frames {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding-bottom: var(--spacing-xs);
+}
+
+.board-frames:empty { display: none; }
+
+.kanji-frame {
+  display: grid;
+  gap: var(--spacing-xs);
+  width: var(--layout-frame);
+  height: var(--layout-frame);
+  padding: var(--spacing-xs);
+  border: var(--stroke-thick) solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.frame-zone {
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  border: var(--stroke-thin) dashed var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-kanji);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-tight);
+  color: var(--color-feedback-hit);
+}
+
+.frame-zone.is-top,
+.frame-zone.is-bottom { flex-direction: row; }
+.frame-zone[data-n="2"] { font-size: var(--font-size-lg); }
+.frame-zone[data-n="3"] { font-size: var(--font-size-md); }
+.frame-zone[data-n="4"] { font-size: var(--font-size-xs); }
+
+.frame-zone.is-cover {
+  z-index: 0;
+  grid-area: 1 / 1 / -1 / -1;
+  border: 0;
+  font-size: var(--font-size-display);
+}
+
+.kanji-frame.has-outer .frame-zone.is-inner {
+  margin: var(--spacing-md);
+  font-size: var(--font-size-lg);
+}
+
+.frame-part { display: inline-flex; }
+
+.frame-part.is-hidden {
+  width: var(--spacing-sm);
+  height: var(--spacing-sm);
+  margin: var(--spacing-xs);
+  border-radius: var(--radius-full);
+  background: var(--color-border-default);
+}
+
+.kanji-frame.is-solved {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-color: transparent;
+  background: var(--color-feedback-hit);
+  color: var(--color-feedback-text);
+  font-size: var(--font-size-3xl);
+  line-height: var(--font-lineHeight-tight);
+}
+
+.frame-part.is-new,
+.kanji-frame.is-new {
+  animation: kanji-in var(--transition-base) var(--transition-bounce) both;
+}
+
+/* Parts levels: one place's parts at a time, picked here or by tapping a cell. */
+.place-tab {
+  flex: 1;
+  justify-content: center;
 }
 
 /* Tile reveal (settings.tiles). Flip is the default; a tile style from
@@ -1473,6 +1589,8 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   }
   .rw-back-logo:hover { animation: none; }
   .board-row.is-new .tile,
-  .board-row.is-new .row-kanji { animation: none; }
+  .board-row.is-new .row-kanji,
+  .frame-part.is-new,
+  .kanji-frame.is-new { animation: none; }
   .palette-tile[aria-pressed="true"] { transform: none; }
 }

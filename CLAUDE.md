@@ -45,7 +45,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/dom.js` | `el()`, the small DOM helper |
 | `js/engine/score.js` | Scoring: a guess against the answer, part by part (rules in `docs/DESIGN.md`, "Scoring") |
 | `js/engine/game.js` | `createEngine(data)`: game state, guesses, every power effect, points, replay, history entries, bonus drops |
-| `js/engine/palette.js` | The puzzle's palette (a seeded subset of tiles), `buildable()`, and `narrow()` for the picker |
+| `js/engine/palette.js` | The puzzle's palette (a seeded subset of tiles), `buildable()`, `narrow()` for the picker, and `tilesForPlace()` for a cell's parts |
 | `js/engine/daily.js` | Date → puzzle number → answer, practice picks, history keys |
 | `js/engine/stats.js` | Stats and streaks from history, achievement checks, streak rewards |
 | `js/engine/data.js` | Loads `data/game/*.json` and `data/parts.json` into the engine's shape |

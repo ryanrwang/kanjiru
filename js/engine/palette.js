@@ -19,6 +19,27 @@ export function tilesOfKanji(data) {
   return tileSets.get(data);
 }
 
+// Per data set: the places each tile takes in any kanji (left, inner …).
+const tilePlaces = new WeakMap();
+export function placesOfTiles(data) {
+  if (!tilePlaces.has(data)) {
+    const map = new Map();
+    Object.values(data.kanji).forEach((k) => k.parts.forEach((p) => {
+      if (!map.has(p.el)) map.set(p.el, new Set());
+      map.get(p.el).add(p.pos);
+    }));
+    tilePlaces.set(data, map);
+  }
+  return tilePlaces.get(data);
+}
+
+// The palette's tiles that some kanji has in this place, in palette order:
+// the parts offered for a cell at a level with places.
+export function tilesForPlace(data, palette, pos) {
+  const places = placesOfTiles(data);
+  return palette.filter((id) => places.has(id) && places.get(id).has(pos));
+}
+
 // answerKanji: the answer's kanji, e.g. ['日', '本'].
 // Returns tile ids in data.tiles order (fewest strokes first).
 export function buildPalette({ data, answerKanji, size, rules, rng }) {

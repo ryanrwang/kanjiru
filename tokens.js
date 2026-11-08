@@ -272,7 +272,8 @@
       swatch:    s[96],
       guessCol:  s[64],
       tile:      s[48],
-      cell:      s[40]   // game screen: board and palette tiles
+      cell:      s[40],  // game screen: board and palette tiles
+      frame:     s[80]   // game screen: the kanji built from found parts
     },
 
     radius: {
