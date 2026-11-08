@@ -5,7 +5,7 @@
  *
  *   const card = renderResult({ ... });   // card.node, card.tick()
  */
-import { RULES } from '../registry.js';
+import { RULES, LEVEL } from '../registry.js';
 import { t } from '../i18n.js';
 import { el } from '../dom.js';
 import { msToNextDaily } from '../engine/daily.js';
@@ -55,7 +55,9 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
   const won = state.status === 'won';
   const info = engine.answerInfo(state.answer);
   const url = `${location.origin}${location.pathname}`;
-  const text = shareText({ state, mode, t, share: RULES.share, url });
+  // The squares keep the kanji apart only where the board did (levels.js showSplit).
+  const level = LEVEL[state.level];
+  const text = shareText({ state, mode, t, share: RULES.share, url, split: !level || level.guess !== 'parts' || level.showSplit });
 
   const status = el('p', { class: 'status-line', role: 'status' });
   const preview = el('pre', { class: 'share-preview' }, text);

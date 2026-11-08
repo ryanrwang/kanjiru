@@ -12,7 +12,7 @@
  *   #main/practice    another puzzle after it ("keep playing")
  */
 import {
-  MODES, MODE, LEVELS, LEVEL, SLOTS, SKINS, POWERS, ECONOMY, ACHIEVEMENT, validate
+  MODES, MODE, SLOTS, SKINS, POWERS, ECONOMY, ACHIEVEMENT, validate
 } from './js/registry.js';
 import { t, setLang, nextLanguage } from './js/i18n.js';
 import { el } from './js/dom.js';
@@ -155,59 +155,31 @@ const playable = (mode) => !!(mode.playable && game.data && answersFor(game.data
 
 const app = document.getElementById('app');
 
-// A worked example for each kind of guess (levels.js guess).
-// Kanji guesses: answer 明 (日 left, 月 right).
-// Parts guesses: answer 時間 (日 土 寸 | 門 日), one group of cells per
-// kanji. Without places (Normal) a part is green in the right kanji and
-// yellow in the other; with places (Hard) it's green only in its place.
+// A worked example: answer 時間, whose parts in writing order are
+// 日 土 寸 門 日. The cells don't show where 時 ends (Normal); like
+// Wordle's letters, a part is green in its cell and yellow in another.
 const DEMO = {
-  kanji: [
-    { guess: '間', parts: [['門', 'miss'], ['日', 'near']] },
-    { guess: '時', parts: [['日', 'hit'], ['寺', 'miss']] },
-    { guess: '明', parts: [['日', 'hit'], ['月', 'hit']] }
+  rows: [
+    [['口', 'miss'], ['日', 'near'], ['寸', 'hit'], ['木', 'miss'], ['月', 'miss']],
+    [['日', 'hit'], ['土', 'hit'], ['寸', 'hit'], ['日', 'near'], ['門', 'near']],
+    [['日', 'hit'], ['土', 'hit'], ['寸', 'hit'], ['門', 'hit'], ['日', 'hit']]
   ],
-  parts: [
-    [[['木', 'miss'], ['口', 'miss'], ['日', 'hit']], [['寸', 'other'], ['門', 'hit']]],
-    [[['日', 'hit'], ['土', 'hit'], ['寸', 'hit']], [['門', 'hit'], ['月', 'miss']]],
-    [[['日', 'hit'], ['土', 'hit'], ['寸', 'hit']], [['門', 'hit'], ['日', 'hit']]]
-  ],
-  places: [
-    [[['口', 'miss'], ['日', 'near'], ['木', 'miss']], [['門', 'hit'], ['寸', 'other']]],
-    [[['日', 'hit'], ['土', 'hit'], ['寸', 'hit']], [['門', 'hit'], ['月', 'miss']]],
-    [[['日', 'hit'], ['土', 'hit'], ['寸', 'hit']], [['門', 'hit'], ['日', 'hit']]]
-  ],
-  answer: '時間',
-  positions: [['left', 'right', 'right'], ['outer', 'inner']]
+  answer: '時間'
 };
 
 let heroSection = null;
 
-// Parts guesses: the cells of each kanji, the answer once a row is solved.
-function demoParts(level) {
-  const slots = (row) => row.map((cells) => el('span', { class: 'demo-slot' }, cells));
-  const rows = DEMO[level.places ? 'places' : 'parts'];
-  return el('div', { class: 'demo is-parts', 'aria-hidden': 'true' },
-    level.places ? el('div', { class: 'demo-row' },
-      slots(DEMO.positions.map((slot) => slot.map((pos) => el('span', { class: 'demo-place' }, t(`posShort.${pos}`)))))) : null,
-    rows.map((row) => el('div', { class: 'demo-row' },
-      slots(row.map((slot) => slot.map(([part, state]) => el('span', { class: `tile is-cell is-${state}`, lang: 'ja' }, part)))),
-      row.every((slot) => slot.every(([, state]) => state === 'hit'))
-        ? el('span', { class: 'demo-answer kanji', lang: 'ja' }, DEMO.answer) : null)));
-}
-
 function renderHero() {
-  const level = LEVEL[currentLevel()];
-  const parts = level.guess === 'parts';
   const legend = ['hit', 'near', 'miss'].map((state) => [state, `hero.${state}`]);
   const fresh = el('section', { class: 'card hero', 'aria-labelledby': 'hero-title' },
     el('p', { class: 'tagline', id: 'hero-title' },
       t('hero.title'),
-      el('small', {}, t(!parts ? 'hero.body' : level.places ? 'hero.placesBody' : 'hero.partsBody'))
+      el('small', {}, t('hero.partsBody'))
     ),
-    parts ? demoParts(level) : el('div', { class: 'demo', 'aria-hidden': 'true' },
-      DEMO.kanji.map((row) => el('div', { class: 'demo-row' },
-        el('span', { class: 'demo-guess kanji', lang: 'ja' }, row.guess),
-        row.parts.map(([part, state]) => el('span', { class: `tile is-${state}`, lang: 'ja' }, part))))
+    el('div', { class: 'demo is-parts', 'aria-hidden': 'true' },
+      DEMO.rows.map((row) => el('div', { class: 'demo-row' },
+        el('span', { class: 'demo-slot' }, row.map(([part, state]) => el('span', { class: `tile is-cell is-${state}`, lang: 'ja' }, part))),
+        row.every(([, state]) => state === 'hit') ? el('span', { class: 'demo-answer kanji', lang: 'ja' }, DEMO.answer) : null))
     ),
     el('p', { class: 'demo-legend' },
       legend.map(([state, key]) =>
@@ -253,26 +225,16 @@ function modeCard(mode) {
   );
 }
 
-// The level for new games (save.settings.level). A game already begun
-// keeps its own, unless it has no moves yet (js/play/session.js).
-function levelPicker() {
-  const current = currentLevel();
-  return el('div', { class: 'level-picker' },
-    el('span', { class: 'look-slot-name', id: 'level-label' }, t('play.level')),
-    el('div', { class: 'chip-row', role: 'group', 'aria-labelledby': 'level-label' },
-      LEVELS.map((level) => el('button', {
-        class: 'chip', type: 'button',
-        'aria-pressed': String(level.id === current),
-        onclick: () => {
-          if (level.id === current) return;
-          store.update((s) => { s.settings.level = level.id; });
-          renderHero();
-          renderModes();
-        }
-      }, t(`level.${level.id}.name`)))),
-    el('p', { class: 'level-desc' },
-      t(`level.${current}.desc`), ' ',
-      el('span', { class: 'level-points' }, t('play.levelPoints', { mult: LEVEL[current].points }))));
+// The level new games start at, set by the Hard and Guided switches in
+// Settings (js/settings.js). A game already begun keeps its own, unless it
+// has no moves yet (js/play/session.js).
+function levelLine() {
+  return el('p', { class: 'level-desc' },
+    t('play.levelNow', { level: t(`level.${currentLevel()}.name`) }), ' ',
+    el('button', {
+      class: 'btn btn-ghost btn-small', type: 'button',
+      onclick: () => openSettings({ onChange: reloadSave })
+    }, t('play.levelChange')));
 }
 
 let modesSection = null;
@@ -281,7 +243,7 @@ function renderModes() {
   const fresh = el('section', { class: 'section', 'aria-labelledby': 'modes-title' },
     el('h2', { class: 'section-title', id: 'modes-title' },
       t('play.title'), el('span', { class: 'section-note' }, t('play.note'))),
-    levelPicker(),
+    levelLine(),
     el('div', { class: 'mode-grid' }, MODES.filter((m) => m.listed).map(modeCard))
   );
   if (modesSection && modesSection.isConnected) modesSection.replaceWith(fresh);

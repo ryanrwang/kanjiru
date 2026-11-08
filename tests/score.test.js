@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { scoreGuess, scoreParts, allHit, layoutOf, MARKS } from '../js/engine/score.js';
+import { scoreGuess, scoreParts, scoreOrder, allHit, layoutOf, MARKS } from '../js/engine/score.js';
 import { KANJI } from './fixture-kanji.js';
 import { slots, marks } from './helpers.js';
 
@@ -159,4 +159,30 @@ test('parts with places: green in the cell\'s place, yellow elsewhere in the kan
   assert.deepEqual(marks(scoreParts([['日', '寸', '土']], slots('時'), [['left', 'right', 'right']])[0]), ['hit', 'hit', 'hit']);
   // 森: 木 top, 木 bottom ×2. Three 木 picked, all green; a 口 is grey.
   assert.deepEqual(marks(scoreParts([['口', '木', '木']], slots('森'), [['top', 'bottom', 'bottom']])[0]), ['miss', 'hit', 'hit']);
+});
+
+// ── In order (levels.js order) ───────────────────────────────────────
+
+const answerOf = (word) => [...word].map((kanji) => ({ kanji, parts: KANJI[kanji].parts }));
+const flatMarks = (scored) => scored.flatMap((slot) => slot.tiles.map((t) => t.mark));
+
+test('in order: green in the right cell, yellow anywhere else in the word', () => {
+  // 時間: 日 土 寸 | 門 日
+  const scored = scoreOrder([['日', '寸', '門'], ['土', '口']], answerOf('時間'));
+  assert.deepEqual(flatMarks(scored), ['hit', 'near', 'near', 'near', 'miss']);
+  assert.deepEqual(scored.map((slot) => slot.solved), [false, false]);
+});
+
+test('in order: each cell takes its answer cell\'s place, and greens use up parts first', () => {
+  const scored = scoreOrder([['日', '日', '日'], ['門', '日']], answerOf('時間'));
+  assert.deepEqual(flatMarks(scored), ['hit', 'miss', 'miss', 'hit', 'hit'], 'two 日 in the answer, both green');
+  assert.deepEqual(scored[0].tiles.map((t) => t.pos), ['left', 'right', 'right']);
+  assert.equal(scored[1].solved, true);
+  assert.equal(scored[1].kanji, '間');
+});
+
+test('in order: the kanji a cell sits in doesn\'t change its mark', () => {
+  // 日本: 日 | 木 一. The same three parts, split another way, score the same.
+  assert.deepEqual(flatMarks(scoreOrder([['木'], ['日', '一']], answerOf('日本'))), ['near', 'near', 'hit']);
+  assert.ok(allHit(scoreOrder([['日'], ['木', '一']], answerOf('日本'))));
 });

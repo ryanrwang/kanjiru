@@ -453,13 +453,7 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 }
 .chip.is-locked { color: var(--color-text-muted); }
 
-/* ── Level picker ──────────────────────────────────────────────────── */
-
-.level-picker {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
+/* ── Level line (Hard and Guided live in Settings) ─────────────────── */
 
 .level-desc {
   font-size: var(--font-size-xs);
@@ -467,10 +461,6 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   color: var(--color-text-secondary);
 }
 
-.level-points {
-  font-weight: var(--font-weight-bold);
-  white-space: nowrap;
-}
 
 /* ── Hints and powers ──────────────────────────────────────────────── */
 
@@ -617,6 +607,30 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
 }
+
+/* Settings switches (Hard, Guided): a checkbox and its name and note. */
+.switch-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+}
+
+.switch {
+  flex: 0 0 auto;
+  width: var(--spacing-lg);
+  height: var(--spacing-lg);
+  margin: 0;
+  accent-color: var(--color-action-primary-bg);
+}
+
+.switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.switch-name { font-weight: var(--font-weight-bold); }
 
 .sheet-note {
   font-size: var(--font-size-xs);
@@ -941,13 +955,6 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   line-height: var(--font-lineHeight-tight);
 }
 
-.row-kanji.is-empty {
-  border: var(--stroke-thick) dashed var(--color-border-default);
-  border-radius: var(--radius-md);
-}
-
-.board-row.is-next .row-kanji { color: var(--color-text-accent); }
-
 .row-tiles {
   flex: 0 1 auto;
   min-width: 0;
@@ -1026,8 +1033,7 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   overflow: hidden;
 }
 
-/* The next guess, not scored yet. A part missing from this puzzle's
-   palette gets a red edge: that kanji can't be guessed here. */
+/* The next guess, not scored yet. */
 .tile.is-pending { border-style: dashed; }
 
 /* Parts levels: the next row's cells are buttons; the selected one takes
@@ -1046,28 +1052,27 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   background: transparent;
   border-color: var(--color-border-subtle);
 }
-.tile.is-absent {
-  border-color: var(--color-status-danger);
-  color: var(--color-text-muted);
+/* Hard: the kanji a row's parts make, hanging off its right edge so the
+   cells stay centred (fitBoard leaves room for it on both sides). */
+.board.has-made .board-row { position: relative; }
+
+.row-made {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: var(--spacing-2xl);
+  margin-left: var(--spacing-sm);
+  transform: translateY(-50%);
+  font-size: var(--font-size-md);
+  line-height: var(--font-lineHeight-tight);
+  color: var(--color-text-secondary);
 }
 
-.board-dots {
-  display: flex;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs) 0 var(--spacing-xs) var(--spacing-md);
-}
-
-.board-dot {
-  width: var(--spacing-sm);
-  height: var(--spacing-sm);
-  border-radius: var(--radius-full);
-  background: var(--color-border-default);
-}
-
-/* The kanji frame (parts levels): the answer's shape, filled in with the
+/* The kanji frames above the rows, laid out like a row so each centres
+   over its kanji's cells. Guided: the answer's shape, filled in with the
    parts found green. Top and bottom span it; left, inner and right share
    the middle; an outer part covers it all, with the inner inset.
-   The frames are laid out like a row, each centred over its kanji's cells. */
+   Otherwise (.is-flat): only a solved kanji, as wide as its cells. */
 .board-frames:empty { display: none; }
 
 .board.is-parts .board-frames {
@@ -1159,6 +1164,14 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   color: var(--color-feedback-text);
   font-size: var(--frame-solved);
   line-height: var(--font-lineHeight-tight);
+}
+
+.board.is-flat .board-frames .row-tiles { column-gap: var(--spacing-xs); }
+
+.board.is-flat .kanji-frame.is-solved {
+  width: 100%;
+  height: var(--board-cell);
+  font-size: var(--board-kanji);
 }
 
 .frame-part.is-new,
@@ -1420,119 +1433,11 @@ body.is-game .app-header { display: none; }
 
 .picker:empty { display: none; }
 
-.entry {
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-
-/* 20px text: phones don't zoom into it when it's tapped. */
-.entry-input {
-  flex: 1;
-  min-width: 0;
-  padding: var(--spacing-xs) var(--spacing-md);
-  border: var(--stroke-thick) solid var(--color-border-default);
-  border-radius: var(--radius-full);
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
-  font-family: var(--font-family-kanji);
-  font-size: var(--font-size-lg);
-}
-
-.entry-input::placeholder {
-  font-family: var(--font-family-ui);
-  font-size: var(--font-size-md);
-  color: var(--color-text-muted);
-}
-
-.entry-input:focus-visible {
-  outline: var(--stroke-thick) solid var(--color-border-focus);
-  outline-offset: 0;
-  border-color: transparent;
-}
-
-.strip-hint {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-}
-
-.strip {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.strip-head {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
-.strip-picked {
-  display: inline-flex;
-  gap: var(--spacing-xs);
-  font-size: var(--font-size-lg);
-  line-height: var(--font-lineHeight-tight);
-  color: var(--color-text-primary);
-}
-
-.strip-count { flex: 1; }
-
-/* Two rows, and a sliver of the third so it's clear the list scrolls. */
-.strip-kanji {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
-  max-height: calc(var(--layout-cell) * 2 + var(--spacing-md) + var(--spacing-xs));
-  overflow-y: auto;
-  padding: var(--spacing-xs);
-  margin: calc(var(--spacing-xs) * -1);
-}
-
-.strip-btn {
-  width: var(--layout-cell);
-  height: var(--layout-cell);
-  border-radius: var(--radius-md);
-  border: var(--stroke-thin) solid var(--color-border-subtle);
-  background: var(--color-bg-surface);
-  font-size: var(--font-size-xl);
-  line-height: var(--font-lineHeight-tight);
-  transition: border-color var(--transition-fast) var(--transition-ease);
-}
-
-.strip-btn:hover:not(:disabled) { border-color: var(--color-border-strong); }
-
-.strip-btn.is-chosen {
-  border-color: var(--color-border-focus);
-  background: var(--color-interactive-selected);
-  box-shadow: 0 0 0 var(--stroke-thin) var(--color-border-focus);
-}
-
-.strip-btn:disabled {
-  opacity: var(--opacity-disabled);
-  text-decoration: line-through;
-}
-
-/* The palette: tiles by stroke count, each group led by its number. */
+/* The palette: the keys, fewest strokes first. */
 .palette {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-xs);
-}
-
-.palette-group { display: contents; }
-
-.palette-strokes {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--spacing-md);
-  height: var(--layout-cell);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-muted);
 }
 
 .palette-tile {

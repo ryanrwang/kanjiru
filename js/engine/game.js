@@ -5,6 +5,7 @@
  *   let game = engine.newGame({ ...daily(data, mode, today()), level });
  *   let r = engine.guess(game, '明');            // a 'kanji' level: { state, scored } or { state, error }
  *   r = engine.guess(game, [['日', '月']]);       // a 'parts' level: tile ids per kanji
+ *                                                // (error: { state, error, detail })
  *   r = engine.usePower(r.state, 'strokes');     // { state, result } or { state, error }
  *   engine.points(r.state);                      // { parts, solve, multiplier, total }
  *
@@ -16,7 +17,7 @@
  * name in KNOWN_EFFECTS, below in EFFECTS.
  */
 import { MODES, POWERS, ECONOMY, RULES, LEVELS, DEFAULT_LEVEL } from '../registry.js';
-import { scoreGuess, scoreParts, layoutOf, MARKS } from './score.js';
+import { scoreGuess, scoreParts, scoreOrder, layoutOf, MARKS } from './score.js';
 import { buildPalette, buildable, easiestFirst } from './palette.js';
 import { seeded, shuffle, weightedIndex } from './random.js';
 
@@ -78,6 +79,24 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
       .get(partsKey(els, places)) || [];
   const sameShape = (parts, withPlaces) =>
     index(withPlaces ? 'shape+places' : 'shape', (ps) => shapeKey(ps, withPlaces)).get(shapeKey(parts, withPlaces)) || [];
+  // The real kanji whose parts are these, in this (writing) order.
+  const kanjiInOrder = (els) => index('order', (parts) => parts.map((p) => p.el).join('+')).get(els.join('+')) || [];
+  // Order levels: the parts, in order, split into real kanji (any split,
+  // fewest kanji, easiest first), or null when no split makes real kanji.
+  function splitIntoKanji(els) {
+    const best = Array(els.length + 1).fill(null);
+    best[0] = [];
+    for (let i = 0; i < els.length; i += 1) {
+      if (!best[i]) continue;
+      for (let j = i + 1; j <= els.length; j += 1) {
+        const found = kanjiInOrder(els.slice(i, j));
+        if (!found.length) continue;
+        const word = [...best[i], found[0]];
+        if (!best[j] || word.length < best[j].length) best[j] = word;
+      }
+    }
+    return best[els.length];
+  }
 
   // ── Starting ───────────────────────────────────────────────────────
 
@@ -117,7 +136,8 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   // Why a guess can't be made, or null. A guess is a word for a 'kanji'
   // level and tile ids per kanji for a 'parts' level (levels.js guess).
   // Codes: over, level (the wrong kind of guess), length, not-kanji, slots,
-  // not-in-palette, not-real, repeat, not-a-word.
+  // not-in-palette, not-real, repeat, not-a-word, and with useHints,
+  // keep-hit and use-near (hintProblem gives the part and cell).
   function checkGuess(state, input) {
     if (state.status !== 'playing') return 'over';
     return levelOf(state).guess === 'parts' ? checkParts(state, input) : checkWord(state, input);
@@ -143,7 +163,15 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
     if (picks.length !== answer.length || picks.some((els, s) => els.length !== answer[s].parts.length)) return 'slots';
     const palette = new Set(rules.guessFromPalette ? state.palette : tileOrder.keys());
     if (!picks.every((els) => els.every((id) => palette.has(id)))) return 'not-in-palette';
-    const real = levelOf(state).realKanji;
+    const level = levelOf(state);
+    const real = level.realKanji;
+    if (level.order) {
+      // In order, the cells are the word's parts: the same parts in the same cells repeat.
+      if (real && !splitIntoKanji(picks.flat())) return 'not-real';
+      if (state.guesses.some((g) => g.parts && g.parts.flat().join('+') === picks.flat().join('+'))) return 'repeat';
+      const hint = level.useHints ? hintProblem(state, picks) : null;
+      return hint ? hint.code : null;
+    }
     const places = placesOf(state);
     if (real && !picks.every((els, s) => kanjiFrom(els, places && places[s]).length)) return 'not-real';
     // The same parts in the same places (or, without places, the same parts).
@@ -154,12 +182,41 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
     return null;
   }
 
+  // Order levels with useHints (Hard), like Wordle's hard mode: what earlier
+  // guesses found must be used. Every green stays in its cell, and every
+  // part shown green or yellow is in the guess as many times as it was
+  // found. The first problem, { code, part, cell }, or null.
+  function hintProblem(state, picks) {
+    const flat = picks.flat();
+    const guesses = state.guesses.filter((g) => g.parts);
+    for (const g of guesses) {
+      const tiles = g.slots.flatMap((slot) => slot.tiles);
+      const i = tiles.findIndex((tile, k) => tile.mark === 'hit' && flat[k] !== tile.el);
+      if (i >= 0) return { code: 'keep-hit', part: tiles[i].form, cell: i + 1 };
+    }
+    for (const g of guesses) {
+      const found = new Map();
+      g.slots.flatMap((slot) => slot.tiles).forEach((tile) => {
+        if (tile.mark === 'hit' || tile.mark === 'near') found.set(tile.el, (found.get(tile.el) || 0) + 1);
+      });
+      for (const [el, n] of found) {
+        if (flat.filter((id) => id === el).length < n) return { code: 'use-near', part: el, cell: null };
+      }
+    }
+    return null;
+  }
+
   // The kanji a parts guess shows: a solved slot's answer kanji; at a
   // realKanji level, else the easiest real kanji its parts make (written
   // into each scored slot). Returns the whole word, or null when a slot
   // has none.
   function wordOf(state, picks, scored) {
     const real = levelOf(state).realKanji;
+    if (levelOf(state).order) {
+      // The kanji the parts make, in order (realKanji), or the answer once solved.
+      if (real) return (splitIntoKanji(picks.flat()) || []).join('') || null;
+      return scored.every((slot) => slot.solved) ? state.answer : null;
+    }
     const places = placesOf(state);
     const chars = scored.map((slot, s) => slot.kanji || (real && kanjiFrom(picks[s], places && places[s])[0]) || null);
     chars.forEach((ch, s) => { scored[s].kanji = ch; });
@@ -168,11 +225,16 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
 
   function guess(state, input) {
     const error = checkGuess(state, input);
-    if (error) return { state, error };
+    if (error) {
+      const hint = error === 'keep-hit' || error === 'use-near' ? hintProblem(state, input) : null;
+      return { state, error, detail: hint ? { part: hint.part, cell: hint.cell } : {} };
+    }
     const next = clone(state);
     const parts = levelOf(next).guess === 'parts';
     const picks = parts ? input.map((els) => els.slice()) : null;
-    const scored = parts ? scoreParts(picks, answerSlots(next), placesOf(next)) : scoreGuess(slotsOf(input), answerSlots(next));
+    const scored = !parts ? scoreGuess(slotsOf(input), answerSlots(next))
+      : levelOf(next).order ? scoreOrder(picks, answerSlots(next))
+        : scoreParts(picks, answerSlots(next), placesOf(next));
     const word = parts ? wordOf(next, picks, scored) : input;
     scored.forEach((slot) => slot.tiles.forEach((tile) => {
       if (tile.of) markFound(next, tile.of, tile.mark, true);
@@ -265,6 +327,7 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   // fits only its kanji. `other` marks count as grey: each slot is checked
   // on its own.
   function fits(state) {
+    if (levelOf(state).order) return fitsInOrder(state);
     const places = placesOf(state);
     const palette = new Set(state.palette);
     const swept = new Set(state.revealed.eliminated);
@@ -283,6 +346,37 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
           const [again] = scoreParts([g.parts[s]], [{ kanji: ch, parts: k.parts }], places && [places[s]]);
           return again.tiles.every((tile, i) => tile.mark === plainMark(g.slots[s].tiles[i].mark));
         });
+      });
+    });
+  }
+
+  // Order levels: the kanji that still fit each slot, from what the cells of
+  // that slot showed (a green part is at that place in the kanji's writing
+  // order, a part not green there isn't), the parts no guess found in the
+  // word at all, and the same palette, powers and shape checks as fits().
+  function fitsInOrder(state) {
+    const palette = new Set(state.palette);
+    const swept = new Set(state.revealed.eliminated);
+    const layout = (parts) => [...new Set(parts.map((p) => p.pos))].sort().join('+');
+    const guesses = state.guesses.filter((g) => g.parts);
+    // A tile every copy of which some guess marked grey isn't in the word.
+    const absent = new Set();
+    guesses.forEach((g) => {
+      const tiles = g.slots.flatMap((slot) => slot.tiles);
+      tiles.forEach((tile) => {
+        if (tiles.every((other) => other.el !== tile.el || other.mark === 'miss')) absent.add(tile.el);
+      });
+    });
+    return answerSlots(state).map((slot, s) => {
+      if (state.revealed.kanji.includes(s)) return [slot.kanji];
+      const shown = state.revealed.parts.filter((ref) => ref.slot === s);
+      return sameShape(slot.parts, false).filter((ch) => {
+        const k = data.kanji[ch];
+        if (!k.parts.every((p) => palette.has(p.el)) || k.parts.some((p) => swept.has(p.el) || absent.has(p.el))) return false;
+        if (state.revealed.strokes && k.strokes !== data.kanji[slot.kanji].strokes) return false;
+        if (state.revealed.layout && layout(k.parts) !== layout(slot.parts)) return false;
+        if (!shown.every((ref) => k.parts[ref.part].el === slot.parts[ref.part].el)) return false;
+        return guesses.every((g) => g.slots[s].tiles.every((tile, i) => (tile.mark === 'hit') === (k.parts[i].el === tile.el)));
       });
     });
   }
@@ -311,8 +405,8 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
       apply: (s) => { s.revealed.strokes = true; return { strokes: clues(s).strokes }; }
     },
     revealLayout: {
-      // Cells that show places already show the layout.
-      useful: (s) => !s.revealed.layout && !placesOf(s),
+      // Cells that show places (or a Guided board) already show the layout.
+      useful: (s) => !s.revealed.layout && !placesOf(s) && !levelOf(s).guided,
       apply: (s) => { s.revealed.layout = true; return { layout: clues(s).layout }; }
     },
     revealMeaning: {

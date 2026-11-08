@@ -116,6 +116,45 @@ export function scoreParts(picks, answer, places = null) {
   return result;
 }
 
+// Scores one parts guess in order (levels.js order): the answer's parts in
+// writing order, one per cell, across all its kanji, like a word's letters
+// in Wordle. A tile is `hit` when its cell holds that part in the answer,
+// then `near` when an unused cell elsewhere in the word does (cells in
+// order). Which kanji a cell belongs to doesn't change its mark.
+//   picks: the tile ids per slot, as many as each answer kanji has parts.
+// Same return shape as scoreGuess; a tile's `pos` is its cell's place in the
+// answer. A slot is solved when all its cells are `hit`.
+export function scoreOrder(picks, answer) {
+  if (picks.length !== answer.length) throw new Error('guess and answer differ in length');
+  const cells = answer.flatMap((slot, s) => slot.parts.map((p, i) => ({ slot: s, part: i, el: p.el, pos: p.pos })));
+  const result = picks.map((els) => ({
+    kanji: null,
+    solved: false,
+    tiles: els.map((el) => ({ el, pos: null, form: el, mark: 'miss', of: null }))
+  }));
+  const tiles = result.flatMap((slot) => slot.tiles);
+  if (tiles.length !== cells.length) throw new Error('guess and answer differ in parts');
+  const used = cells.map(() => false);
+  tiles.forEach((tile, i) => {
+    tile.pos = cells[i].pos;
+    if (tile.el !== cells[i].el) return;
+    used[i] = true;
+    Object.assign(tile, { mark: 'hit', of: { slot: cells[i].slot, part: cells[i].part } });
+  });
+  tiles.forEach((tile) => {
+    if (tile.mark !== 'miss') return;
+    const j = cells.findIndex((cell, k) => !used[k] && cell.el === tile.el);
+    if (j < 0) return;
+    used[j] = true;
+    Object.assign(tile, { mark: 'near', of: { slot: cells[j].slot, part: cells[j].part } });
+  });
+  result.forEach((slot, s) => {
+    slot.solved = slot.tiles.length === answer[s].parts.length && slot.tiles.every((tile) => tile.mark === 'hit');
+    if (slot.solved) slot.kanji = answer[s].kanji;
+  });
+  return result;
+}
+
 // True when every part of every slot is green, i.e. the guess and the answer
 // have the same parts in the same places (a look-alike, or the answer).
 export function allHit(scored) {

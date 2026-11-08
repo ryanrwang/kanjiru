@@ -11,11 +11,11 @@ import { POWERS } from './config/powers.js';
 import { ECONOMY } from './config/economy.js';
 import { ACHIEVEMENTS } from './config/achievements.js';
 import { RULES } from './config/rules.js';
-import { LEVELS, DEFAULT_LEVEL } from './config/levels.js';
+import { LEVELS, DEFAULT_LEVEL, settingsLevel } from './config/levels.js';
 import { has, missingStrings } from './i18n.js';
 import { missingMergeRules } from './store.js';
 
-export { MODES, SLOTS, SKINS, DEFAULT_LOOK, POWERS, ECONOMY, ACHIEVEMENTS, RULES, LEVELS, DEFAULT_LEVEL };
+export { MODES, SLOTS, SKINS, DEFAULT_LOOK, POWERS, ECONOMY, ACHIEVEMENTS, RULES, LEVELS, DEFAULT_LEVEL, settingsLevel };
 
 // Where each catalogue entry's text lives in js/i18n/*.js.
 export const TEXT_KEYS = {
@@ -90,13 +90,18 @@ export function validate() {
   checkIds(LEVELS, 'level');
   LEVELS.forEach((l) => {
     if (!GUESS_KINDS.includes(l.guess)) say(`level "${l.id}" needs guess: ${GUESS_KINDS.join(' or ')}`);
-    ['places', 'realKanji', 'countLeft', 'meanings', 'freeMeaning'].forEach((k) => {
+    ['offered', 'hard', 'guided', 'order', 'places', 'realKanji', 'useHints', 'showSplit', 'countLeft', 'meanings', 'freeMeaning'].forEach((k) => {
       if (typeof l[k] !== 'boolean') say(`level "${l.id}" needs ${k}: true or false`);
     });
     if (!(l.points > 0)) say(`level "${l.id}" needs a points multiplier`);
     if (!(l.paletteScale > 0)) say(`level "${l.id}" needs a paletteScale above 0`);
   });
-  if (!LEVEL[DEFAULT_LEVEL]) say(`the default level "${DEFAULT_LEVEL}" isn't in levels.js`);
+  if (!LEVEL[DEFAULT_LEVEL] || !LEVEL[DEFAULT_LEVEL].offered) say(`the default level "${DEFAULT_LEVEL}" isn't offered in levels.js`);
+  // Every mix of the Settings switches needs exactly one offered level.
+  [[false, false], [true, false], [false, true], [true, true]].forEach(([hard, guided]) => {
+    const n = LEVELS.filter((l) => l.offered && l.hard === hard && l.guided === guided).length;
+    if (n !== 1) say(`levels.js needs one offered level with hard: ${hard}, guided: ${guided} (has ${n})`);
+  });
 
   // Points for marks the engine gives (js/engine/score.js MARKS).
   MARK_POINTS.forEach((mark) => {

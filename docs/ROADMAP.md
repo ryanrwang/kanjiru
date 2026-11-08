@@ -12,7 +12,7 @@ Last updated: 2026-11-08.
 - [x] **Device transfer:** one-time codes from `api/transfer.php`, the Settings panel (gear in the header), Merge both or Replace this device, and copy/paste save text (step 7, PR #3)
 - [x] **Engine:** scoring, game state and every power, the per-puzzle palette, dailies, stats and achievements in `js/engine/`; `tools/compile_game.py` writes `data/game/`; 71 engine tests and 12 compile tests (step 2)
 - [x] **Game screen:** the one-kanji daily and practice in `js/play/`: board with flip reveal, parts palette, saved games, powers, points paid, result card with share text and countdown. Three levels (`js/config/levels.js`): Easy guesses kanji from a strip with a free meaning; Normal (the default) and Hard guess parts only, one per cell, with each cell a place in the kanji so parts go green or yellow. Normal has fewer tiles and counts the kanji that still fit; Hard's parts must make a real kanji (step 3, PR #5)
-- [x] **One daily of 4–6 parts:** one `main` mode whose answers are 1–4 kanji with 4–6 parts in all; k1–k4 retired. Normal's spot is the kanji (yellow = in another kanji), Hard's is the place. A Wordle-style screen: big cells grouped by kanji, a frame over each kanji, the parts as a keyboard pinned to the bottom with Delete and Guess, hints behind a button. Keep playing after the daily, for full points. Claude's first word review: 603 Keep words (step 4)
+- [x] **One daily of 4–6 parts:** one `main` mode whose answers are 1–4 kanji with 4–6 parts in all; k1–k4 retired. One game for everyone: the parts in writing order, like Wordle's letters, with the split between kanji hidden. Settings switches: Hard (real kanji, use what's found) and Guided (split, places, frames, dimmed keys). Easy retired. A Wordle-style screen with a fixed 28-key keyboard pinned to the bottom. Keep playing after the daily, for full points. Claude's first word review: 603 Keep words (step 4)
 
 ## Order
 
@@ -98,7 +98,6 @@ Done when a full daily and a practice game play well on phone and PC (check both
 
 Still open from it, for later:
 - **Real words at Hard:** whether a Hard guess must also be a real word, not just real kanji.
-- **Kanji on the rows at Hard:** the board has no room to show the kanji a row makes.
 - **The Reveal a kanji power** on the new screen, and the meaning or reading as the main clue.
 - **More words:** 2,389 common two-kanji words with 4–6 parts aren't on a JLPT list; many are worth keeping.
 

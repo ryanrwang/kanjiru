@@ -32,7 +32,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `styles.css` | All styles, using token variables only |
 | `app.js` | Start screen built from the catalogues, data loading, and the routes (`#k1` daily, `#k1/practice`) |
 | `js/config/modes.js` | Game modes: the main daily (4–6 parts, 1–4 kanji); k1–k4 retired |
-| `js/config/levels.js` | Difficulty levels: Easy (kanji guesses), Normal and Hard (parts guesses) |
+| `js/config/levels.js` | Levels: Normal, plus the Hard and Guided switches in Settings (`settingsLevel()`); Easy retired |
 | `js/config/skins.js` | Skin catalogue: colours, tile reveal, win effect |
 | `js/config/powers.js` | Hints and powers: effect, cost, when usable, drop weight |
 | `js/config/economy.js` | Every points number: per part, per win, streaks, drops |
@@ -40,7 +40,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/config/rules.js` | Rules that aren't points or modes: the palette's always-shown tiles and decoy weights, palette-only guesses, practice repeats, share squares |
 | `js/registry.js` | One import for all catalogues, plus a start-up check that their ids agree |
 | `js/store.js` | The save in localStorage: versioned, with migrations, plus export, import and the merge rules (`MERGE`). Games on the go are in `playing` |
-| `js/settings.js` | Settings panel (gear in the header): send, receive and the save text, with Merge / Replace |
+| `js/settings.js` | Settings panel (gear in the header): the Hard and Guided switches; send, receive and the save text, with Merge / Replace |
 | `js/transfer.js` | Calls `api/transfer.php` |
 | `js/dom.js` | `el()`, the small DOM helper |
 | `js/engine/score.js` | Scoring: a guess against the answer, part by part (rules in `docs/DESIGN.md`, "Scoring") |

@@ -8,7 +8,7 @@ Last updated: 2026-11-08.
 
 - **Decided — Concept:** Wordle for kanji. The player guesses the answer word from its parts, and every guess colours them.
 - **Decided — One daily of 4–6 parts (step 4):** the answer is a word of 1 to 4 kanji with 4–6 parts in all, like Wordle's five letters ("The puzzle", below).
-- **Decided — Levels:** Easy, Normal and Hard. Normal, the default, is a pure part guesser: one cell per part, grouped by kanji, with no kanji list and no free meaning ("Levels", below).
+- **Decided — One game, two switches (step 4):** everyone plays Normal: the word's parts in writing order, one per cell, like Wordle's letters. Settings has two switches, Hard and Guided. Easy is retired ("Levels", below).
 - **Decided — Name:** Kanjiru, written **漢じる**: 感じる (*kanjiru*, "to sense") with the 漢 of 漢字 in place of 感. The favicon is a vermilion hanko seal with 漢.
 - **Decided — No modes by length (step 4):** the first plan had one mode per length (k1–k4 in `js/config/modes.js`). After playing, one kanji had too few parts to feel like Wordle, so one main mode (`main`) plays every length. k1–k4 are retired, kept so old saves still read.
 - **Decided — Difficulty ceiling:** answers are JLPT N3 or easier, for learners, but words a native speaker also knows. Nothing obscure.
@@ -25,16 +25,17 @@ After playing step 3, the user found one kanji too short: 79% of one-kanji answe
 - **Decided — 4–6 parts, 1–4 kanji:** an answer has 4–6 parts in all, in any number of kanji. `tools/compile_game.py` `LISTS` sets the rule; the daily plays the `main` list.
 - **Why 4–6:** two-kanji words run from 2 to 13 parts; 68% have 4–6. It keeps most words and cuts both the giveaways and the monsters (優勝 has 13).
 - **The mix:** of the 3,297 candidates with 4–6 parts, 88% are two kanji. In the first Keep list (603 words) it's 109 one-kanji, 472 two-kanji, 21 three-kanji and 1 four-kanji answer.
-- **Decided — The grouping shows (for now):** the cells come in one group per kanji (3 + 2 for 時間), so the player knows how many kanji and how many parts each has, like Wordle's word length.
-- **Decided — The kanji is the spot at Normal:** green means the part is in this kanji, yellow that it's in another kanji of the word, grey that the word hasn't got it. The order of cells inside a kanji doesn't matter. One-kanji answers get no yellows at Normal, which is fine at under a fifth of days.
-- **Decided — The place is the spot at Hard:** each cell is a place in its kanji (`places`), so green means right kanji and right place, and yellow means in the word but in another place or kanji. One yellow covers both; there's no third colour.
-- **Decided — Yellow for another kanji:** the engine's `other` mark shows yellow (`--color-feedback-other`, its own token so a colour-blind mode can split it), and 🟨 in the share text.
+- **Decided — Parts in writing order, like letters (step 4, after playing):** each cell is one part of the answer, in writing order across the whole word: 時間 is 日 土 寸 門 日. Green: the right part in the right cell. Yellow: in the word, in another cell (same kanji or not). Grey: not in the word. Repeated parts work like Wordle's repeated letters. The engine is `scoreOrder()` in `js/engine/score.js`.
+- **Decided — The split is hidden (for now):** the cells are one row, so where one kanji ends is part of the puzzle. Once all of a kanji's cells are green, the kanji shows above them, which gives that kanji's cells away. (Guided shows the split from the start.)
+- **Why order:** with the kanji as the spot, order inside a kanji didn't matter and one-kanji days had no yellows. Order makes every day a Wordle-style puzzle, and teaches writing order.
+- **Writing order isn't always obvious:** it's KanjiVG's component order, which is mostly left to right, top to bottom and outside in, but enclosures written last come last (近 is 斤 then 辶). 138 of the 603 answers have an enclosure. Players learn it from the colours; Guided helps.
+- **Decided — Yellow is one colour:** the engine's `near` (another cell) shows yellow, and so does the older `other` mark (`--color-feedback-other`, its own token so a colour-blind mode can split it). 🟨 in the share text.
 - **Decided — First Keep list:** the user asked Claude to review the words. The first pass keeps every candidate with 4–6 parts that's on Waller's N5–N3 vocab lists, marked common in JMdict, written in kanji (not usually kana), with no rare, archaic, slang or sensitive tags. It cuts 15 by hand: 自殺 and 人種 (sensitive), 家内 and 字引 (dated), 一体, 具体, 前者, 後者 and 気味 (odd as answers), and the short weekday names (日曜 to 土曜; the 曜日 forms stay). That's 603 Keep words, about 1.7 years of dailies, in `data/review.json`, which the review page can still change.
 - **Open — More words:** 2,389 common two-kanji words with 4–6 parts aren't on a JLPT list. Many are everyday words worth keeping; review them later.
 
 ## Scoring (Decided, step 2)
 
-Every guessed kanji is broken into parts (`data/parts.json` tiles with positions), and each part gets a mark. The engine is `js/engine/score.js`; `tests/score.test.js` covers every example here. These are the rules for Easy, where a guess is a kanji; Normal and Hard guess parts, and each cell takes the position of the answer's part in that place ("Levels", below).
+Every guessed kanji is broken into parts (`data/parts.json` tiles with positions), and each part gets a mark. The engine is `js/engine/score.js`; `tests/score.test.js` covers every example here. These are the rules for a guess that is a kanji (the retired Easy, and each kanji scored on its own). Every level now guesses parts in writing order across the word, like letters ("The puzzle", above; `scoreOrder()`).
 
 | Mark | Colour | Meaning |
 |---|---|---|
@@ -78,7 +79,7 @@ From `js/config/economy.js`, every number there:
 - **Parts:** each part of the answer pays the first time a guess marks it: green 8, yellow 3, `other` 2. A part that goes yellow, then green, pays the difference, so each part pays at most 8.
 - **Powers:** a part a power reveals counts as found and pays nothing later.
 - **Win:** 80 + 20 per unused row, counted from the mode's own rows, so an Extra guess row can't pay.
-- **Totals:** times the mode's multiplier, the level's (Easy 0.5, Normal 1, Hard 1.5) and daily 1 / keep playing 1 (it was practice 0.5), rounded at the end. Part points pay on a loss too.
+- **Totals:** times the mode's multiplier, the level's (Normal 1, Hard 1.5, Guided 0.75, Guided · Hard 1.125) and daily 1 / keep playing 1 (it was practice 0.5), rounded at the end. Part points pay on a loss too.
 - **Starting points:** 150.
 - **Why these:** the user asked for more generous points than the first draft (5 / 2 / 50 + 15). A typical daily win pays about 145. Tune after playing.
 
@@ -88,7 +89,7 @@ From `js/config/economy.js`, every number there:
 - **revealParts:** parts not yet green, picked in a seeded order, so replaying a game gives the same parts.
 - **eliminateParts:** the most-used tiles that aren't in the answer and aren't already ruled out.
 - **revealKanji:** never fills the last unsolved kanji.
-- **Free meaning:** after guess 3, set per mode (`freeMeaning` in `js/config/modes.js`; 0 shows it from the start), and only at a level with `freeMeaning` (Easy). It isn't a power, so a game that only used it is still clean and gets no 💡.
+- **Free meaning:** after guess 3, set per mode (`freeMeaning` in `js/config/modes.js`; 0 shows it from the start), and only at a level with `freeMeaning` (only the retired Easy). It isn't a power, so a game that only used it is still clean and gets no 💡.
 - **Bonus drops:** after a win, 30% (60% when solved in half the rows or fewer), weighted by each power's `drop`, skipping powers held at their limit.
 
 ### Dailies and stats
@@ -113,64 +114,50 @@ Each puzzle shows a subset of the 251 tiles instead of all of them, like Wordle'
 - **The leak:** the answer's parts are always in the palette; with 34 decoys that gives little away.
 - **Why:** the user asked for it, since 251 tiles is a lot to scan on a phone.
 
-## Levels (Decided, step 3)
+## Levels (Decided, step 4)
 
-After playing step 3, the user found it worked as a kanji finder, not a part guesser: once you know which parts are in the answer, the strip of kanji gives it away. The game is meant to be about guessing the parts (radicals), so it now has three levels (`js/config/levels.js`), picked on the start screen.
+Step 3 had three levels picked on the start screen: Easy (guess a kanji from a strip), Normal and Hard (guess parts). After playing step 4, the user asked for one game for everyone, with order mattering, and two settings. Each mix of the Settings switches is a level in `js/config/levels.js` (`settingsLevel()`), so games, history and points keep a level id.
 
-| Level | A guess is | Helpers | Meaning |
-|---|---|---|---|
-| Easy | A kanji, as in "Making a guess" below | Kanji strip, greyed-out parts, meanings on the rows | Free after guess 3 |
-| Normal (the default) | Any parts, one per cell, grouped by kanji | The kanji is the spot; a count of the kanji that still fit; 70% of the tiles (28) | Only from the Meaning hint |
-| Hard | Parts that make a real kanji in those places, one per cell | Cells are places; all the tiles | Only from the Meaning hint |
+| Level | Hard | Guided | Points | What changes |
+|---|---|---|---|---|
+| Normal (the default) | off | off | ×1 | One row of cells, split hidden |
+| Hard | on | off | ×1.5 | Guesses must make real kanji and use what's been found |
+| Guided | off | on | ×0.75 | The split, places, frames and counts show; keys that can't go in the cell dim |
+| Guided · Hard | on | on | ×1.125 | Both |
 
-- **Decided — Cells:** each row has one cell per part of the answer, grouped by kanji, so the part count is known from the start.
-- **Decided — Like Wordle's screen (step 4):** every row shows from the start, the cells as big as fit, and nothing beside them: no guess counter, dots or side column. The parts sit at the bottom as a keyboard, pinned there, with Delete and Guess keys in its last row. Hints open from a button in the head. While a game is on, the site header steps aside.
-- **Proposed — Delete:** empties the selected cell, or when it's empty, the one before it (like a backspace). Clear is gone.
+- **Decided — Easy is retired:** it worked as a kanji finder, not a part puzzle. Its level stays (`offered: false`) so old games still read; a game on the go at Easy starts again at the current level.
+- **Decided — Settings switches:** Hard and Guided are in Settings (the gear on the start screen), under "Game". They apply to the next puzzle, and to one not started yet. The start screen says which level is on.
+- **Decided — Hard: real kanji, any split:** the parts, in order, must split into real jōyō kanji, any way (the answer's split isn't needed). The row shows the kanji they make, fewest kanji first (子女, 村日), hanging off its right edge so the cells stay centred. Note: many tiles are kanji on their own (日, 木, 口), so this mostly turns away guesses with parts that can't stand or combine (亠 月).
+- **Decided — Hard: use what's been found:** like Wordle's hard mode, every green stays in its cell, and every part found green or yellow is in the guess again, as many times as it was found ("二 stays in cell 1", "Use 土").
+- **Decided — Guided:** shows each kanji's cells apart, their places (左 右) above them, a frame per kanji filled in with the parts found green, and how many kanji still fit under it. The keyboard dims the keys no jōyō kanji has in the selected cell's place (`tilesForPlace()` in `js/engine/palette.js`); dimmed keys keep their spot.
+- **Decided — The keyboard never changes:** the same 28 keys (`paletteScale` 0.7 of the mode's 40) in the same spots for the whole game, at every level, in stroke order. Keys show the best mark each part has had, like Wordle's keyboard.
+- **Decided — Every row, like Wordle:** every row shows from the start, the cells as big as fit, and nothing beside them. The parts sit at the bottom as a keyboard, pinned there, with Delete and Guess keys. Hints open from a button in the head. While a game is on, the site header steps aside.
+- **Proposed — Delete:** empties the selected cell, or when it's empty, the one before it (like a backspace).
 - **Proposed — Selecting cells:** one cell of the next row is selected. A tapped part fills it, then the next empty cell is selected; tapping a cell selects it, so its part can be swapped.
-- **Decided — Parts by place at Hard:** a cell only takes parts that some jōyō kanji has in its place (`tilesForPlace()` in `js/engine/palette.js`). The keyboard shows the selected cell's place's parts, named above them ("Parts for left"); tapping a cell switches place. (The place buttons of step 3 are gone; Normal has no places.)
-- **Proposed — Part colours by place:** at Hard, a part tried in the selected cell's place shows the mark it got there, so green means "right here". Otherwise a part in the answer shows yellow, and one ruled out shows grey. At Normal, keys show the best mark each part has had, like Wordle's keyboard.
-- **Decided — Kanji frame (after playing):** a frame in each answer kanji's shape fills in with each part found green, in its place, whether by a guess or a power. A dot stands for each part still hidden. A solved kanji shows whole, on green.
-- **Proposed — Frame layout:** top and bottom span the frame; left, inner and right share the middle; an outer part (門, 辶) covers it all, with the inner inset. A place with several parts stacks them (土 over 寸 for 時). The frame catches up once the row has flipped.
-- **Decided — The board fits the screen (after playing):** the user found a narrow column in the middle of a phone a poor use of space, and asked for a board that scales to any number of kanji.
-- **Proposed — How it fits (`fitBoard()` in `js/play/screen.js`):** cells take the largest layout-token size (64, 56, 48, 40, 32 or 24 px) whose rows fit the width on one line and, with the head, frames, place names and keyboard, the screen's height. Each kanji's frame sits above its own cells, 80 or 64 px. If even 24 px cells are too wide, rows wrap between kanji, never inside one. It refits when the screen turns or resizes. On a 402 × 780 phone a 6-part answer gets 48 px cells; on a 375 × 667 one, 32 px.
+- **Decided — Kanji frame (Guided):** a frame in each answer kanji's shape fills in with each part found green, in its place, whether by a guess or a power. A dot stands for each part still hidden. A solved kanji shows whole, on green.
+- **Proposed — Frame layout:** top and bottom span the frame; left, inner and right share the middle; an outer part (門, 辶) covers it all, with the inner inset. A place with several parts stacks them (土 over 寸 for 時). The frames catch up once the row has flipped.
+- **Decided — The board fits the screen:** the user found a narrow column in the middle of a phone a poor use of space, and asked for a board that scales to any number of kanji.
+- **Proposed — How it fits (`fitBoard()` in `js/play/screen.js`):** cells take the largest layout-token size (64, 56, 48, 40, 32 or 24 px) whose rows fit the width on one line and, with the head, frames, place names and keyboard, the screen's height. Hard leaves room on both sides for the row's kanji. With the split shown, each kanji's frame sits above its own cells (80 or 64 px), and if even 24 px cells are too wide, rows wrap between kanji. It refits when the screen turns or resizes. A 6-part answer gets 56 px cells on a 402 × 780 phone and 48 px on a 375 × 667 one.
 - **Proposed — Short place names:** over cells narrower than 40 px, places use short names (L, R, btm, out, in; Japanese is already one character).
-- **Decided — Cells are places at Hard (`places`):** each cell stands for one of the answer's part positions, in order, and a line above the board names them (左 右, or 左 右 右 for 時). A part is green in its place, yellow in another place or kanji. Repeated parts work like Wordle's letters: three 木 picked for 森 are all green. All cells green wins. The engine is `scoreParts()` in `js/engine/score.js`.
-- **Decided — Why places came, then went to Hard:** in step 3, parts-only guessing of one kanji was a guessing game, and places brought back yellow. With 4–6 parts over 1–4 kanji (step 4), the kanji is a natural spot and gives yellow by itself, so Normal drops places and Hard keeps them.
-- **Decided — Kanji that fit (`countLeft`, Normal only):** each guess says how many kanji still fit everything seen so far: same shape, buildable from the palette, none swept away, the revealed strokes, layout and parts, and the same marks for every guess (`engine.fits()`). The next row shows the count before the first guess, and again when a power changes it.
-- **Proposed — Where the count goes:** under each kanji's frame ("12 fit"), for the latest guess only. Each row's count is in its screen-reader label.
-- **Decided — Fewer parts at Normal (`paletteScale` 0.7):** 28 tiles instead of 40, so each guess tests more of them. Hard keeps 40.
-- **Decided — Normal takes any parts:** they don't have to make a kanji. **Hard** turns away parts that make no jōyō kanji in those places ("No kanji has those parts in those places").
-- **Decided — No free meaning at Normal or Hard:** only the Meaning hint shows it (`freeMeaning: false`).
-- **Decided — Layout hint at Hard:** the cells already show the layout, so the hint says it has nothing new to show. At Normal it works.
-- **Open — Kanji on the rows:** the engine still works out the kanji a Hard row's parts make (the easiest when several share them, such as 員 and 唄), and it's in the row's screen-reader label, but the Wordle-style board has no room beside the rows to show it. The frame shows each kanji once solved.
-- **Proposed — Look-alikes:** parts that are exactly the answer's, in the same places, win, even when a look-alike shares them (未 and 末).
-- **Proposed — Points:** each level multiplies points, on top of the mode and daily or practice: Easy ×0.5, Normal ×1, Hard ×1.5 (`levels.js` `points`). Normal stays ×1 because the economy was tuned at ×1.
-- **Proposed — One daily for every level:** a mode has one daily, whatever the level, so puzzle numbers and streaks are shared. A game keeps the level it started at (in its start, `save.playing`), and its history entry records it. A game with no moves yet moves to a level picked since.
-- **Proposed — Sharing:** the share text names the level (`Kanjiru 一 #7 Normal 3/6`), with yellow squares at Normal and Hard too.
-- **Proposed — Start screen:** the example rows follow the level picked: kanji guesses at Easy (answer 明), and at Normal and Hard three rows for 時間, with 寸 yellow in the wrong kanji (and at Hard, 日 yellow in the wrong place), then 時間 solved.
-- **Open — Tuning Normal:** 28 tiles, 6 rows and the count may still be too hard, or too easy. More rows, a different `paletteScale` or cheaper hints are catalogue edits. Decide after playing.
-- **Decided — One-part answers stay out:** one-part kanji (金, 車, 雨) are already out of the one-kanji answers ("Atomic answers leave", below), and the 4–6 part rule keeps them out anyway.
-- **Open — Real words at Hard:** each kanji's parts must make a real kanji. Whether the whole word must be a real word too is still open (`options.isWord` already applies).
+- **Decided — Kanji that fit (`countLeft`, Guided):** under each kanji's frame, how many kanji still fit that slot: the same number of parts, buildable from the palette, none swept away or shown grey, the revealed strokes, layout and parts, a green part at that cell of the kanji's writing order and a part not green there not at it (`engine.fits()`).
+- **Decided — Normal takes any parts:** they don't have to make a kanji.
+- **Decided — No free meaning:** only the Meaning hint shows it (`freeMeaning: false`).
+- **Decided — Layout hint:** useful at Normal and Hard; at Guided the board already shows the layout.
+- **Proposed — Look-alikes:** parts that are exactly the answer's, in the same order, win, even when a look-alike shares them (未 and 末); the compile step keeps the 4 look-alike answers out anyway.
+- **Proposed — One daily for every level:** one daily, whatever the level, so puzzle numbers and streaks are shared. A game keeps the level it started at (in its start, `save.playing`), and its history entry records it. A game with no moves yet moves to a level picked since.
+- **Proposed — Sharing:** the share text names the level (`Kanjiru 漢 #7 Normal 3/6`), with one square per cell. The squares are split by kanji only where the board showed the split (Guided).
+- **Proposed — Start screen:** the example rows show 時間's five cells: 口 日 寸 木 月 (日 yellow, 寸 green), then 日 土 寸 日 門, then 時間 solved.
+- **Open — Tuning:** 28 keys, 6 rows, the Hard and Guided points. All catalogue edits; decide after playing.
+- **Open — Real words at Hard:** the parts must make real kanji; whether the whole guess must be a real word is still open.
 
-## Making a guess at Easy (Decided, built in step 3; longer words in step 4)
+## The game screen (steps 3 and 4)
 
-- The player taps parts on the puzzle's palette, grouped by stroke count like jisho.org's radical search. `narrow()` in `js/engine/palette.js` does the filtering below.
-- Parts that can't combine with the ones already picked grey out. A tile's corner shows its most used other form (氵 on 水).
-- A strip shows the real kanji that match, easiest first. Every guess is therefore a real kanji, and its meaning shows, so guesses teach.
-- Players who type Japanese can enter a kanji with their keyboard instead. A typed kanji with a part outside the palette is shown with a red edge and turned away.
-- **Proposed — Tap twice to guess:** the first tap puts the kanji in the next row with its parts and meaning; a second tap (or Guess) makes the guess. One tap was the plan, but a stray tap on a phone would waste a row.
-- **Proposed — Longer words:** the next row says how many kanji the word has. Each tapped kanji fills the next slot, and the picked parts reset for the next kanji; once all are full, tapping the last one again guesses. Delete takes the last kanji off. Easy doesn't check that the word is real.
-- **Palette colours:** each tile shows the best mark it has had (green, yellow, grey), like Wordle's keyboard. Parts a power reveals are green; parts Sweep removes are grey.
-
-## The game screen (step 3)
-
-- **Board at Easy, proposed:** the rows guessed so far, then the next row, then one dot per row left, and a guess counter in the head. Normal and Hard show every row instead ("Levels", above).
 - **Reveal:** each new row flips tile by tile (`settings.tiles`; Flip for now, step 6 adds the rest). Off under reduced motion.
-- **Hints:** at Easy, the free meaning after guess 3 (with a note until then). At every level, the bar of powers with the count held opens from the Hints button in the head (at Normal and Hard, above the keyboard); clues already found stay on show. Tapping a power opens a sheet that says what it does and why it can't be used now, if so. Using one spends it from the inventory.
+- **Hints:** the bar of powers with the count held opens from the Hints button in the head, above the keyboard; clues already found stay on show there. Tapping a power opens a sheet that says what it does and why it can't be used now, if so. Using one spends it from the inventory.
 - **Saving:** the game on the go is saved as its start and log after every move (`save.playing`), so a reload carries on. A finished daily is recorded to history and can't be played again; its result shows until the next daily.
 - **Points:** paid into the wallet once, when a game ends: what `engine.points()` gives. Streak rewards, bonus drops and achievements are step 5.
 - **Result card:** the answer with its meanings, readings and parts, points, streak, share text and a countdown to the next daily, with Keep playing (after the daily) or Next puzzle (after another one). A game from another device (merged in) shows without points, since only its guesses are known.
-- **Share text:** the mode's numeral, the daily number, the level, the score (X when lost) and one square per part per guess (`rules.js` `share`). 💡 marks a game that used a power; the free meaning doesn't count.
+- **Share text:** the mode's numeral, the daily number, the level, the score (X when lost) and one square per part per guess (`rules.js` `share`). 💡 marks a game that used a power.
 - **Modes:** `listed` in `js/config/modes.js` puts a mode on the start screen and `playable` says the screen supports it; a mode with no answers shows "soon". The start screen offers the daily first, then Keep playing once it's done.
 
 ## Hints, powers and points
@@ -178,7 +165,7 @@ After playing step 3, the user found it worked as a kanji finder, not a part gue
 - **Decided — Game-like:** random bonus hints, hints you can use before the game starts (reveal one or several parts), and points earned per guess that buy hints and powers.
 - **Decided — Catalogue:** `js/config/powers.js`. Each power names an `effect` (revealStrokes, revealLayout, revealMeaning, revealReading, revealParts, eliminateParts, addGuesses, revealKanji) plus `params`, `when` (before / during), `cost`, `hold` and `drop`.
 - **Decided — Point values:** `js/config/economy.js`, with the rules in "Scoring", "Points". Daily games pay more than practice, streak milestones pay a reward, and wins drop a random hint. Each mode multiplies its points.
-- **Decided — Base rules:** at Easy the meaning is free after guess 3 (set per mode). At Normal and Hard only the Meaning hint shows it ("Levels").
+- **Decided — Base rules:** only the Meaning hint shows the meaning ("Levels"). (The retired Easy showed it free after guess 3.)
 - **Decided — Honest sharing:** the share text marks a game that used a power with 💡 (step 3).
 - **Open — Japanese mode:** the 意味 (Meaning) hint shows the English gloss, because the dictionary data is English only. For native speakers, the reading or example words may suit better.
 

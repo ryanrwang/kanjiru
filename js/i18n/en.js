@@ -24,13 +24,11 @@ export default {
 
   hero: {
     title: 'Guess the word from its parts.',
-    body: 'Each guess colours its parts: right spot, wrong spot, or not in the answer.',
     hit: 'Right part, right spot',
     near: 'Right part, wrong spot',
     miss: 'Not in the answer',
-    // Levels with parts guesses: Normal (each kanji is a spot) and Hard (each place in a kanji is)
-    partsBody: 'Fill the cells with parts, one group per kanji. A part turns green in the right kanji, yellow in another kanji of the word, grey if the word hasn’t got it.',
-    placesBody: 'Fill the cells with parts. Each cell is a place in its kanji: a part turns green in its place, yellow in another place or kanji, grey if the word hasn’t got it.'
+    // Parts in writing order (every level now)
+    partsBody: 'Fill the cells with the word’s parts in writing order, like Wordle’s letters. Where one kanji ends is for you to work out. A part turns green in its cell, yellow if it’s elsewhere in the word, grey if the word hasn’t got it.'
   },
 
   play: {
@@ -45,8 +43,8 @@ export default {
     dailyStarted: 'Daily #{n} · {level} · {guesses} guessed',
     dailyWon: 'Daily #{n} · {level} · solved in {guesses} ✓',
     dailyLost: 'Daily #{n} · {level} · not solved',
-    level: 'Level',
-    levelPoints: '×{mult} pts',
+    levelNow: 'Playing at {level}. Hard and Guided are in Settings.',
+    levelChange: 'Settings',
     daily: 'Play',
     continue: 'Continue',
     result: 'Result',
@@ -58,8 +56,6 @@ export default {
     daily: 'Daily #{n}',
     practice: 'Keep playing',
     kindLevel: '{kind} · {level}',
-    count: '{n}/{rows}',
-    countTitle: 'Guesses used',
     listSep: ', ',
     meaningSep: ', ',
     layoutSep: ' · ',
@@ -67,11 +63,11 @@ export default {
     rowLabel: 'Guess {n}: {word}. {parts}',
     rowLabelParts: 'Guess {n}: {parts}',
     rowLabelFit: '{label}. {fit}',
-    nextHint: 'Pick parts below, or type a kanji',
-    nextHintWord: 'A word of {n} kanji: pick parts for each, or type it',
     cells: 'Next guess: {n} of {cells} cells filled',
-    cellEmpty: '{place} cell, empty',
-    cellFilled: '{place} cell: {part}',
+    cellEmpty: '{cell}, empty',
+    cellFilled: '{cell}: {part}',
+    cellNumber: 'Cell {n}',
+    cellPlace: 'Cell {n}, {place}',
     shape: 'Cells: {places}',
     fit: 'Kanji that fit: {n}',
     fitTitle: 'How many kanji still fit',
@@ -82,18 +78,9 @@ export default {
     framePart: '{part} {place}',
     frameEmpty: 'no parts found yet',
     frameSolved: 'Solved: {kanji}',
-    typeLabel: 'Your guess',
-    typePlaceholder: 'Type a kanji',
     guess: 'Guess',
-    chosen: '{kanji}: {meaning}. Tap it again to guess.',
-    chosenNext: 'Now pick kanji {n}.',
-    chosenWord: '{word}: tap {kanji} again to guess.',
-    stripHint: 'Tap parts to see the kanji they make.',
-    matches: '{n} kanji',
-    clear: 'Clear',
     delete: 'Delete',
     palette: 'Parts',
-    strokes: '{n} strokes',
     soon: 'This mode is coming soon: its words need reviewing first.',
     on: 'On',
     kun: 'Kun',
@@ -136,9 +123,10 @@ export default {
       }
     },
     errors: {
-      empty: 'Pick a kanji first.',
       slots: 'Fill all {cells} cells first.',
-      'not-real': 'No kanji has those parts in those places. Try another mix.',
+      'not-real': 'Those parts don’t make real kanji in that order. Try another mix.',
+      'keep-hit': '{part} stays in cell {cell}: you found it there.',
+      'use-near': 'Use {part}: you found it in the word.',
       level: 'That kind of guess isn’t used at this level.',
       over: 'The game is over.',
       length: 'The answer is {n} kanji long.',
@@ -218,7 +206,19 @@ export default {
   settings: {
     open: 'Settings',
     title: 'Settings',
-    close: 'Close'
+    close: 'Close',
+    game: {
+      title: 'Game',
+      body: 'For your next puzzle, and one you haven’t started.'
+    },
+    hard: {
+      name: 'Hard',
+      body: 'Every guess must make real kanji and use what you’ve found: greens stay put, and parts found are used again. Points ×{mult}.'
+    },
+    guided: {
+      name: 'Guided',
+      body: 'Shows where each kanji starts, its places and a frame for each, and dims the parts that can’t go in the cell. Points ×{mult}.'
+    }
   },
 
   transfer: {
@@ -290,9 +290,11 @@ export default {
   },
 
   level: {
-    easy: { name: 'Easy', desc: 'Guess kanji. The parts you pick list the kanji they make, with meanings, and the meaning shows for free after a few guesses.' },
-    normal: { name: 'Normal', desc: 'Guess parts, a group per kanji: green in the right kanji, yellow in another. No kanji list or free meaning; fewer parts, and a count of the kanji that still fit.' },
-    hard: { name: 'Hard', desc: 'Each cell is a place in its kanji, so green means the right place, and every guess must make real kanji. All the parts, no count.' }
+    easy: { name: 'Easy', desc: 'Guess kanji from a list the parts make, with meanings. (Retired.)' },
+    normal: { name: 'Normal', desc: 'The word’s parts in writing order, one per cell. You work out where each kanji starts.' },
+    hard: { name: 'Hard', desc: 'Every guess must make real kanji, and use what you’ve found: greens stay put, and parts found are used again.' },
+    guided: { name: 'Guided', desc: 'Shows each kanji’s cells and places, a frame per kanji with how many still fit, and dims the parts that can’t go in the cell.' },
+    'guided-hard': { name: 'Guided · Hard', desc: 'Guided and Hard together.' }
   },
 
   slot: {
