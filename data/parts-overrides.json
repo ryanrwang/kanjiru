@@ -54,12 +54,12 @@
       "why": "Same right as 重: 𠂉 over 里."
     },
     "産": {
-      "parts": [["立", "outer"], ["厂", "outer"], ["生", "inner"]],
-      "why": "The stroke down the left and 立's last line draw 厂 around 生; KanjiVG leaves the stroke loose."
+      "parts": [["立", "top"], ["厂", "bottom"], ["生", "bottom"]],
+      "why": "立 over 厂 and 生: the stroke down the left and 立's last line draw 厂; KanjiVG leaves the stroke loose."
     },
     "着": {
-      "parts": [["羊", "outer"], ["目", "inner"]],
-      "why": "The long stroke is part of 羊 here; KanjiVG leaves it loose."
+      "parts": [["羊", "top"], ["目", "bottom"]],
+      "why": "羊 over 目; the long stroke is part of 羊 here, and KanjiVG leaves it loose."
     },
     "表": {
       "parts": [["龶", "top"], ["衣", "bottom"]],

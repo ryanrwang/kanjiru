@@ -395,10 +395,13 @@ export function openGame(root, ctx) {
   // ── Kanji frames ───────────────────────────────────────────────────
 
   // Where each place sits in the frame: top and bottom span the width;
-  // left, inner and right share the middle; outer, whole and none cover it all.
+  // left, inner and right share the middle; outer, whole and none cover it
+  // all when they hold one part (門 around 日). Holding several (立 and 厂
+  // around 生 in 産), they'd pile up past the frame, so they take a column
+  // of the middle instead, before the inner.
   const COVER = ['outer', 'whole', 'none'];
-  function frameAreas(order) {
-    const mid = ['left', 'inner', 'right'].filter((pos) => order.includes(pos));
+  function frameAreas(order, covers) {
+    const mid = ['left', 'outer', 'none', 'inner', 'right'].filter((pos) => order.includes(pos) && !covers(pos));
     const cols = Math.max(mid.length, 1);
     const rows = [];
     if (order.includes('top')) rows.push(Array(cols).fill('top'));
@@ -453,16 +456,17 @@ export function openGame(root, ctx) {
     }
     const parts = data.kanji[ch].parts;
     const order = [...new Set(parts.map((p) => p.pos))];
+    const covers = (pos) => COVER.includes(pos) && parts.filter((p) => p.pos === pos).length === 1;
     const found = (i) => s.found[`${slot}:${i}`] === 'hit';
     const said = parts.filter((p, i) => found(i)).map((p) => t('game.framePart', { part: p.form || p.el, place: t(`pos.${p.pos}`) }));
     return el('span', {
-      class: `kanji-frame${order.includes('outer') ? ' has-outer' : ''}`,
-      style: frameAreas(order),
+      class: `kanji-frame${order.includes('outer') && covers('outer') ? ' has-outer' : ''}`,
+      style: frameAreas(order, covers),
       role: 'img',
       'aria-label': t('game.frameLabel', { parts: said.length ? said.join(t('game.listSep')) : t('game.frameEmpty') })
     }, order.map((pos) => {
       const here = parts.map((p, i) => ({ p, i })).filter(({ p }) => p.pos === pos);
-      const cover = COVER.includes(pos);
+      const cover = covers(pos);
       return el('span', {
         class: `frame-zone is-${pos}${cover ? ' is-cover' : ''}`,
         'data-n': String(Math.min(here.length, 4)),
