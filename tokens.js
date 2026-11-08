@@ -283,9 +283,13 @@
       cellMd:    s[48],
       cellLg:    s[56],
       cellXl:    s[64],
-      // The kanji built from found parts, above each kanji's cells.
-      frameSm:   s[64],
-      frame:     s[80]
+      // Guided: the kanji built from found parts, above each kanji's cells.
+      frameSm:   s[56],
+      frame:     s[64],
+      // The keyboard's keys: their height, and their least width. The game
+      // screen drops to the small height only to keep cells at 32 px or more.
+      keySm:     s[32],
+      key:       s[40]
     },
 
     radius: {
