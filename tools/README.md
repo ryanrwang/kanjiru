@@ -62,6 +62,32 @@ For kanji the rules get wrong. Each entry lists the parts in stroke order as `[g
 
 To find what needs fixing, flag kanji on the parts check page (`review/parts.html`); the next build lists them.
 
+## compile_game.py
+
+Writes the slim files the game loads, into `data/game/` (they deploy; `candidates.json` doesn't):
+
+- `kanji.json`: every jōyō kanji as a row of `fields`: strokes, JLPT level, frequency, up to 3 meanings (KANJIDIC's "radical (no. …)" labels dropped), on and kun readings, and parts as `[tile, position]` or `[tile, position, form]`. About 280 KB, 82 KB gzipped.
+- `answers.json`: the daily schedule. `epoch` is the date of puzzle 1, `answers` lists each length's answers in daily order, and `words` gives each answer of 2+ kanji its `[reading, meanings]`. One entry per line, so schedule changes diff cleanly.
+
+```
+python -I -X utf8 tools/compile_game.py
+```
+
+- **Answers are Keep words only,** from `data/review.json` (read, never written). With no Keep words every list is empty, and the summary says so. Use `--review PATH` to read another file, such as the main folder's when running from a worktree.
+- **Left out:** one-kanji look-alikes (未 末 押 招: same parts in the same places as another kanji), and Keep words that are no longer candidates. The summary lists both.
+- **Stable order:** answers for days already played, up to tomorrow, never move. Every later day is shuffled again from a fixed seed, so newly kept words mix in evenly. A word cut after its day is listed but stays in its slot.
+- **The summary** shows each length's answer count against the 365 a year of dailies needs.
+
+Settings at the top:
+
+- `EPOCH = "2026-11-01"`: the date of puzzle 1. Set it to launch day at launch, then never change it. A new epoch unlocks every day.
+- `SHUFFLE_SEED`: changing it reorders every day not yet played.
+- `LOCK_AHEAD_DAYS = 1`: days past today that are locked too, for time zones ahead of this computer.
+- `ALLOW_LOOKALIKE_ANSWERS = False`: True keeps the look-alikes as answers.
+- `MAX_KANJI_MEANINGS = 3`.
+
+Tests, on small made-up data: `python -I -X utf8 -m unittest discover -s tools`.
+
 ### Review pages
 
 `review/` is for checking the data locally, under PHP's built-in server. It never deploys.

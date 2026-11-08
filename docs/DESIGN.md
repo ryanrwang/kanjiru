@@ -12,28 +12,94 @@ Last updated: 2026-11-07.
 - **Decided — Difficulty ceiling:** answers are JLPT N3 or easier, for learners, but words a native speaker also knows. Nothing obscure.
 - **Decided — Everything scalable:** the number of kanji, skins, hint types and point values are catalogue entries, never hard-coded (see CLAUDE.md, "Rules").
 - **Decided — Interface languages:** English and Japanese, with a toggle. It follows the device until the player picks.
-- **Proposed — Guessable kanji:** any of the 2,136 jōyō kanji can be a guess, so native speakers aren't blocked. The candidate list shows easier ones first.
-- **Proposed — Daily + practice:** one daily puzzle per mode, the same for everyone, rolling over at local midnight, plus unlimited practice. Streaks count dailies only.
+- **Decided — Guessable kanji:** any of the 2,136 jōyō kanji built from the puzzle's palette ("The palette", below). The candidate list shows easier ones first.
+- **Decided — Daily + practice:** one daily puzzle per mode, the same for everyone, rolling over at local midnight, plus unlimited practice. Streaks count dailies only.
+- **Decided — Tune by playing:** every rule, size and number below lives in `js/config/`, so balancing after playtests is a catalogue edit.
 
-## Feedback (Proposed)
+## Scoring (Decided, step 2)
 
-Every guessed kanji is broken into parts, and each part gets a colour:
+Every guessed kanji is broken into parts (`data/parts.json` tiles with positions), and each part gets a mark. The engine is `js/engine/score.js`; `tests/score.test.js` covers every example here.
 
-| Colour | Meaning |
-|---|---|
-| Green (`--color-feedback-hit`) | The part is in the answer, in the same position |
-| Yellow (`--color-feedback-near`) | The part is in the answer, in a different position |
-| Grey (`--color-feedback-miss`) | The part isn't in the answer |
+| Mark | Colour | Meaning |
+|---|---|---|
+| `hit` | Green (`--color-feedback-hit`) | The part is in the answer, in the same position |
+| `near` | Yellow (`--color-feedback-near`) | The part is in the answer, in a different position |
+| `other` | (2–4 kanji only; colour in step 4) | The part isn't in this kanji, but is in another kanji of the word |
+| `miss` | Grey (`--color-feedback-miss`) | The part isn't in the answer, or every copy of it is already marked |
 
 - **Positions are needed** because a plain set of parts isn't unique: 員 and 唄 are both 口 + 貝, and 古 and 叶 are both 十 + 口.
-- **Positions:** left, right, top, bottom, outer (enclosures such as 門, 囗, 广, 辶), inner (what they enclose), whole (an atomic kanji), none.
-- **Worked example:** the answer is 明 (日 left, 月 right). 間 gives 門 grey and 日 yellow (日 is inside, not left). 時 gives 日 green and 寺 grey. 明 gives two greens.
-- **Open — Repeated parts:** how to colour a part that appears twice (like Wordle's repeated letters). The engine step settles this.
-- **Open — Longer words:** each slot gets its own colours, plus a marker for "this part is in another kanji of the word". Whether a 2–4 kanji guess must be a real word is also open; real words fit Wordle and teach vocab, and the input can narrow the choices as slots fill.
+- **Positions:** left, right, top, bottom, outer (enclosures such as 門, 囗, 广, 辶), inner (what they enclose), whole (an atomic kanji), none. They must match exactly: `whole` only matches `whole`.
+- **Variants:** parts are compared by tile, never by the glyph shown, so a guess of 水 scores against 海's 氵 (yellow: whole vs left).
+- **Worked example:** the answer is 明 (日 left, 月 right). 間 gives 門 grey and 日 yellow (日 is inside, not left). 時 gives 日 green, 土 and 寸 grey. 明 gives two greens.
+
+### Repeated parts
+
+Like Wordle's repeated letters: greens first, then yellows, each in stroke order. Every marked part uses up one part of the answer, so the marks never claim more copies than the answer has.
+
+| Answer | Guess | Marks | Why |
+|---|---|---|---|
+| 林 (木 left, 木 right) | 森 (木 top, 木 bottom, 木 bottom) | yellow, yellow, grey | The answer has two 木, not three |
+| 休 (亻 left, 木 right) | 林 (木 left, 木 right) | grey, green | The green uses up the only 木 |
+| 品 (口 top, 口 bottom ×2) | 語 (言 left, 五 right, 口 right) | grey, grey, yellow | One 口 in the guess, so one mark |
+
+### Winning
+
+- **One kanji:** the guess is the answer.
+- **Look-alikes:** 未/末, 押/抽 and 拐/招 have the same parts in the same places. The compile step leaves the 4 of them that are answers (未 末 押 招) out of the one-kanji answers, so an all-green row is always the answer. They stay guessable, and stay in longer words.
+- **Not a guess:** a kanji outside the jōyō list, one with a part that isn't in the palette, the wrong length, or a repeat of an earlier guess is turned away without using a row.
+
+### Longer words (2–4 kanji)
+
+1. Each slot is scored against the answer's kanji in the same slot, with the rules above. A slot holding the right kanji is solved.
+2. Then a grey part whose tile is still unused in another slot of the answer is marked `other` instead. Same use-up rule: slots left to right, parts in stroke order, using only answer parts nothing else has marked.
+3. Example: the answer is 日本 and the guess 本日. Slot 1 (本 vs 日): 木 and 一 are `other`, since both are in 本. Slot 2 (日 vs 本): 日 is `other`.
+4. A look-alike in a slot (末 for 未) shows all green but isn't solved. Whether a guess must be a real word is step 4's call; the engine scores any kanji.
+
+### Points
+
+From `js/config/economy.js`, every number there:
+
+- **Parts:** each part of the answer pays the first time a guess marks it: green 8, yellow 3, `other` 2. A part that goes yellow, then green, pays the difference, so each part pays at most 8.
+- **Powers:** a part a power reveals counts as found and pays nothing later.
+- **Win:** 80 + 20 per unused row, counted from the mode's own rows, so an Extra guess row can't pay.
+- **Totals:** times the mode's multiplier and daily 1 / practice 0.5, rounded at the end. Part points pay on a loss too.
+- **Starting points:** 150.
+- **Why these:** the user asked for more generous points than the first draft (5 / 2 / 50 + 15). A typical daily win pays about 145. Tune after playing.
+
+### Powers in the engine
+
+- **When:** `before` is before the first guess; `during` is after it, until the game ends. A power that would show nothing new can't be used.
+- **revealParts:** parts not yet green, picked in a seeded order, so replaying a game gives the same parts.
+- **eliminateParts:** the most-used tiles that aren't in the answer and aren't already ruled out.
+- **revealKanji:** never fills the last unsolved kanji.
+- **Free meaning:** after guess 3, set per mode (`freeMeaning` in `js/config/modes.js`; 0 shows it from the start). It isn't a power, so a game that only used it is still clean and gets no 💡.
+- **Bonus drops:** after a win, 30% (60% when solved in half the rows or fewer), weighted by each power's `drop`, skipping powers held at their limit.
+
+### Dailies and stats
+
+- **Puzzle number:** days since the epoch, by the local date. The epoch is `EPOCH` in `tools/compile_game.py`, written into `data/game/answers.json` with the answer order (`js/engine/daily.js` reads it). Set it to launch day at step 8, then never change it.
+- **Answer order:** a fixed (seeded) shuffle of the Keep words. Days already played, up to tomorrow, are locked; later days are shuffled again on each compile, so new Keep words mix in evenly. When the list runs out it starts again from the top.
+- **A year of dailies** needs 365 Keep words per mode. One kanji has 530 candidates once the look-alikes leave; four kanji has only 144, so its daily would repeat after 144 days.
+- **Practice:** a random Keep answer, skipping the last 30 played in that mode (`rules.js` `practice.avoidRecent`).
+- **Streak:** one streak across modes: days in a row with at least one daily won. A day not yet played doesn't break it. Streak rewards pay each time a run reaches their length.
+- **Stats:** wins, fastest win, clean wins and kanji collected count practice too. Streaks and full-set days count dailies only. Kanji collected counts every kanji of a solved word.
+- **History entries** (`js/store.js`): `{ date, guesses: [words], won, powers: [ids], answer }`, under the puzzle number for a daily, or `p` + a timestamp for practice.
+
+## The palette (Decided, step 2)
+
+Each puzzle shows a subset of the 251 tiles instead of all of them, like Wordle's keyboard. The engine is `js/engine/palette.js`.
+
+- **What's in it:** every part of the answer, the six single strokes (`rules.js` `palette.always`), and random decoys up to the mode's `palette` size in `modes.js`: 40, 50, 56 and 64 for 1–4 kanji.
+- **Guesses:** only kanji built entirely from the palette's tiles, typed ones included (`rules.js` `guessFromPalette`).
+- **Same for everyone:** a daily's palette comes from its puzzle number.
+- **Decoys:** picked by weight: how many jōyō kanji use the tile, plus 20× how many kanji it shares with a part of the answer (`rules.js` `decoyWeight`). Neighbours make more real kanji buildable.
+- **Why 40:** tested on the real data, a 40-tile palette leaves about 190 buildable jōyō kanji per puzzle, about 75 of them N3 or easier. 30 tiles leaves about 115, which felt too tight.
+- **The leak:** the answer's parts are always in the palette; with 34 decoys that gives little away.
+- **Why:** the user asked for it, since 251 tiles is a lot to scan on a phone.
 
 ## Making a guess (Proposed)
 
-- The player taps parts on a palette, grouped by stroke count like jisho.org's radical search.
+- The player taps parts on the puzzle's palette, grouped by stroke count like jisho.org's radical search. `narrow()` in `js/engine/palette.js` does the filtering below.
 - Parts that can't combine with the ones already picked grey out.
 - A strip shows the real kanji that match, easiest first, and the player taps one to guess it. Every guess is therefore a real kanji, and its meaning can be shown, so guesses teach.
 - Players who type Japanese can enter a kanji with their keyboard instead.
@@ -42,8 +108,8 @@ Every guessed kanji is broken into parts, and each part gets a colour:
 
 - **Decided — Game-like:** random bonus hints, hints you can use before the game starts (reveal one or several parts), and points earned per guess that buy hints and powers.
 - **Decided — Catalogue:** `js/config/powers.js`. Each power names an `effect` (revealStrokes, revealLayout, revealMeaning, revealReading, revealParts, eliminateParts, addGuesses, revealKanji) plus `params`, `when` (before / during), `cost`, `hold` and `drop`.
-- **Decided — Point values:** `js/config/economy.js`. Points come per part a guess uncovers (green 5, yellow 2) and per win (50 + 15 per unused row). Daily games pay more than practice, streak milestones pay a reward, and wins drop a random hint (30%, or 60% for a fast solve). Each mode multiplies its points.
-- **Proposed — Base rules:** the meaning is free after guess 3. A Hard toggle (no free meaning) can come later.
+- **Decided — Point values:** `js/config/economy.js`, with the rules in "Scoring", "Points". Daily games pay more than practice, streak milestones pay a reward, and wins drop a random hint. Each mode multiplies its points.
+- **Decided — Base rules:** the meaning is free after guess 3 (set per mode). A Hard toggle (no free meaning) can come later.
 - **Proposed — Honest sharing:** the share text marks a daily that used hints (e.g. 💡).
 - **Open — Japanese mode:** the 意味 (Meaning) hint shows the English gloss, because the dictionary data is English only. For native speakers, the reading or example words may suit better.
 
@@ -140,13 +206,13 @@ Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in strok
 
 ### Still open
 
-- **Look-alikes:** 未/末, 押/抽 and 拐/招 have the same parts in the same places. The engine needs a tie-break, or must accept either.
+- **Look-alikes:** settled in step 2: 未 末 押 招 leave the one-kanji answers ("Scoring", "Winning").
 - **Clumsy breakdowns:** 160 answers still have single strokes, and a few have several (乗, 呼, 段, 喜, 候). Flag them on the parts check page, then fix them in `data/parts-overrides.json`.
 - **Phones:** check `review/parts.html` on iOS and Android to confirm which glyphs need the drawings.
 
 ## Hosting
 
 - **Live:** https://www.ryanrwang.com/apps/kanjiru/ (also clearful.net). Each push to `main` deploys by FTPS (`.github/workflows/deploy.yml`).
-- **Not deployed:** `tools/`, `review/`, the data working files and `*.md`.
+- **Not deployed:** `tools/`, `review/`, `tests/`, `package.json`, the data working files and `*.md`. The game loads `data/game/` and `data/parts.json`.
 - **Local:** `php -S 0.0.0.0:8095 -t D:/Dropbox/Clearful`, then open `/apps/kanjiru/`.
 - **Apps page:** not listed on `/apps/` yet; add it at launch.

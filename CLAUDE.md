@@ -22,6 +22,8 @@ php -S 0.0.0.0:8095 -t D:/Dropbox/Clearful
 
 Then open `http://localhost:8095/apps/kanjiru/` on the PC, or `http://<LAN IP>:8095/apps/kanjiru/` on the phone. Keep port 8095 for this project.
 
+Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m unittest discover -s tools` for the compile step. Run both before committing engine or config changes.
+
 ## Key Files
 | File | Purpose |
 |---|---|
@@ -34,16 +36,28 @@ Then open `http://localhost:8095/apps/kanjiru/` on the PC, or `http://<LAN IP>:8
 | `js/config/powers.js` | Hints and powers: effect, cost, when usable, drop weight |
 | `js/config/economy.js` | Every points number: per part, per win, streaks, drops |
 | `js/config/achievements.js` | Achievements as stat + threshold |
+| `js/config/rules.js` | Rules that aren't points or modes: the palette's always-shown tiles and decoy weights, palette-only guesses, practice repeats |
 | `js/registry.js` | One import for all catalogues, plus a start-up check that their ids agree |
 | `js/store.js` | The save in localStorage: versioned, with migrations, plus export, import and the merge rules (`MERGE`) |
 | `js/settings.js` | Settings panel (gear in the header): send, receive and the save text, with Merge / Replace |
 | `js/transfer.js` | Calls `api/transfer.php` |
 | `js/dom.js` | `el()`, the small DOM helper |
+| `js/engine/score.js` | Scoring: a guess against the answer, part by part (rules in `docs/DESIGN.md`, "Scoring") |
+| `js/engine/game.js` | `createEngine(data)`: game state, guesses, every power effect, points, replay, history entries, bonus drops |
+| `js/engine/palette.js` | The puzzle's palette (a seeded subset of tiles), `buildable()`, and `narrow()` for the picker |
+| `js/engine/daily.js` | Date → puzzle number → answer, practice picks, history keys |
+| `js/engine/stats.js` | Stats and streaks from history, achievement checks, streak rewards |
+| `js/engine/data.js` | Loads `data/game/*.json` and `data/parts.json` into the engine's shape |
+| `js/engine/random.js` | Seeded randomness, so dailies and powers come out the same for everyone |
+| `tests/` | `node --test` tests for the engine, on fixtures (never the real word list) |
 | `api/transfer.php` | Device transfer: a save in, a one-time code out, and back. Settings at the top |
 | `js/i18n.js` | Interface languages: `t()`, `setLang()`, `LANGUAGES`, missing-text check |
 | `js/i18n/en.js`, `js/i18n/ja.js` | All interface text, English (the reference) and Japanese |
 | `tools/build_data.py` | Downloads the dictionaries and writes `data/candidates.json` (settings at the top; see `tools/README.md`) |
 | `data/candidates.json` | Every candidate answer, with kanji info and part breakdowns |
+| `tools/compile_game.py` | Writes `data/game/`: the slim kanji file and the daily schedule from the Keep words (see `tools/README.md`) |
+| `data/game/kanji.json` | Every guessable kanji: strokes, JLPT, frequency, meanings, readings, parts |
+| `data/game/answers.json` | The daily schedule: the epoch and the answers per length, Keep words only |
 | `data/ATTRIBUTION.md` | Exact source versions and licences; the app's About screen must credit them |
 | `review/` | Dev-only word review page: Keep / Maybe / Cut per word, flag a kanji's parts. Saves to `data/review.json` through `review.php`, which only runs under `php -S` |
 | `data/review.json` | The user's review decisions. Never overwrite it from a script |
@@ -63,8 +77,9 @@ Then open `http://localhost:8095/apps/kanjiru/` on the PC, or `http://<LAN IP>:8
 - **The save is versioned.** Changing its shape means bumping `VERSION` in `js/store.js` and adding a migration. Adding a key needs nothing: missing keys are filled from `fresh()`.
 - **History is the source of truth.** Streaks and stats are worked out from `history`, never stored as counters.
 - **Check the console.** `validate()` logs `[kanjiru config]` warnings at start-up when catalogues disagree. Fix them before committing.
-- **Answers are N3 or easier.** Guesses may use any jōyō kanji.
-- **Dev-only files don't deploy.** `tools/`, `review/`, `data/candidates.json` and `data/review.json` are excluded in `deploy.yml`. The review page writes files, so it must never reach the server.
+- **Answers are N3 or easier.** Guesses may use any jōyō kanji built from the puzzle's palette.
+- **Game data is compiled.** After a rebuild or a review session, run `python -I -X utf8 tools/compile_game.py` and commit `data/game/`. It never invents answers: with no Keep words the answer lists are empty.
+- **Dev-only files don't deploy.** `tools/`, `review/`, `tests/`, `package.json`, `data/candidates.json` and `data/review.json` are excluded in `deploy.yml`. The review page writes files, so it must never reach the server.
 - **Server data stays put.** `api/transfer.php` writes codes to `api/codes/`, which is gitignored, blocked by `.htaccess` and excluded in `deploy.yml`.
 - **Back-to-apps mark:** this app's hover move is `rw-brush`, a left-to-right clip-path wipe. Keep it unique across the apps family.
 
