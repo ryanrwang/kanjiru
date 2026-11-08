@@ -17,7 +17,9 @@
  *   achievements  { [achievementId]: 'YYYY-MM-DD' }
  *   history       { [modeId]: { [key]: { date, guesses, won, powers, answer, level } } }
  *                 key: the puzzle number for a daily, "p" + a timestamp for
- *                 practice (js/engine/daily.js historyKey). guesses: the words
+ *                 practice (js/engine/daily.js historyKey), or
+ *                 "<epoch>#<number>" for a daily from an earlier epoch,
+ *                 kept as a keep-playing game (settleDailies). guesses: the words
  *                 guessed, or for parts guesses the tile ids per kanji;
  *                 powers: power ids used (js/engine/game.js record)
  *   playing       { [modeId]: { daily, practice } }   games on the go, each
@@ -36,6 +38,7 @@
 import { DEFAULT_LOOK } from './config/skins.js';
 import { ECONOMY } from './config/economy.js';
 import { DEFAULT_LEVEL } from './config/levels.js';
+import { puzzleNumber, addDays, isDailyKey } from './engine/daily.js';
 import * as ledger from './ledger.js';
 
 export const SAVE_KEY = 'kanjiru';
@@ -93,6 +96,7 @@ function migrate(save) {
 
 let state = null;
 let memoryOnly = false;   // storage blocked (private mode etc.): play on, save nothing
+let epoch = null;         // the date of puzzle 1, once the game data says (useEpoch)
 
 export function load() {
   let raw = null;
@@ -107,8 +111,76 @@ export function load() {
   }
   if (!isObject(save)) save = fresh();
   state = fillDefaults(migrate(save), fresh());
+  settleDailies(state, epoch);
   askForPersistentStorage();
   return state;
+}
+
+// ── Dailies and the epoch ────────────────────────────────────────────
+//
+// A daily is saved under its puzzle number, counted from the epoch (the date
+// of puzzle 1, data/game/answers.json). When the epoch moves (launch day, or
+// any reset later), numbers from the old epoch would mark new puzzles as
+// played. A daily's own date says which epoch it was played under (its date
+// less its number, plus one), so one that doesn't fit the epoch now becomes
+// a keep-playing game: its win, kanji and points still count, but it is no
+// longer that number's daily and no longer counts toward the streak.
+//
+//   history  '7' played 2026-11-07, epoch then 2026-11-01  →  '2026-11-01#7'
+//   ledger   its entries' game 'main/7'  →  'main/2026-11-01#7', so the new
+//            puzzle 7's result card doesn't list the old game's rewards
+//   playing  a daily on the go from another epoch is dropped
+//
+// Every device does the same with the same game, and doing it again changes
+// nothing, so saves merge as before. Returns how many things it changed.
+
+const isDate = (x) => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x);
+const fitsEpoch = (now, date, n) => isDate(date) && puzzleNumber(now, date) === Number(n);
+
+// The history key for daily n played on `date`, once its epoch has passed.
+export function pastKey(date, n) {
+  return `${isDate(date) ? addDays(date, 1 - Number(n)) : 'old'}#${n}`;
+}
+
+export function settleDailies(save, now) {
+  if (!isDate(now) || !isObject(save)) return 0;
+  let changed = 0;
+  const renamed = {};
+  Object.entries(isObject(save.history) ? save.history : {}).forEach(([modeId, games]) => {
+    if (!isObject(games)) return;
+    Object.keys(games).filter(isDailyKey).forEach((key) => {
+      const game = games[key];
+      const date = isObject(game) ? game.date : null;
+      if (fitsEpoch(now, date, key)) return;
+      const to = pastKey(date, key);
+      games[to] = isObject(games[to]) && isObject(game) ? betterGame(games[to], game) : game;
+      delete games[key];
+      renamed[`${modeId}/${key}`] = `${modeId}/${to}`;
+      changed += 1;
+    });
+  });
+  if (changed) {
+    Object.values(isObject(save.ledger) ? save.ledger : {}).forEach((entry) => {
+      if (isObject(entry) && renamed[entry.game]) entry.game = renamed[entry.game];
+    });
+  }
+  Object.values(isObject(save.playing) ? save.playing : {}).forEach((kinds) => {
+    const start = isObject(kinds) && isObject(kinds.daily) ? kinds.daily.start : null;
+    if (isObject(start) && !fitsEpoch(now, start.date, start.puzzle)) {
+      delete kinds.daily;
+      changed += 1;
+    }
+  });
+  return changed;
+}
+
+// The game data has loaded: its epoch settles this save now, and any save
+// received from another device later (readSave). Returns settleDailies()'s count.
+export function useEpoch(date) {
+  epoch = isDate(date) ? date : null;
+  const changed = settleDailies(get(), epoch);
+  if (changed) persist();
+  return changed;
 }
 
 export function get() {
@@ -188,6 +260,9 @@ export function readSave(text) {
   const base = fresh();
   const broken = Object.keys(base).some((key) => isObject(base[key]) && !isObject(save[key]));
   if (broken) throw saveError('not-a-save');
+  // A device not opened since the epoch moved: settle its dailies first, so
+  // they can't land on this epoch's puzzle numbers in a merge.
+  settleDailies(save, epoch);
   return save;
 }
 

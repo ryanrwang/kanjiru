@@ -4,16 +4,83 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Kanjiru · 漢じる</title>
-  <meta name="description" content="A daily kanji puzzle: guess the kanji from its parts.">
+  <meta name="description" content="A daily kanji puzzle: guess the word from its parts.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+  <!-- Home screen. tools/make_images.py draws the icons from favicon.svg. -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Kanjiru">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <!-- Link previews (Open Graph, read by X too). Their links must be absolute. -->
+  <link rel="canonical" href="https://www.ryanrwang.com/apps/kanjiru/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Kanjiru">
+  <meta property="og:title" content="Kanjiru · 漢じる">
+  <meta property="og:description" content="A daily kanji puzzle: guess the word from its parts. 毎日の漢字パズル。">
+  <meta property="og:url" content="https://www.ryanrwang.com/apps/kanjiru/">
+  <meta property="og:image" content="https://www.ryanrwang.com/apps/kanjiru/icons/share.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="漢じる Kanjiru, a daily kanji puzzle: two rows of coloured tiles, one part of the word in each.">
+  <meta name="twitter:card" content="summary_large_image">
 
   <!-- Tokens first: sets the colours and the saved skin before first paint. -->
   <script src="tokens.js"></script>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <!-- Both fonts are variable: one file per slice covers every weight, so a
+       weight range keeps the stylesheet to 60 KB (a list of weights made it 150). -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400..700&family=Noto+Serif+JP:wght@700..900&display=swap" rel="stylesheet" crossorigin>
   <link rel="stylesheet" href="styles.css">
+
+  <!-- Fetch the data and every module at once, instead of one wave of
+       imports at a time. tests/head.test.js checks this list against the
+       imports, and the data files against js/engine/data.js. -->
+  <link rel="preload" href="data/game/kanji.json" as="fetch" crossorigin>
+  <link rel="preload" href="data/game/answers.json" as="fetch" crossorigin>
+  <link rel="preload" href="data/parts.json" as="fetch" crossorigin>
+  <link rel="modulepreload" href="app.js">
+  <link rel="modulepreload" href="js/registry.js">
+  <link rel="modulepreload" href="js/i18n.js">
+  <link rel="modulepreload" href="js/dom.js">
+  <link rel="modulepreload" href="js/store.js">
+  <link rel="modulepreload" href="js/settings.js">
+  <link rel="modulepreload" href="js/shop.js">
+  <link rel="modulepreload" href="js/toast.js">
+  <link rel="modulepreload" href="js/engine/data.js">
+  <link rel="modulepreload" href="js/engine/game.js">
+  <link rel="modulepreload" href="js/engine/daily.js">
+  <link rel="modulepreload" href="js/engine/stats.js">
+  <link rel="modulepreload" href="js/play/glyph.js">
+  <link rel="modulepreload" href="js/play/screen.js">
+  <link rel="modulepreload" href="js/play/session.js">
+  <link rel="modulepreload" href="js/play/rewards.js">
+  <link rel="modulepreload" href="js/config/modes.js">
+  <link rel="modulepreload" href="js/config/skins.js">
+  <link rel="modulepreload" href="js/config/powers.js">
+  <link rel="modulepreload" href="js/config/economy.js">
+  <link rel="modulepreload" href="js/config/achievements.js">
+  <link rel="modulepreload" href="js/config/rules.js">
+  <link rel="modulepreload" href="js/config/levels.js">
+  <link rel="modulepreload" href="js/i18n/en.js">
+  <link rel="modulepreload" href="js/i18n/ja.js">
+  <link rel="modulepreload" href="js/ledger.js">
+  <link rel="modulepreload" href="js/transfer.js">
+  <link rel="modulepreload" href="js/engine/score.js">
+  <link rel="modulepreload" href="js/engine/palette.js">
+  <link rel="modulepreload" href="js/engine/random.js">
+  <link rel="modulepreload" href="js/play/hints.js">
+  <link rel="modulepreload" href="js/play/result.js">
+  <link rel="modulepreload" href="js/play/share.js">
+
+  <!-- Offline play and installs; never a stale app (sw.js). -->
+  <script type="module" src="js/service-worker.js"></script>
 </head>
 <body>
   <header class="app-header">

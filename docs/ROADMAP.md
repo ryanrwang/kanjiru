@@ -15,19 +15,21 @@ Last updated: 2026-11-08.
 - [x] **One daily of 4–6 parts:** one `main` mode whose answers are 1–4 kanji with 4–6 parts in all; k1–k4 retired. One game for everyone: the parts in writing order, like Wordle's letters, with the split between kanji hidden. Settings switches: Hard (real kanji, use what's found) and Guided (split, places, frames, dimmed keys). Easy retired. A Wordle-style screen with a fixed 28-key keyboard pinned to the bottom. Keep playing after the daily, for full points. Claude's first word review: 603 Keep words (step 4)
 - [x] **Loose strokes and hints:** answers with a loose single stroke (丨 丶 丿 乙 亅) leave the daily (`LISTS` `without`); 10 kanji fixed in `data/parts-overrides.json` bring back 25 words, so the daily has 453 answers. Parts a power shows (Reveal a part, Head start, Reveal a kanji) fill their cells, green, on each new row, and stay put at Hard. No page scroll while playing (step 4b)
 - [x] **Points, shop & achievements:** points and hints held are a ledger (save v2), so merging devices adds them up exactly. A finished game pays its points, streak rewards, a bonus hint and achievements, shown on the result card and as toasts. The shop opens from the points in the header: hints and locked looks, two taps to buy. The power bar floats above the keyboard, open before the first guess. Hard win replaces Full set (step 5)
+- [x] **Launch prep, off screen:** home-screen install (manifest, icons, iOS tags) and a network-first service worker for offline play; share previews with a 1200 × 630 image; first load on a phone from 2.9 s to 1.6 s to the daily (scripts and data fetched at once, gzipped data, a smaller font stylesheet); and dailies from an earlier epoch become keep-playing games, so launch day is one line and a recompile (step 8a)
 
 ## Order
 
 ```
 1 Parts & palette ✓ ──► 2 Engine ✓ ──► 3 Game screen ✓ ──► 4 One daily ✓ ──► 4b Loose strokes & hints ✓
                                           ├──► 5 Points, shop & achievements ✓
-                                          ├──► 8 Launch
+                                          ├──► 8a Launch prep ✓ ──► 8b Launch
                                           └──► 6 Skin effects (after launch)
 7 Device transfer  ✓ done
 You: review words  (any time; the game only uses words marked Keep)
 ```
 
-- **Next:** step 8. Step 6 can wait until after launch. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
+- **Next:** step 8b, once the screen layout overhaul (branch `screen-polish`) has merged. Step 6 can wait until after launch. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
+- **Launch date:** not picked yet. Flipping it is part of 8b.
 - **Words:** 453 daily answers from 603 Keep words are enough for launch (about 1.2 years). More can be added any time on the review page, then `tools/compile_game.py`. 146 Keep words with loose strokes come back as their kanji are fixed.
 
 **Running threads at the same time:** every thread shares this one folder, and Git can only have one branch checked out in it. Two threads in the same folder will switch each other's branches. So either run one thread at a time, or start each one in its own worktree (the app's worktree option when you start a session).
@@ -180,22 +182,33 @@ Done when a save moves from PC to phone on the local server, and again on the li
 
 ## 8. Launch
 
-**Last.**
+Step 8 was split in two, so the half that doesn't touch the screens could run while the screen layout overhaul (branch `screen-polish`) reshaped them.
+
+### 8a. Launch prep, off screen
+
+**Done** (step 8a). What it left in place:
+- **Install:** `manifest.webmanifest`, `icons/` (drawn by `tools/make_images.py` from `favicon.svg`), and the iOS tags in `index.html`'s `<head>`. iOS's status bar stays `default`; `black-translucent` would need the header to pad for `env(safe-area-inset-top)`.
+- **Service worker:** `sw.js`, registered by `js/service-worker.js`. Network first for everything, a kept copy only when the network fails, and never `api/` or `review/`. Browsers allow it on https and localhost only, so the phone's LAN test link runs without it. The app's browser pane can't run service workers either; test them in Chrome.
+- **Share previews:** Open Graph and Twitter tags, and `icons/share.png` (1200 × 630).
+- **Performance:** measured on a simulated phone (150 ms, 4 Mbps, gzip): the daily showed at 2.9 s, now 1.6 s; first paint 0.9 s, now 0.75 s. The scripts came in 4 to 8 waves of imports, then the data; now `<link rel="modulepreload">` and data preloads fetch them all at once (`tests/head.test.js` keeps the list in step with the imports). The app's `.htaccess` gzips the JSON (340 KB → 100 KB) and has it rechecked on every visit, so a recompile reaches phones at once. The font stylesheet asks for weight ranges: 60 KB instead of 150. The data now arrives before the scripts, so slimming it further wouldn't pay.
+- **Launch day:** `settleDailies()` in `js/store.js` turns a daily from another epoch into a keep-playing game, on load and on receiving a save (docs/DESIGN.md, "Dailies and stats").
+
+### 8b. Launch
+
+**Needs:** step 8a, and the screen layout overhaul merged.
 
 ```
-Kanjiru step 8: get it ready to launch.
+Kanjiru step 8b: launch.
 
-Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first. Work on a new branch.
+Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first (step 8a's notes are under "8. Launch"). Work in a new worktree on a new branch.
 
-1. An About / credits screen in both languages. EDRDG asks for KANJIDIC and JMdict credit with links on a screen of its own; also credit KanjiVG and Jonathan Waller (see data/ATTRIBUTION.md).
-2. Home-screen install (web app manifest and icons, a basic service worker if it helps) so iOS Safari's 7-day storage wipe can't erase saves. Mention the transfer code as a backup.
-3. Share previews (Open Graph and Twitter tags, a share image).
-4. Accessibility: keyboard play, screen reader labels, and contrast in every skin and both schemes.
-5. Performance: first load on a phone, data file sizes (data/game/kanji.json is about 82 KB gzipped), font loading.
-6. Add Kanjiru to the Apps page: apps/index.html in the Clearful repo, which is a separate repo; read D:\Dropbox\Clearful\.claude\github-deploy.md first.
-7. Set EPOCH in tools/compile_game.py to launch day, recompile, and commit data/game/ (puzzle 1 = launch day). Dailies are saved under their puzzle number only, so testers' pre-launch games would mark launch-day puzzles as played: bump VERSION in js/store.js with a migration that moves pre-launch history (main dailies and the retired k1–k4 games) aside.
+1. An About / credits screen in both languages. EDRDG asks for KANJIDIC and JMdict credit with links on a screen of its own; also credit KanjiVG and Jonathan Waller (see data/ATTRIBUTION.md). Put it where the new layout has room (Settings or the Points page).
+2. An install tip: how to add Kanjiru to the home screen on iOS and Android (iOS Safari wipes a site's storage after 7 days without a visit; a home-screen app keeps it), with the transfer code and save text as a backup. Skip it when already installed (display-mode: standalone). Check the install on the live site on an iPhone and an Android phone.
+3. Accessibility: keyboard play, screen reader labels, and contrast in every skin and both schemes.
+4. Add Kanjiru to the Apps page: apps/index.html in the Clearful repo, which is a separate repo; read D:\Dropbox\Clearful\.claude\github-deploy.md first.
+5. Launch day: ask me the date. On that day, set EPOCH in tools/compile_game.py to it, run python -I -X utf8 tools/compile_game.py, commit data/game/ and deploy (before the epoch there is no daily). Testers' earlier dailies become keep-playing games on their next visit (settleDailies() in js/store.js). Check the live site shows Daily #1.
 
-Done when it installs to a phone's home screen, passes the accessibility checks, and is listed on /apps/.
+Done when the About screen credits every source, it passes the accessibility checks, it's listed on /apps/, and puzzle 1 is live on launch day.
 ```
 
 ---

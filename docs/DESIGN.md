@@ -35,7 +35,7 @@ After playing step 3, the user found one kanji too short: 79% of one-kanji answe
 - **Decided — Loose strokes leave the daily for now (step 4b):** 177 of the 603 Keep answers had a stray single stroke as a part (丨 丶 丿 乙 亅; e.g. 今日, 電気, 仕事). With every part a cell, those cells are close to guesswork. They stay Keep, but the daily list leaves them out (`LISTS` `without` in `tools/compile_game.py`) until their breakdowns are fixed in `data/parts-overrides.json`; fixed ones come back on the next compile. 一 is a real part and stays. Days already played keep their answer (勝 and 経由 were days 8 and 9).
 - **Decided — First fixes (step 4b):** 10 kanji fixed with tiles the palette already has, the way similar kanji split: 重 動 種 (𠂉 over 里, as in 毎), 産 (立 over 厂 and 生), 着 (羊 over 目), 表 (龶 衣), 平 (干 八, as in 前), 号 (口 丂), 母 (毋, as in 毎), 犯 (犭 卩, as in 危). That brought back 25 words: the daily has 453 answers, and 146 Keep words are still left out.
 - **Decided — The rest stay out:** the most common left-out kanji (事 13 words, 年 11, 中 8, 今 7, 以 6) are made of strokes. As whole tiles, most of their words would have under 4 parts (仕事 would have 3), so a new tile wouldn't bring them back.
-- **Decided — Live before launch:** since PR #6 the live URL plays the daily (epoch 2026-11-01). It isn't linked anywhere; step 8 sets the real epoch, so puzzle 1 is launch day.
+- **Decided — Live before launch:** since PR #6 the live URL plays the daily (epoch 2026-11-01). It isn't linked anywhere; step 8b sets the real epoch, so puzzle 1 is launch day.
 
 ## Scoring (Decided, step 2)
 
@@ -98,13 +98,15 @@ From `js/config/economy.js`, every number there:
 
 ### Dailies and stats
 
-- **Puzzle number:** days since the epoch, by the local date. The epoch is `EPOCH` in `tools/compile_game.py`, written into `data/game/answers.json` with the answer order (`js/engine/daily.js` reads it). Set it to launch day at step 8, then never change it.
+- **Puzzle number:** days since the epoch, by the local date. The epoch is `EPOCH` in `tools/compile_game.py`, written into `data/game/answers.json` with the answer order (`js/engine/daily.js` reads it). Set it to launch day at step 8b, then never change it.
+- **Decided — A new epoch (step 8a):** dailies are saved under their puzzle number, so when the epoch moves, testers' earlier games would mark new puzzles as played. A daily's own date says which epoch it was played under (its date less its number, plus one), so `settleDailies()` in `js/store.js` turns any daily that doesn't fit the epoch now into a keep-playing game, under `<epoch>#<number>` (`2026-11-01#7`). Its win, kanji and points still count; it stops being that number's daily and stops counting toward the streak. Its ledger entries follow it, and a daily on the go from another epoch is dropped. It runs when the game data loads and on every save received from another device, so a device not opened since launch can't bring old numbers into a merge. No save version bump: the shape is the same. The user picked this over archiving them where stats can't see them (2026-11-08).
+- **Launch day** is then one line: `EPOCH` in `tools/compile_game.py`, a recompile, and a deploy that day.
 - **Answer order:** a fixed (seeded) shuffle of the Keep words. Days already played, up to tomorrow, are locked; later days are shuffled again on each compile, so new Keep words mix in evenly. When the list runs out it starts again from the top.
 - **A year of dailies** needs 365 answers. The main list has 453 (step 4b).
 - **Practice:** a random Keep answer, skipping the last 30 played in that mode (`rules.js` `practice.avoidRecent`).
 - **Streak:** one streak across modes: days in a row with at least one daily won. A day not yet played doesn't break it. Streak rewards pay each time a run reaches their length.
 - **Stats:** wins, fastest win, clean wins, Hard wins and kanji collected count practice too. Streaks count dailies only. Kanji collected counts every kanji of a solved word.
-- **History entries** (`js/store.js`): `{ date, guesses, won, powers: [ids], answer, level }`, under the puzzle number for a daily, or `p` + a timestamp for practice. `guesses` holds words, or for parts guesses the tile ids per kanji, so `engine.guess()` can replay either.
+- **History entries** (`js/store.js`): `{ date, guesses, won, powers: [ids], answer, level }`, under the puzzle number for a daily, `p` + a timestamp for practice, or `<epoch>#<number>` for a daily from an earlier epoch. `guesses` holds words, or for parts guesses the tile ids per kanji, so `engine.guess()` can replay either.
 
 ## The palette (Decided, step 2)
 
@@ -228,6 +230,7 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 - **Decided — Ledger (step 5):** points and hints held are a ledger (`js/ledger.js`, save v2): every gain and spend is an entry with its own random id (`why`: start, game, streak, drop, achievement, buy, use, or v1 for what a v1 save held), and the balance is their sum, never below 0. Merging joins the entries, so it's exact and safe to repeat. A v1 save's wallet and hints become one `v1` entry; two devices that each had one keep the higher, as v1 merges did.
 - **Server:** the site runs PHP 8.2 (`ea-php82` in the site's root `.htaccess`). The endpoint is written for PHP 7.4 and up, with core functions only.
 - **Risk:** iOS Safari wipes a site's storage after 7 days without a visit. Installing to the home screen avoids it, and the save text is a backup.
+- **Decided — Home-screen install (step 8a):** a web app manifest (`manifest.webmanifest`, standalone, named Kanjiru), icons drawn from the favicon by `tools/make_images.py` (192, 512, a maskable 512 and a 180 apple-touch icon), and the iOS tags. An in-app tip about installing is step 8b.
 
 ## Word data
 
@@ -293,6 +296,10 @@ Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in strok
 ## Hosting
 
 - **Live:** https://www.ryanrwang.com/apps/kanjiru/ (also clearful.net). Each push to `main` deploys by FTPS (`.github/workflows/deploy.yml`).
+- **Decided — Offline, never stale (step 8a):** a service worker (`sw.js`) fetches every file from the network first and keeps a copy, used only when the network fails, so a deploy reaches players on their next visit and a daily still plays offline. It never handles `api/`, `review/`, any `.php` or anything but GET. Google's font files, whose URLs never change, come from the copy first.
+- **Caching (step 8a):** the site's root `.htaccess` has pages, CSS and JS rechecked on every visit; the app's own `.htaccess` does the same for the JSON data and the manifest, and gzips them. Images are kept 30 days, so a changed icon needs a new file name.
+- **First load (step 8a):** `index.html` preloads every module (`modulepreload`) and the three data files, so they come at once instead of in waves of imports. A new module needs its line there; `tests/head.test.js` says which.
+- **Share previews (step 8a):** Open Graph and Twitter tags in `index.html`, with `icons/share.png` (1200 × 630): the seal, 漢じる, the tagline in both languages, and two rows of the worked example.
 - **Not deployed:** `tools/`, `review/`, `tests/`, `package.json`, the data working files and `*.md`. The game loads `data/game/` and `data/parts.json`.
 - **Local:** `php -S 0.0.0.0:8095 -t D:/Dropbox/Clearful` on the PC, or `php -S 0.0.0.0:8099 -t ~/kanjiru-test` on the Mac, then open `/apps/kanjiru/`.
 - **Apps page:** not listed on `/apps/` yet; add it at launch.
