@@ -85,38 +85,64 @@ Every guessed kanji is broken into parts, and each part gets a colour:
 
 ## Word data
 
-- **Builder:** `tools/build_data.py` builds `data/candidates.json`. The sources are pinned, and the credits are in `data/ATTRIBUTION.md`:
+- **Builder:** `tools/build_data.py` builds `data/candidates.json` and `data/parts.json`. The sources are pinned, and the credits are in `data/ATTRIBUTION.md`:
   - KANJIDIC2 (kanji info)
-  - KanjiVG (parts)
+  - KanjiVG (parts, positions and stroke drawings)
   - JMdict common words
   - Jonathan Waller's JLPT lists
 - **Waller's kanji lists:** tanos.co.uk is offline, so they come from Internet Archive snapshots (July–August 2020).
 - **Common words only:** rare alternate spellings (学文 for 学問) are dropped (`REQUIRE_COMMON`).
-- **Candidates:** 5,725 in all.
+- **Candidates:** 5,647 in all.
 
 | Length | Candidates | On a JLPT list |
 |---|---|---|
-| 1 kanji | 612 | all |
+| 1 kanji | 534 | all |
 | 2 kanji | 4,309 | 717 |
 | 3 kanji | 660 | 46 |
 | 4 kanji | 144 | 3 |
 
 - **Decided — Review:** the user reviews words on `review/` (local only). The game uses only words marked Keep in `data/review.json`.
+- **Decided — Atomic answers leave:** a one-kanji answer that is a palette tile itself (金, 車, 雨: 78 of them) isn't an answer, since its parts give no clues. It still appears inside longer words. `KEEP_ATOMIC_ANSWERS` brings them back.
 
-## Part breakdowns: known problems
+## Part breakdowns
 
-The parts come from KanjiVG's top-level components. Before the game can score with them, these need fixing:
+Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in stroke order, each with its position in the whole kanji. The palette is `data/parts.json`. The rules are in `tools/README.md` ("Parts").
 
-1. **Loose strokes aren't components:** 本, 未 and 末 all reduce to just 木; 白 → 日, 言 → 口, 鳥 → 灬.
-2. **Enclosure contents have no position:** 国 = 囗 outer + 玉 none, and the same for 間 and 図. They should be inner.
-3. **Positions are relative to a subgroup:** 命 comes out as 人 top, 一 top, 口 left, 卩 right.
-4. **Several parts with no position at all:** 上, 中, 出, 東, 右.
-5. **Variant forms:** 氵 (from 水), 亻 (人), 扌 (手), and 月 from 肉. Whether a variant matches its original is undecided.
-6. **Unprintable component names:** `CDP-8BC4` (原, 願) and `CDP-8CB8` (武, 源).
-7. **Split parts:** 裏 (衣 around 里), 衷, 主.
-8. **Atomic answers give no clues:** 金, 車, 雨 and others.
-9. **Open — Depth:** is 語 言 + 吾, or 言 + 五 + 口? This depends on the parts palette.
-10. **Open — Fonts:** some components (⺌, 𠂉) may not render on every phone. KanjiVG's stroke drawings are a fallback.
+- **Decided — Palette:** 251 tiles.
+  - The radicals that jōyō kanji use, plus shapes that recur but aren't radicals (业, 免, 兼), and a few kanji that would otherwise fall apart into single strokes (五, 不, 半, 北).
+  - ナ and マ stand for the katakana-like shapes in 右, 左 and 予.
+  - The six single strokes 一 丨 丶 丿 乙 亅 cover what's left over.
+- **Decided — Variants are the same part:** 氵 and 氺 count as 水, 亻 as 人, 扌 as 手, 忄 as 心, 刂 as 刀, 灬 as 火, 犭 as 犬, 礻 as 示, 衤 as 衣, 飠 as 食, 爫 as 爪, 耂 as 老, 覀 as 西, ⺧ as 牛, ⺷ as 羊.
+  - **Why:** players learn them as one idea, a guess of 水 for 海 should score, and the palette stays small.
+  - Each part keeps the glyph it appears as (`form`), so a revealed part can show 氵.
+  - 月 and 肉 are different tiles: players see the shape 月 in 腸, not where it came from.
+- **Decided — Depth: building blocks.** A kanji splits into the biggest pieces that are tiles, like jisho's radical search. 語 = 言 + 五 + 口, not 言 + 吾 (吾 isn't a tile).
+- **Decided — Positions:** left, right, top, bottom, outer, inner, whole or none. The kanji's first split decides, so 語's 五 and 口 are both right.
+  - Enclosures are outer and what they hold is inner (国 = 囗 outer + 玉 inner).
+  - none is for parts that cross (中 = 口 + 丨).
+- **Decided — Fonts:** 11 palette glyphs are drawn from KanjiVG's strokes instead of text.
+  - Not in Noto Sans/Serif JP: 龶 㐄 业 𢆉.
+  - Not in JIS X 0213, so a phone's own fonts may lack them: 𠂊 ⺌ ⺍ ⺗ ⺧ ⺷ 卌.
+  - `review/parts.html` tests the device's own fonts. On Windows, all draw.
+- **Hand fixes:** 10 kanji in `data/parts-overrides.json` (万 三 円 年 実 寒 声 勤 無 舞).
+
+### How the known problems were fixed
+
+| Problem | Now |
+|---|---|
+| Loose strokes reduced 本, 未, 末 to 木 | They become single-stroke tiles: 本 = 木 + 一 |
+| Enclosure contents had no position (国, 間) | inner |
+| Positions relative to a subgroup (命, 歯) | The first split decides: 命 = 人 + 一 top, 口 + 卩 bottom |
+| No position at all (上, 中, 東) | Measured from the strokes: 上 = 卜 top + 一 bottom |
+| Unprintable `CDP-…` names (原, 願, 武, 源) | Cut below them: 原 = 厂 outer + 白 and 小 inner |
+| Split parts (裏, 衷, 主) | Joined: 裏 = 衣 outer + 里 inner; 主 = 丶 + 王 |
+| Atomic answers (金, 車, 雨) | One part each, and out of the one-kanji answers |
+
+### Still open
+
+- **Look-alikes:** 未/末, 押/抽 and 拐/招 have the same parts in the same places. The engine needs a tie-break, or must accept either.
+- **Clumsy breakdowns:** 160 answers still have single strokes, and a few have several (乗, 呼, 段, 喜, 候). Flag them on the parts check page, then fix them in `data/parts-overrides.json`.
+- **Phones:** check `review/parts.html` on iOS and Android to confirm which glyphs need the drawings.
 
 ## Hosting
 

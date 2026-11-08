@@ -8,6 +8,7 @@ Last updated: 2026-11-07.
 
 - [x] **Scaffold:** design tokens and skins, catalogues, versioned save, start screen, deploy. Live at https://www.ryanrwang.com/apps/kanjiru/
 - [x] **Word data:** 5,725 candidates at N3 or easier, the review page, and the EN/JP toggle (PR #1)
+- [x] **Parts & palette:** 251-tile palette in `data/parts.json`, fixed part breakdowns with positions, hand fixes in `data/parts-overrides.json`, and the parts check page (step 1)
 
 ## Order
 
@@ -20,7 +21,7 @@ Last updated: 2026-11-07.
 You: review words  (any time; the game only uses words marked Keep)
 ```
 
-- **Start now:** steps 1 and 7. They touch different files.
+- **Start now:** steps 2 and 7. They touch different files.
 - **After step 3:** steps 4, 5 and 6 can run side by side.
 
 **Running threads at the same time:** every thread shares this one folder, and Git can only have one branch checked out in it. Two threads in the same folder will switch each other's branches. So either run one thread at a time, or start each one in its own worktree (the app's worktree option when you start a session).
@@ -194,5 +195,5 @@ php -S 0.0.0.0:8095 -t D:/Dropbox/Clearful
 
 - **Start easy:** filter by length and "N5"/"N4"/"N3" to begin with the easiest words.
 - **Bulk keep:** "Keep all pending on this page" speeds it up.
-- **Flag parts:** use ⚐ on any kanji whose parts look wrong; step 1 reads those flags.
+- **Flag parts:** use ⚐ on any kanji whose parts look wrong. The parts check page (`review/parts.html`) shows every kanji's parts and the palette. The build lists flagged kanji, and fixes go in `data/parts-overrides.json`.
 - **Saving:** decisions save to `data/review.json`. Commit that file with the next push so it's kept in Git.
