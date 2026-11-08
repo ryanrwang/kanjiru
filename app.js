@@ -125,6 +125,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 const game = { data: null, engine: null, glyph: null, error: false };
 
 const ready = loadData().then((data) => {
+  store.useEpoch(data.epoch);   // dailies from an earlier epoch become keep-playing games
   game.data = data;
   game.engine = createEngine(data);
   game.glyph = glyphMaker(data.tiles);

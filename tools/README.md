@@ -103,3 +103,13 @@ Both save to `data/review.json` through `review.php`.
 Source versions are pinned in the script (`KANJIVG_RELEASE`, `JMDICT_RELEASE`, `JLPT_VOCAB_RELEASE`, `WALLER_KANJI_SNAPSHOTS`). To move to a newer release, change the constant, delete the old file from `tools/sources/`, rerun, and update `data/ATTRIBUTION.md`. KANJIDIC2 has no versioned address: delete `tools/sources/kanjidic2.xml.gz` to fetch the current one.
 
 `tools/sources/` is not committed.
+
+## make_images.py
+
+Draws the home-screen icons and the link-preview image into `icons/`, from the favicon's design (a vermilion seal with a white 漢):
+
+```
+python -I -X utf8 tools/make_images.py [--serif PATH] [--sans PATH]
+```
+
+It needs Pillow and the Noto Serif JP and Noto Sans JP variable fonts (Windows has both in `C:/Windows/Fonts`). Run it after changing the favicon, the brand colour or the share text, and commit the PNGs. The site keeps images for 30 days, so a changed image needs a new file name, in `manifest.webmanifest` and `index.html` too.

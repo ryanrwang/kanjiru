@@ -1,0 +1,27 @@
+# Kanjiru's own server rules. The site's root .htaccess does the rest: https,
+# security headers, and caching for pages, CSS, JS (rechecked every visit)
+# and images (kept 30 days). api/ has its own .htaccess.
+
+# The web app manifest's type.
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+</IfModule>
+
+# Gzip the game's data: the JSON files are about 340 KB, 100 KB gzipped.
+# Apache already gzips pages, CSS and JS, but not JSON.
+<IfModule mod_deflate.c>
+  <IfModule mod_filter.c>
+    AddOutputFilterByType DEFLATE application/json application/manifest+json
+  </IfModule>
+</IfModule>
+
+# Recheck the data and the manifest on every visit, like pages and scripts.
+# Without this Apache sends only Last-Modified, so browsers guess a lifetime
+# (about a tenth of the file's age) and a phone could keep last week's
+# schedule (data/game/answers.json) for hours after a recompile. "no-cache"
+# still keeps a copy; the server answers a cheap "not changed" when it is.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(?i:json|webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

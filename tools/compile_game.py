@@ -37,8 +37,14 @@ from pathlib import Path
 # Settings
 # --------------------------------------------------------------------------
 
-# The date of daily puzzle 1. Set it to launch day at launch (step 8), then
-# never change it: every puzzle number, and so every daily answer, hangs on it.
+# The date of daily puzzle 1. Every puzzle number, and so every daily answer,
+# hangs on it, so after launch never change it.
+#
+# Launch day (step 8b): set it to that date, run this script, commit
+# data/game/ and deploy that day (before the epoch there is no daily). The
+# whole schedule is shuffled afresh, and on their next visit testers' earlier
+# dailies become keep-playing games (settleDailies() in js/store.js), so
+# puzzle 1 is new for everyone.
 EPOCH = "2026-11-01"
 
 # Seed for the answer shuffle. Changing it reorders every day not yet played.
