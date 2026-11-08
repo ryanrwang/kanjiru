@@ -43,10 +43,10 @@ test('a lost practice game scores X and ends with the link', () => {
   assert.equal(lines[lines.length - 1], 'https://example.com/');
 });
 
-test('a parts game shares green and grey squares, and its level', () => {
-  const game = play(engine.newGame(start('k1', '明', { level: 'normal', puzzle: 7 })), ['門', '日'], ['月', '日']);
+test('a parts game shares its squares and its level', () => {
+  const game = play(engine.newGame(start('k1', '明', { level: 'normal', puzzle: 7 })), ['門', '日'], ['日', '月']);
   const lines = shareText({ state: game, mode: MODE.k1, t, share: RULES.share }).split('\n');
   assert.equal(lines[0], 'share.daily|一|7|level.normal.name|2/6|');
-  const { hit, miss } = RULES.share.marks;
-  assert.deepEqual(lines.slice(1), [miss + hit, hit + hit]);
+  const { hit, near, miss } = RULES.share.marks;
+  assert.deepEqual(lines.slice(1), [miss + near, hit + hit]);
 });

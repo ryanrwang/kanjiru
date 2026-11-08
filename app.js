@@ -157,7 +157,7 @@ const app = document.getElementById('app');
 
 // A worked example for each kind of guess (levels.js guess): answer 明
 // (日 left, 月 right). Parts rows show their kanji at a realKanji level,
-// or once solved.
+// or once solved, and their cells' places at a level with places.
 const DEMO = {
   kanji: [
     { guess: '間', parts: [['門', 'miss'], ['日', 'near']] },
@@ -166,9 +166,10 @@ const DEMO = {
   ],
   parts: [
     { guess: '好', parts: [['女', 'miss'], ['子', 'miss']] },
-    { guess: '星', parts: [['日', 'hit'], ['生', 'miss']] },
+    { guess: '肌', parts: [['月', 'near'], ['几', 'miss']] },
     { guess: '明', parts: [['日', 'hit'], ['月', 'hit']] }
-  ]
+  ],
+  places: ['left', 'right']
 };
 
 let heroSection = null;
@@ -176,15 +177,19 @@ let heroSection = null;
 function renderHero() {
   const level = LEVEL[currentLevel()];
   const parts = level.guess === 'parts';
-  const legend = parts ? [['hit', 'hero.partsHit'], ['miss', 'hero.miss']]
-    : ['hit', 'near', 'miss'].map((state) => [state, `hero.${state}`]);
+  const legend = (parts && !level.places ? ['hit', 'miss'] : ['hit', 'near', 'miss']).map((state) => [state, `hero.${state}`]);
+  const rows = DEMO[level.guess].map((row) => (parts && !level.places
+    ? { ...row, parts: row.parts.map(([part, state]) => [part, state === 'near' ? 'hit' : state]) } : row));
   const fresh = el('section', { class: 'card hero', 'aria-labelledby': 'hero-title' },
     el('p', { class: 'tagline', id: 'hero-title' },
       t('hero.title'),
       el('small', {}, t(parts ? 'hero.partsBody' : 'hero.body'))
     ),
     el('div', { class: 'demo', 'aria-hidden': 'true' },
-      DEMO[level.guess].map((row) => {
+      parts && level.places ? el('div', { class: 'demo-row demo-places' },
+        el('span', { class: 'demo-guess' }),
+        DEMO.places.map((pos) => el('span', { class: 'demo-place' }, t(`pos.${pos}`)))) : null,
+      rows.map((row) => {
         const shown = !parts || level.realKanji || row.parts.every(([, state]) => state === 'hit');
         return el('div', { class: 'demo-row' },
           el('span', { class: 'demo-guess kanji', lang: 'ja' }, shown ? row.guess : ''),

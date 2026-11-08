@@ -239,6 +239,13 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   text-align: center;
 }
 
+.demo-place {
+  width: var(--layout-tile);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
 .demo-legend {
   display: flex;
   flex-wrap: wrap;
@@ -876,6 +883,25 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 }
 
 .row-gap { width: var(--spacing-sm); }
+
+/* Parts levels with places: a gap where the place changes, and the
+   places above the board, one label over each run of cells. */
+.cell-gap { width: var(--spacing-xs); }
+
+.board-shape:empty { display: none; }
+.board-shape .board-row { min-height: 0; }
+.board-shape .row-kanji { height: auto; }
+
+.shape-place {
+  width: calc(var(--layout-cell) * var(--n, 1) + var(--spacing-xs) * (var(--n, 1) - 1));
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  color: var(--color-text-muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.row-meaning.is-count { font-variant-numeric: tabular-nums; }
 
 .row-meaning {
   flex: 1 1 var(--spacing-3xl);

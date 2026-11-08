@@ -43,6 +43,23 @@ function markOthers(result, answer, take) {
   });
 }
 
+// Greens, then yellows, within each slot, in order: a tile is `hit` when an
+// unused part of its slot has the same tile and place, then `near` when
+// one has the same tile anywhere.
+function markPlaces(result, take) {
+  result.forEach((slot, s) => {
+    slot.tiles.forEach((tile) => {
+      const of = take(s, (p) => p.el === tile.el && p.pos === tile.pos);
+      if (of) Object.assign(tile, { mark: 'hit', of });
+    });
+    slot.tiles.forEach((tile) => {
+      if (tile.mark !== 'miss') return;
+      const of = take(s, (p) => p.el === tile.el);
+      if (of) Object.assign(tile, { mark: 'near', of });
+    });
+  });
+}
+
 // Scores one kanji guess (levels.js guess: 'kanji').
 //   guess, answer: arrays of slots, one per kanji: { kanji, parts: [...] }
 // Returns one entry per slot:
@@ -58,17 +75,7 @@ export function scoreGuess(guess, answer) {
   }));
 
   // 1. Greens, then 2. yellows, within each slot, in stroke order.
-  result.forEach((slot, s) => {
-    slot.tiles.forEach((tile) => {
-      const of = take(s, (p) => p.el === tile.el && p.pos === tile.pos);
-      if (of) Object.assign(tile, { mark: 'hit', of });
-    });
-    slot.tiles.forEach((tile) => {
-      if (tile.mark !== 'miss') return;
-      const of = take(s, (p) => p.el === tile.el);
-      if (of) Object.assign(tile, { mark: 'near', of });
-    });
-  });
+  markPlaces(result, take);
 
   // 3. Parts in another kanji of the word.
   markOthers(result, answer, take);
@@ -76,24 +83,31 @@ export function scoreGuess(guess, answer) {
 }
 
 // Scores one parts guess (levels.js guess: 'parts'): the tile ids picked
-// for each slot. The player picks parts, not places, so a part is green
-// (`hit`) when its slot of the answer has it anywhere; there is no yellow.
-// Longer words get `other` as above. A slot is solved when its parts are
-// exactly the answer's; its kanji is then the answer's, otherwise null
-// (the engine fills in a real kanji the parts make, if any).
-// Same return shape as scoreGuess; a hit tile takes its answer part's pos.
-export function scoreParts(picks, answer) {
+// for each slot's cells.
+//   places: each cell's place, per slot (levels.js places), or null.
+// With places, a tile takes its cell's place and is marked as in
+// scoreGuess: `hit` in its place, `near` elsewhere in its slot. Without,
+// a tile is `hit` when its slot has it anywhere (taking that part's
+// place), with no `near`. Longer words get `other` as above. A slot is
+// solved when all its cells are `hit` and it has as many as the answer's
+// kanji has parts; its kanji is then the answer's, otherwise null (the
+// engine fills in a real kanji the parts make, if any).
+// Same return shape as scoreGuess.
+export function scoreParts(picks, answer, places = null) {
   if (picks.length !== answer.length) throw new Error('guess and answer differ in length');
   const take = partTaker(answer);
-  const result = picks.map((els) => ({
+  const result = picks.map((els, s) => ({
     kanji: null,
     solved: false,
-    tiles: els.map((el) => ({ el, pos: null, form: el, mark: 'miss', of: null }))
+    tiles: els.map((el, i) => ({ el, pos: places ? places[s][i] : null, form: el, mark: 'miss', of: null }))
   }));
-  result.forEach((slot, s) => slot.tiles.forEach((tile) => {
-    const of = take(s, (p) => p.el === tile.el);
-    if (of) Object.assign(tile, { mark: 'hit', of, pos: answer[s].parts[of.part].pos });
-  }));
+  if (places) markPlaces(result, take);
+  else {
+    result.forEach((slot, s) => slot.tiles.forEach((tile) => {
+      const of = take(s, (p) => p.el === tile.el);
+      if (of) Object.assign(tile, { mark: 'hit', of, pos: answer[s].parts[of.part].pos });
+    }));
+  }
   markOthers(result, answer, take);
   result.forEach((slot, s) => {
     slot.solved = slot.tiles.length === answer[s].parts.length && slot.tiles.every((tile) => tile.mark === 'hit');

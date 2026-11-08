@@ -11,7 +11,7 @@ Last updated: 2026-11-07.
 - [x] **Parts & palette:** 251-tile palette in `data/parts.json`, fixed part breakdowns with positions, hand fixes in `data/parts-overrides.json`, and the parts check page (step 1)
 - [x] **Device transfer:** one-time codes from `api/transfer.php`, the Settings panel (gear in the header), Merge both or Replace this device, and copy/paste save text (step 7, PR #3)
 - [x] **Engine:** scoring, game state and every power, the per-puzzle palette, dailies, stats and achievements in `js/engine/`; `tools/compile_game.py` writes `data/game/`; 71 engine tests and 12 compile tests (step 2)
-- [x] **Game screen:** the one-kanji daily and practice in `js/play/`: board with flip reveal, parts palette, saved games, powers, points paid, result card with share text and countdown. Three levels (`js/config/levels.js`): Easy guesses kanji from a strip with a free meaning; Normal (the default) and Hard guess parts only, one per cell, and Hard's must make a real kanji (step 3)
+- [x] **Game screen:** the one-kanji daily and practice in `js/play/`: board with flip reveal, parts palette, saved games, powers, points paid, result card with share text and countdown. Three levels (`js/config/levels.js`): Easy guesses kanji from a strip with a free meaning; Normal (the default) and Hard guess parts only, one per cell, with each cell a place in the kanji so parts go green or yellow. Normal has fewer tiles and counts the kanji that still fit; Hard's parts must make a real kanji (step 3)
 
 ## Order
 

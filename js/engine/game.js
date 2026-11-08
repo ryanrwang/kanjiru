@@ -27,9 +27,12 @@ export const DEFAULT_CONFIG = {
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const key = (ref) => `${ref.slot}:${ref.part}`;
 const better = (a, b) => MARKS.indexOf(a) > MARKS.indexOf(b || 'miss');
-// A bag of tile ids, order ignored: ['月', '日'] and ['日', '月'] match.
-const bagKey = (els) => els.slice().sort().join('+');
-const bagsKey = (picks) => picks.map(bagKey).join('/');
+// A kanji's parts as a key, order ignored: tile ids, with their places
+// when `places` is given (['月', '日'] and ['日', '月'] match without).
+const partsKey = (els, places) => (places ? els.map((el, i) => `${el}@${places[i]}`) : els.slice()).sort().join('+');
+// A shape: the number of parts, and their places when `withPlaces`.
+const shapeKey = (parts, withPlaces) => (withPlaces ? parts.map((p) => p.pos).sort().join('+') : String(parts.length));
+const plainMark = (mark) => (mark === 'other' ? 'miss' : mark);
 
 // options.isWord(word, mode): turns away guesses that aren't real words
 // (step 4 decides whether 2+ kanji modes pass one).
@@ -46,20 +49,35 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   const modeOf = (state) => MODE[state.mode];
   const levelOf = (state) => LEVEL[state.level];
 
-  // Real kanji by their bag of parts, easiest first: what a 'parts' guess
-  // makes. Worked out the first time it's needed.
-  let byBag = null;
-  const kanjiFrom = (els) => {
-    if (!byBag) {
-      byBag = new Map();
-      Object.keys(data.kanji).sort(easiestFirst(data)).forEach((ch) => {
-        const k = bagKey(data.kanji[ch].parts.map((p) => p.el));
-        if (!byBag.has(k)) byBag.set(k, []);
-        byBag.get(k).push(ch);
-      });
-    }
-    return byBag.get(bagKey(els)) || [];
+  // Each cell's place, per slot, at a 'parts' level with places: the
+  // answer's part positions in order. Otherwise null.
+  const placesOf = (state) => {
+    const level = levelOf(state);
+    return level.guess === 'parts' && level.places ? answerSlots(state).map((slot) => slot.parts.map((p) => p.pos)) : null;
   };
+
+  // Every kanji grouped by a key of its parts, easiest first, worked out the
+  // first time it's needed: index(name, keyOf) → Map(key → [kanji]).
+  const indexes = new Map();
+  const index = (name, keyOf) => {
+    if (!indexes.has(name)) {
+      const map = new Map();
+      Object.keys(data.kanji).sort(easiestFirst(data)).forEach((ch) => {
+        const k = keyOf(data.kanji[ch].parts);
+        if (!map.has(k)) map.set(k, []);
+        map.get(k).push(ch);
+      });
+      indexes.set(name, map);
+    }
+    return indexes.get(name);
+  };
+  // The real kanji these tiles make (in these places, if given): what a
+  // 'parts' guess shows at a realKanji level.
+  const kanjiFrom = (els, places = null) =>
+    index(places ? 'places' : 'tiles', (parts) => partsKey(parts.map((p) => p.el), places && parts.map((p) => p.pos)))
+      .get(partsKey(els, places)) || [];
+  const sameShape = (parts, withPlaces) =>
+    index(withPlaces ? 'shape+places' : 'shape', (ps) => shapeKey(ps, withPlaces)).get(shapeKey(parts, withPlaces)) || [];
 
   // ── Starting ───────────────────────────────────────────────────────
 
@@ -70,6 +88,7 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
     if (!mode) throw new Error(`unknown mode "${start.modeId}"`);
     const level = LEVEL[start.level || config.defaultLevel];
     if (!level) throw new Error(`unknown level "${start.level}"`);
+    const size = Math.round(mode.palette * (level.paletteScale || 1));
     const chars = [...String(start.answer || '')];
     if (chars.length !== mode.length) throw new Error(`answer "${start.answer}" isn't ${mode.length} kanji`);
     chars.forEach((ch) => { if (!data.kanji[ch]) throw new Error(`answer kanji "${ch}" has no data`); });
@@ -82,7 +101,7 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
       daily: !!start.daily,
       puzzle: start.daily ? start.puzzle : null,
       rows: mode.guesses,
-      palette: buildPalette({ data, answerKanji: chars, size: mode.palette, rules, rng: seeded(`${seed}:palette`) }),
+      palette: buildPalette({ data, answerKanji: chars, size, rules, rng: seeded(`${seed}:palette`) }),
       status: 'playing',
       guesses: [],
       powers: [],
@@ -125,10 +144,13 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
     const palette = new Set(rules.guessFromPalette ? state.palette : tileOrder.keys());
     if (!picks.every((els) => els.every((id) => palette.has(id)))) return 'not-in-palette';
     const real = levelOf(state).realKanji;
-    if (real && !picks.every((els) => kanjiFrom(els).length)) return 'not-real';
-    if (state.guesses.some((g) => g.parts && bagsKey(g.parts) === bagsKey(picks))) return 'repeat';
+    const places = placesOf(state);
+    if (real && !picks.every((els, s) => kanjiFrom(els, places && places[s]).length)) return 'not-real';
+    // The same parts in the same places (or, without places, the same parts).
+    const key = (p) => p.map((els, s) => partsKey(els, places && places[s])).join('/');
+    if (state.guesses.some((g) => g.parts && key(g.parts) === key(picks))) return 'repeat';
     if (real && options.isWord && answer.length > 1
-      && !options.isWord(wordOf(state, picks, scoreParts(picks, answer)), modeOf(state))) return 'not-a-word';
+      && !options.isWord(wordOf(state, picks, scoreParts(picks, answer, places)), modeOf(state))) return 'not-a-word';
     return null;
   }
 
@@ -138,7 +160,8 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   // has none.
   function wordOf(state, picks, scored) {
     const real = levelOf(state).realKanji;
-    const chars = scored.map((slot, s) => slot.kanji || (real && kanjiFrom(picks[s])[0]) || null);
+    const places = placesOf(state);
+    const chars = scored.map((slot, s) => slot.kanji || (real && kanjiFrom(picks[s], places && places[s])[0]) || null);
     chars.forEach((ch, s) => { scored[s].kanji = ch; });
     return chars.every(Boolean) ? chars.join('') : null;
   }
@@ -149,12 +172,14 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
     const next = clone(state);
     const parts = levelOf(next).guess === 'parts';
     const picks = parts ? input.map((els) => els.slice()) : null;
-    const scored = parts ? scoreParts(picks, answerSlots(next)) : scoreGuess(slotsOf(input), answerSlots(next));
+    const scored = parts ? scoreParts(picks, answerSlots(next), placesOf(next)) : scoreGuess(slotsOf(input), answerSlots(next));
     const word = parts ? wordOf(next, picks, scored) : input;
     scored.forEach((slot) => slot.tiles.forEach((tile) => {
       if (tile.of) markFound(next, tile.of, tile.mark, true);
     }));
     next.guesses.push(parts ? { word, parts: picks, slots: scored } : { word, slots: scored });
+    // At a countLeft level, each guess keeps how many kanji fit after it.
+    if (parts && levelOf(next).countLeft) next.guesses[next.guesses.length - 1].left = fits(next).map((list) => list.length);
     next.log.push({ guess: parts ? picks : input });
     if (scored.every((slot) => slot.solved)) next.status = 'won';
     else if (next.guesses.length >= next.rows) next.status = 'lost';
@@ -231,6 +256,37 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
     };
   }
 
+  // The kanji that still fit everything the player has seen, per slot of
+  // the answer, easiest first: the same shape (as many parts, in the same
+  // places when cells show places), buildable from the palette, holding
+  // the parts powers revealed and none swept away, the revealed stroke
+  // count and layout, and giving every 'parts' guess so far the same
+  // marks. Meanings and readings aren't checked. A slot a power filled
+  // fits only its kanji. `other` marks count as grey: each slot is checked
+  // on its own.
+  function fits(state) {
+    const places = placesOf(state);
+    const palette = new Set(state.palette);
+    const swept = new Set(state.revealed.eliminated);
+    const layout = (parts) => [...new Set(parts.map((p) => p.pos))].sort().join('+');
+    const guesses = state.guesses.filter((g) => g.parts);
+    return answerSlots(state).map((slot, s) => {
+      if (state.revealed.kanji.includes(s)) return [slot.kanji];
+      const shown = state.revealed.parts.filter((ref) => ref.slot === s).map((ref) => slot.parts[ref.part]);
+      return sameShape(slot.parts, !!places).filter((ch) => {
+        const k = data.kanji[ch];
+        if (!k.parts.every((p) => palette.has(p.el)) || k.parts.some((p) => swept.has(p.el))) return false;
+        if (state.revealed.strokes && k.strokes !== data.kanji[slot.kanji].strokes) return false;
+        if (state.revealed.layout && layout(k.parts) !== layout(slot.parts)) return false;
+        if (!shown.every((part) => k.parts.some((p) => p.el === part.el && p.pos === part.pos))) return false;
+        return guesses.every((g) => {
+          const [again] = scoreParts([g.parts[s]], [{ kanji: ch, parts: k.parts }], places && [places[s]]);
+          return again.tiles.every((tile, i) => tile.mark === plainMark(g.slots[s].tiles[i].mark));
+        });
+      });
+    });
+  }
+
   // The answer's dictionary info. One kanji: its meanings and on/kun
   // readings; a word: its reading and meanings.
   function answerInfo(word) {
@@ -255,7 +311,8 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
       apply: (s) => { s.revealed.strokes = true; return { strokes: clues(s).strokes }; }
     },
     revealLayout: {
-      useful: (s) => !s.revealed.layout,
+      // Cells that show places already show the layout.
+      useful: (s) => !s.revealed.layout && !placesOf(s),
       apply: (s) => { s.revealed.layout = true; return { layout: clues(s).layout }; }
     },
     revealMeaning: {
@@ -381,6 +438,6 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
 
   return {
     newGame, guess, checkGuess, usePower, canUse, clues, answerInfo,
-    replay, points, record, rollDrop, effects: Object.keys(EFFECTS)
+    replay, points, record, rollDrop, fits, effects: Object.keys(EFFECTS)
   };
 }

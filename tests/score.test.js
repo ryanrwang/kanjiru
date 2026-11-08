@@ -147,3 +147,16 @@ test('parts: longer words mark parts in another kanji as "other"', () => {
   assert.deepEqual(marks(one), ['other']);
   assert.deepEqual(marks(two), ['other', 'hit']);
 });
+
+test('parts with places: green in the cell\'s place, yellow elsewhere in the kanji', () => {
+  assert.deepEqual(marks(scoreParts([['月', '日']], slots('明'), [['left', 'right']])[0]), ['near', 'near']);
+  const [won] = scoreParts([['日', '月']], slots('明'), [['left', 'right']]);
+  assert.deepEqual(marks(won), ['hit', 'hit']);
+  assert.equal(won.solved, true);
+  // 時: 日 left, 土 right, 寸 right.
+  assert.deepEqual(marks(scoreParts([['土', '日', '寸']], slots('時'), [['left', 'right', 'right']])[0]), ['near', 'near', 'hit']);
+  // Parts sharing a place can go in either of its cells.
+  assert.deepEqual(marks(scoreParts([['日', '寸', '土']], slots('時'), [['left', 'right', 'right']])[0]), ['hit', 'hit', 'hit']);
+  // 森: 木 top, 木 bottom ×2. Three 木 picked, all green; a 口 is grey.
+  assert.deepEqual(marks(scoreParts([['口', '木', '木']], slots('森'), [['top', 'bottom', 'bottom']])[0]), ['miss', 'hit', 'hit']);
+});

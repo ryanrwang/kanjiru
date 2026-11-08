@@ -88,10 +88,11 @@ export function validate() {
   checkIds(LEVELS, 'level');
   LEVELS.forEach((l) => {
     if (!GUESS_KINDS.includes(l.guess)) say(`level "${l.id}" needs guess: ${GUESS_KINDS.join(' or ')}`);
-    ['realKanji', 'meanings', 'freeMeaning'].forEach((k) => {
+    ['places', 'realKanji', 'countLeft', 'meanings', 'freeMeaning'].forEach((k) => {
       if (typeof l[k] !== 'boolean') say(`level "${l.id}" needs ${k}: true or false`);
     });
     if (!(l.points > 0)) say(`level "${l.id}" needs a points multiplier`);
+    if (!(l.paletteScale > 0)) say(`level "${l.id}" needs a paletteScale above 0`);
   });
   if (!LEVEL[DEFAULT_LEVEL]) say(`the default level "${DEFAULT_LEVEL}" isn't in levels.js`);
 

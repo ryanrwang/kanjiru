@@ -15,6 +15,8 @@
  *   parts  the next row has one empty cell per part of the answer. Tapping a
  *          part fills the first empty cell, tapping a filled cell empties it,
  *          and Guess scores the parts. No strip, no greying, no meanings.
+ *          With places (levels.js), a line above the board names each
+ *          cell's place; with countLeft, each row says how many kanji fit.
  *
  * The board keeps the rows already drawn, so a new row's reveal plays once
  * and redrawing the picker never replays it.
@@ -55,6 +57,7 @@ export function openGame(root, ctx) {
   let guessButton;
   let clearButton;
   const board = el('div', { class: 'board' });
+  const shape = el('div', { class: 'board-shape' });
   const boardDone = el('div', { class: 'board-rows', role: 'list' });
   const boardNext = el('div', { class: 'board-rows' });
   const head = el('div');
@@ -64,7 +67,7 @@ export function openGame(root, ctx) {
   const choices = el('div', { class: 'picker-choices' });
   const result = el('div', { class: 'game-result' });
   const live = el('p', { class: 'visually-hidden', 'aria-live': 'polite' });
-  board.append(boardDone, boardNext);
+  board.append(shape, boardDone, boardNext);
 
   function freshUi() {
     return {
@@ -84,12 +87,32 @@ export function openGame(root, ctx) {
   const meaningOf = (word) => (word && [...word].length === 1 && data.kanji[word]
     ? data.kanji[word].meanings.slice(0, 3).join(t('game.meaningSep')) : '');
   const rowMeaning = (word) => (level().meanings ? meaningOf(word) : '');
-  const markText = (mark) => t(`${partsMode() ? 'game.markParts' : 'game.mark'}.${mark}`);
+  // Mark words: places count unless it's a parts level without them.
+  const markText = (mark) => t(`${partsMode() && !level().places ? 'game.markParts' : 'game.mark'}.${mark}`);
 
   // Parts levels: each kanji of the answer has as many cells as parts.
   // (Declarations, so freshUi() can use them before this line runs.)
   function cellCounts() { return [...game.state.answer].map((ch) => data.kanji[ch].parts.length); }
   function emptyCells() { return Array(cellCounts().reduce((a, b) => a + b, 0)).fill(null); }
+  // Each cell's place, per slot, at a level with places; otherwise null.
+  const places = () => (partsMode() && level().places
+    ? [...state().answer].map((ch) => data.kanji[ch].parts.map((p) => p.pos)) : null);
+  // Cells, per slot, with a gap between kanji and between places.
+  const laidOut = (perSlot) => {
+    const pl = places();
+    return perSlot.map((nodes, s) => [
+      s ? el('span', { class: 'row-gap' }) : null,
+      nodes.map((node, i) => [pl && i && pl[s][i] !== pl[s][i - 1] ? el('span', { class: 'cell-gap' }) : null, node])
+    ]);
+  };
+  // How many kanji still fit (engine.fits), for the next row; one state at a time.
+  let fitsFor = null;
+  let fitsCount = null;
+  const fitsNow = () => {
+    if (fitsFor !== state()) { fitsFor = state(); fitsCount = engine.fits(state()).map((list) => list.length); }
+    return fitsCount;
+  };
+  const fitText = (counts) => t('game.fit', { n: counts.join(t('game.layoutSep')) });
   const picksBySlot = () => {
     let i = 0;
     return cellCounts().map((n) => { const out = ui.cells.slice(i, i + n); i += n; return out; });
@@ -126,19 +149,18 @@ export function openGame(root, ctx) {
   function rowLabel(g, i) {
     const parts = g.slots.flatMap((slot) => slot.tiles.map((tile) => `${tile.form} ${markText(tile.mark)}`));
     const list = parts.join(t('game.listSep'));
-    return g.word ? t('game.rowLabel', { n: i + 1, word: g.word, parts: list }) : t('game.rowLabelParts', { n: i + 1, parts: list });
+    const label = g.word ? t('game.rowLabel', { n: i + 1, word: g.word, parts: list }) : t('game.rowLabelParts', { n: i + 1, parts: list });
+    return g.left ? t('game.rowLabelFit', { label, fit: fitText(g.left) }) : label;
   }
 
   function guessRow(g, i, reveal) {
     let n = 0;
-    const tiles = g.slots.map((slot, s) => [
-      s ? el('span', { class: 'row-gap' }) : null,
-      slot.tiles.map((tile) => tileNode(tile, n++))
-    ]);
+    const perSlot = g.slots.map((slot) => slot.tiles.map((tile) => tileNode(tile, n++)));
+    const tiles = g.parts ? laidOut(perSlot) : perSlot.map((nodes, s) => [s ? el('span', { class: 'row-gap' }) : null, nodes]);
     const row = el('div', { class: `board-row${reveal ? ' is-new' : ''}`, role: 'listitem', 'aria-label': rowLabel(g, i) },
       el('span', { class: 'row-kanji kanji', lang: 'ja', 'aria-hidden': 'true' }, g.word || ''),
       el('span', { class: 'row-tiles', 'aria-hidden': 'true' }, tiles),
-      el('span', { class: 'row-meaning', 'aria-hidden': 'true' }, rowMeaning(g.word)));
+      el('span', { class: `row-meaning${g.left ? ' is-count' : ''}`, 'aria-hidden': 'true' }, g.left ? fitText(g.left) : rowMeaning(g.word)));
     if (reveal) setTimeout(() => row.classList.remove('is-new'), revealTime(g));
     return row;
   }
@@ -162,27 +184,66 @@ export function openGame(root, ctx) {
   function pendingCells() {
     let n = 0;
     const filled = ui.cells.filter(Boolean).length;
-    const groups = cellCounts().map((count, s) => [
-      s ? el('span', { class: 'row-gap' }) : null,
-      Array.from({ length: count }, () => {
-        const i = n++;
-        const id = ui.cells[i];
-        return id
-          ? el('button', {
-            class: 'tile is-cell is-pending is-filled', type: 'button', lang: 'ja',
-            'aria-label': t('game.cellRemove', { part: id }), onclick: () => emptyCell(i)
-          }, glyph(id))
-          : el('span', { class: 'tile is-cell is-pending is-empty', 'aria-hidden': 'true' });
-      })
-    ]);
+    const perSlot = cellCounts().map((count) => Array.from({ length: count }, () => {
+      const i = n++;
+      const id = ui.cells[i];
+      return id
+        ? el('button', {
+          class: 'tile is-cell is-pending is-filled', type: 'button', lang: 'ja',
+          'aria-label': t('game.cellRemove', { part: id }), onclick: () => emptyCell(i)
+        }, glyph(id))
+        : el('span', { class: 'tile is-cell is-pending is-empty', 'aria-hidden': 'true' });
+    }));
+    // The count once before the first guess, then only when a power changed
+    // it since the last row (which shows its own).
+    const last = state().guesses[state().guesses.length - 1];
+    const count = level().countLeft && (!last || !last.left || last.left.join() !== fitsNow().join());
+    const note = count ? fitText(fitsNow())
+      : filled || (level().countLeft && last) ? '' : t('game.nextHintParts', { n: ui.cells.length });
     return el('div', { class: 'board-row is-next', role: 'group', 'aria-label': t('game.cells', { n: filled, cells: ui.cells.length }) },
       el('span', { class: 'row-kanji kanji', 'aria-hidden': 'true' }),
-      el('span', { class: 'row-tiles' }, groups),
-      el('span', { class: 'row-meaning', 'aria-hidden': 'true' }, filled ? '' : t('game.nextHintParts', { n: ui.cells.length })));
+      el('span', { class: 'row-tiles' }, laidOut(perSlot)),
+      el('span', { class: `row-meaning${count ? ' is-count' : ''}` }, note));
+  }
+
+  // A place's name over its run of n cells (styles.css .shape-place).
+  function placeLabel({ pos, n }) {
+    const node = el('span', { class: 'shape-place' }, t(`pos.${pos}`));
+    node.style.setProperty('--n', n);
+    return node;
+  }
+
+  // At a level with places: each cell's place, above the board.
+  function renderShape() {
+    const pl = places();
+    if (!pl) { shape.replaceChildren(); return; }
+    const groups = pl.map((slot) => {
+      const out = [];
+      slot.forEach((pos, i) => {
+        if (i && slot[i - 1] === pos) { out[out.length - 1].n += 1; return; }
+        out.push({ pos, n: 1 });
+      });
+      return out;
+    });
+    let s = 0;
+    shape.replaceChildren(
+      el('span', { class: 'visually-hidden' }, t('game.shape', {
+        places: pl.map((slot) => slot.map((pos) => t(`pos.${pos}`)).join(t('game.listSep'))).join(' / ')
+      })),
+      el('div', { class: 'board-row', 'aria-hidden': 'true' },
+        el('span', { class: 'row-kanji' }),
+        el('span', { class: 'row-tiles' }, groups.map((slot) => [
+          s++ ? el('span', { class: 'row-gap' }) : null,
+          slot.map((g, i) => [
+            i ? el('span', { class: 'cell-gap' }) : null,
+            placeLabel(g)
+          ])
+        ]))));
   }
 
   function renderBoard() {
     const s = state();
+    renderShape();
     boardDone.setAttribute('aria-label', t('game.board'));
     if (doneRows > s.guesses.length) { boardDone.replaceChildren(); doneRows = 0; }
     s.guesses.slice(doneRows).forEach((g, j) => {

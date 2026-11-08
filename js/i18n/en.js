@@ -29,8 +29,7 @@ export default {
     near: 'Right part, wrong spot',
     miss: 'Not in the answer',
     // Levels with parts guesses (Normal, Hard)
-    partsBody: 'Fill the cells with parts. A part turns green if the answer has it, grey if not.',
-    partsHit: 'In the answer'
+    partsBody: 'Fill the cells with parts. Each cell is a place in the kanji: a part turns green in its place, yellow in another, grey if the kanji hasn’t got it.'
   },
 
   play: {
@@ -66,11 +65,14 @@ export default {
     board: 'Your guesses',
     rowLabel: 'Guess {n}: {word}. {parts}',
     rowLabelParts: 'Guess {n}: {parts}',
+    rowLabelFit: '{label}. {fit}',
     nextHint: 'Pick parts below, or type a kanji',
     nextHintParts: 'Tap parts below to fill the {n} cells',
     cells: 'Next guess: {n} of {cells} cells filled',
     cellRemove: 'Take out {part}',
     cellsFull: 'All cells are full. Tap a cell to take its part out.',
+    shape: 'Cells: {places}',
+    fit: 'Kanji that fit: {n}',
     typeLabel: 'Your guess',
     typePlaceholder: 'Type a kanji',
     guess: 'Guess',
@@ -124,7 +126,7 @@ export default {
     errors: {
       empty: 'Pick a kanji first.',
       slots: 'Fill all {cells} cells first.',
-      'not-real': 'Those parts don’t make a kanji. Try another mix.',
+      'not-real': 'No kanji has those parts in those places. Try another mix.',
       level: 'That kind of guess isn’t used at this level.',
       over: 'The game is over.',
       length: 'The answer is {n} kanji long.',
@@ -264,8 +266,8 @@ export default {
 
   level: {
     easy: { name: 'Easy', desc: 'Guess kanji. The parts you pick list the kanji they make, with meanings, and the meaning shows for free after a few guesses.' },
-    normal: { name: 'Normal', desc: 'Guess parts only: fill each cell with a part. No kanji list and no free meaning.' },
-    hard: { name: 'Hard', desc: 'Like Normal, but the parts must make a real kanji.' }
+    normal: { name: 'Normal', desc: 'Guess parts: each cell is a place in the kanji, so parts go green in place and yellow out of place. No kanji list or free meaning; fewer parts, and a count of the kanji that still fit.' },
+    hard: { name: 'Hard', desc: 'Like Normal, but every guess must be a real kanji, from all the parts, with no count.' }
   },
 
   slot: {
