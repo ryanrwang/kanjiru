@@ -29,7 +29,12 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 ## Key Files
 | File | Purpose |
 |---|---|
-| `index.html` | Shell: loads `tokens.js`, the fonts, `styles.css`, then `app.js` |
+| `index.html` | Shell: loads `tokens.js`, the fonts, `styles.css`, then `app.js`. Its `<head>` also preloads every module and the data, and has the install and share-preview tags |
+| `manifest.webmanifest` | The web app manifest: home-screen name, colours and icons |
+| `icons/` | Home-screen icons and the 1200 × 630 share image, drawn by `tools/make_images.py` |
+| `sw.js` | Service worker: network first, a kept copy only offline; never `api/` or `review/` |
+| `js/service-worker.js` | Registers `sw.js` after the page loads (https and localhost only) |
+| `.htaccess` | Gzips the JSON data and has it rechecked every visit (the site's root `.htaccess` does pages, CSS and JS) |
 | `tokens.js` | Design tokens, skins' colours (`THEMES`) and `TOKENS.applyLook()` |
 | `styles.css` | All styles, using token variables only |
 | `app.js` | Start screen built from the catalogues, data loading, and the routes (`#main` daily, `#main/practice` keep playing) |
@@ -70,7 +75,8 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `data/candidates.json` | Every candidate answer, with kanji info and part breakdowns |
 | `data/parts.json` | The parts palette: 251 tiles, their forms (氵 for 水) and drawings for glyphs fonts may lack |
 | `data/parts-overrides.json` | Hand-fixed part breakdowns, each with a `why`; `build_data.py` uses them instead of its own split |
-| `tools/compile_game.py` | Writes `data/game/`: the slim kanji file and the daily schedule from the Keep words (see `tools/README.md`) |
+| `tools/compile_game.py` | Writes `data/game/`: the slim kanji file and the daily schedule from the Keep words (see `tools/README.md`). `EPOCH` is the date of puzzle 1 |
+| `tools/make_images.py` | Draws `icons/` from the favicon's design (needs Pillow and the Noto JP fonts) |
 | `data/game/kanji.json` | Every guessable kanji: strokes, JLPT, frequency, meanings, readings, parts |
 | `data/game/answers.json` | The daily schedule: the epoch and each mode's answer list (`LISTS` in `tools/compile_game.py`), Keep words only |
 | `data/ATTRIBUTION.md` | Exact source versions and licences; the app's About screen must credit them |
@@ -92,6 +98,9 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 - **Ids are permanent.** Saves store mode, skin, power and achievement ids. Never rename one; add a new entry and retire the old.
 - **The save is versioned.** Changing its shape means bumping `VERSION` in `js/store.js` and adding a migration. Adding a key needs nothing: missing keys are filled from `fresh()`.
 - **History is the source of truth.** Streaks and stats are worked out from `history`, never stored as counters.
+- **The epoch is fixed after launch.** Dailies from another epoch become keep-playing games (`settleDailies()` in `js/store.js`), so moving it never breaks a save, but it does change every player's puzzle numbers.
+- **A new module needs a preload.** Add its `<link rel="modulepreload">` to `index.html`'s `<head>`; `node --test` (`tests/head.test.js`) names any that are missing or extra.
+- **Service worker:** `sw.js` answers from the network first, so a deploy reaches players at once; never let it cache `api/`. The app's browser pane can't run service workers, so check it in Chrome on `localhost` (the LAN link is plain http, so phones run without it). To clear one: DevTools → Application → Service workers → Unregister.
 - **Check the console.** `validate()` logs `[kanjiru config]` warnings at start-up when catalogues disagree. Fix them before committing.
 - **Answers are N3 or easier.** Guesses may use any jōyō kanji built from the puzzle's palette.
 - **Game data is compiled.** After a rebuild or a review session, run `python -I -X utf8 tools/compile_game.py` and commit `data/game/`. It never invents answers: with no Keep words the answer lists are empty.

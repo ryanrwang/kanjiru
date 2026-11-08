@@ -7,7 +7,7 @@
  */
 export default {
   meta: {
-    description: 'A daily kanji puzzle: guess the kanji from its parts.'
+    description: 'A daily kanji puzzle: guess the word from its parts.'
   },
 
   header: {

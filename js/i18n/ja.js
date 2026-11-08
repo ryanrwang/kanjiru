@@ -4,7 +4,7 @@
  */
 export default {
   meta: {
-    description: 'パーツから漢字を当てる、毎日のパズル。'
+    description: 'パーツからことばを当てる、毎日の漢字パズル。'
   },
 
   header: {
