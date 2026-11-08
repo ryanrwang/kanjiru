@@ -112,7 +112,7 @@ class Answers(unittest.TestCase):
         self.assertEqual(later["answers"]["1"][:3], played)
         self.assertEqual(report["lists"]["1"]["locked"], 3)
         self.assertIn("間", later["answers"]["1"][3:])
-        self.assertEqual(report["lists"]["1"]["locked_not_kept"], ["時"])
+        self.assertEqual(report["lists"]["1"]["locked_left_out"], ["時"])
 
     def test_future_days_are_reshuffled_as_words_are_added(self):
         first, _ = compile_(review("明", "海"))
@@ -125,6 +125,56 @@ class Answers(unittest.TestCase):
                                  today=datetime.date(2026, 11, 20), epoch="2026-12-01")
         self.assertEqual(report["lists"]["1"]["locked"], 0)
         self.assertEqual(later["epoch"], "2026-12-01")
+
+
+# 主 has a loose stroke (丶) as a part; 本 has 一, which is a real part.
+LOOSE = {
+    "kanji": {**CANDIDATES["kanji"],
+              "主": kanji([("丶", "top", None), ("王", "bottom", None)]),
+              "人": kanji([("人", "whole", None)])},
+    "words": CANDIDATES["words"] + [{"word": "主人", "length": 2, "reading": "しゅじん", "meanings": ["master"]}],
+}
+NO_DOT = {"2": {"lengths": (2,), "parts": (1, 99), "without": ("丶",)}}
+
+
+def compile_loose(rev, candidates=LOOSE, lists=NO_DOT, **kw):
+    return cg.compile_answers(candidates, rev, kw.get("previous"), kw.get("today", BEFORE), EPOCH, lists)
+
+
+class Without(unittest.TestCase):
+    def test_words_with_those_parts_are_left_out(self):
+        doc, report = compile_loose(review("主人", "時間", "本日"))
+        self.assertEqual(sorted(doc["answers"]["2"]), ["時間", "本日"])
+        self.assertNotIn("主人", doc["words"])
+        self.assertEqual(report["lists"]["2"]["without"], ["主人"])
+        self.assertEqual(report["lists"]["2"]["without_tiles"], ["丶"])
+
+    def test_a_list_without_the_rule_keeps_them(self):
+        doc, report = compile_loose(review("主人", "時間"), lists=TEST_LISTS)
+        self.assertIn("主人", doc["answers"]["2"])
+        self.assertEqual(report["lists"]["2"]["without"], [])
+
+    def test_a_fixed_breakdown_brings_the_word_back(self):
+        fixed = {**LOOSE, "kanji": {**LOOSE["kanji"], "主": kanji([("王", "whole", None)])}}
+        doc, _ = compile_loose(review("主人", "時間"), candidates=fixed)
+        self.assertIn("主人", doc["answers"]["2"])
+
+    def test_only_words_that_fit_otherwise_are_counted(self):
+        # 主人 has 3 parts: a 4-6 part list never wanted it, so it isn't counted as left out.
+        rule = {"2": {"lengths": (2,), "parts": (4, 6), "without": ("丶",)}}
+        _, report = compile_loose(review("主人", "時間"), lists=rule)
+        self.assertEqual(report["lists"]["2"]["without"], [])
+
+    def test_a_day_already_played_keeps_its_answer(self):
+        first, _ = compile_loose(review("主人"), lists=TEST_LISTS)
+        self.assertEqual(first["answers"]["2"], ["主人"])
+        later, report = compile_loose(review("主人", "時間"), previous=first, today=datetime.date(2026, 11, 1))
+        self.assertEqual(later["answers"]["2"][0], "主人")
+        self.assertEqual(report["lists"]["2"]["locked_left_out"], ["主人"])
+
+    def test_the_real_main_list_leaves_out_loose_strokes_but_not_one(self):
+        self.assertEqual(set(cg.LISTS["main"]["without"]), {"丨", "丶", "丿", "乙", "亅"})
+        self.assertNotIn("一", cg.LISTS["main"]["without"])
 
 
 class Kanji(unittest.TestCase):
