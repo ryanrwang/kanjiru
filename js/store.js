@@ -11,7 +11,10 @@
  *   inventory     { [powerId]: count }
  *   unlocked      { [slotId]: [skinId, …] }           free skins aren't listed
  *   achievements  { [achievementId]: 'YYYY-MM-DD' }
- *   history       { [modeId]: { [puzzleNo]: { date, guesses, won, powers } } }
+ *   history       { [modeId]: { [key]: { date, guesses, won, powers, answer } } }
+ *                 key: the puzzle number for a daily, "p" + a timestamp for
+ *                 practice (js/engine/daily.js historyKey). guesses: the words
+ *                 guessed; powers: power ids used (js/engine/game.js record)
  *
  * History is the source of truth: streaks and stats are worked out from it,
  * which also makes merging two devices simple (MERGE, below).

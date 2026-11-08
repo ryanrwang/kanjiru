@@ -1,0 +1,39 @@
+/*
+ * Shared test setup: fixture data and a test config whose numbers differ
+ * from the real ones, so a test that passes proves the engine read them.
+ */
+import { KANJI, TILES } from './fixture-kanji.js';
+import { MODES, POWERS, ECONOMY, RULES } from '../js/registry.js';
+
+const clone = (x) => JSON.parse(JSON.stringify(x));
+
+// answers: { [length]: [...] }, words: { [word]: { reading, meanings } }
+export function fixtureData({ answers = {}, words = {}, epoch = '2026-01-01' } = {}) {
+  return { kanji: clone(KANJI), tiles: clone(TILES), answers, words, epoch };
+}
+
+// The real config with test numbers. Overrides merge in at the top level.
+export function testConfig(overrides = {}) {
+  return {
+    modes: clone(MODES),
+    powers: clone(POWERS),
+    economy: {
+      ...clone(ECONOMY),
+      perPart: { hit: 10, near: 4, other: 1 },
+      solve: { base: 100, perUnusedGuess: 10 },
+      dailyMultiplier: 1,
+      practiceMultiplier: 0.5,
+      drops: { chanceOnWin: 0.3, chanceOnPerfect: 0.6, perfectShare: 0.5 }
+    },
+    rules: clone(RULES),
+    ...overrides
+  };
+}
+
+// A start for engine.newGame.
+export const start = (modeId, answer, extra = {}) => ({ modeId, answer, seed: `test:${answer}`, daily: true, puzzle: 1, ...extra });
+
+// Kanji → scoreGuess slots.
+export const slots = (word) => [...word].map((kanji) => ({ kanji, parts: KANJI[kanji].parts }));
+
+export const marks = (scoredSlot) => scoredSlot.tiles.map((t) => t.mark);

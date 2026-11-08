@@ -1,0 +1,11 @@
+{
+"about":"The daily schedule: puzzle n (n = days since epoch + 1) plays answer n of its length, wrapping round. Only words marked Keep on the review page. Written by tools/compile_game.py; words gives each 2+ kanji answer's [reading, meanings].",
+"epoch":"2026-11-01",
+"answers":{
+"1":[],
+"2":[],
+"3":[],
+"4":[]
+},
+"words":{}
+}

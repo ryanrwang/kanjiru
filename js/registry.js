@@ -10,10 +10,11 @@ import { SLOTS, SKINS, DEFAULT_LOOK } from './config/skins.js';
 import { POWERS } from './config/powers.js';
 import { ECONOMY } from './config/economy.js';
 import { ACHIEVEMENTS } from './config/achievements.js';
+import { RULES } from './config/rules.js';
 import { has, missingStrings } from './i18n.js';
 import { missingMergeRules } from './store.js';
 
-export { MODES, SLOTS, SKINS, DEFAULT_LOOK, POWERS, ECONOMY, ACHIEVEMENTS };
+export { MODES, SLOTS, SKINS, DEFAULT_LOOK, POWERS, ECONOMY, ACHIEVEMENTS, RULES };
 
 // Where each catalogue entry's text lives in js/i18n/*.js.
 export const TEXT_KEYS = {
@@ -43,6 +44,8 @@ export const KNOWN_EFFECTS = [
 export const KNOWN_STATS = [
   'wins', 'bestStreak', 'fastestWin', 'cleanWins', 'collected', 'fullSetDays'
 ];
+// Marks a part can get that pay points (js/engine/score.js).
+export const MARK_POINTS = ['hit', 'near', 'other'];
 const UNLOCK_TYPES = ['free', 'points', 'achievement'];
 const WHEN = ['before', 'during'];
 
@@ -69,7 +72,17 @@ export function validate() {
     if (lengths.has(m.length)) say(`two modes have length ${m.length}`);
     lengths.add(m.length);
     if (!Number.isInteger(m.guesses) || m.guesses < 1) say(`mode "${m.id}" has a bad guess count`);
+    if (!Number.isInteger(m.palette) || m.palette < 1) say(`mode "${m.id}" needs a palette size`);
+    if (m.freeMeaning !== null && !(Number.isInteger(m.freeMeaning) && m.freeMeaning >= 0)) {
+      say(`mode "${m.id}" needs freeMeaning: a guess count, or null for never`);
+    }
   });
+
+  // Points for marks the engine gives (js/engine/score.js MARKS).
+  MARK_POINTS.forEach((mark) => {
+    if (!(ECONOMY.perPart[mark] >= 0)) say(`economy.perPart.${mark} needs a number`);
+  });
+  if (!Array.isArray(RULES.palette.always)) say('rules.palette.always needs a list of tiles');
 
   // Skins
   SLOTS.forEach((slot) => {

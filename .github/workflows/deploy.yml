@@ -41,8 +41,10 @@ jobs:
           local-dir: ./
           server-dir: ./apps/kanjiru/
           # Dev-only files never go to the server: the data build scripts,
-          # the word review page (it writes files) and its working data.
-          # api/codes/ is the server's own transfer-code store: never touch it.
+          # the word review page (it writes files) and its working data, and
+          # the tests. The game loads data/game/ and data/parts.json, which
+          # do deploy. api/codes/ is the server's own transfer-code store:
+          # never touch it.
           exclude: |
             **/.git*
             **/.git*/**
@@ -51,6 +53,8 @@ jobs:
             api/codes/**
             tools/**
             review/**
+            tests/**
+            package.json
             data/candidates.json
             data/review.json
             **/*.md

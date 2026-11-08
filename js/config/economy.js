@@ -7,19 +7,24 @@ export const ECONOMY = {
   // 小判, the old gold coin. Its name and "{n} pts" wording are in js/i18n/*.js.
   currency: { icon: '🪙' },
 
-  startingPoints: 100,
+  startingPoints: 150,
 
-  // Earned during a game, for each part a guess uncovers for the first time.
-  perPart: { hit: 5, near: 2 },
+  // Earned during a game, for each part of the answer a guess marks for the
+  // first time. A part that goes from one mark to a better one later pays
+  // the difference, so each part pays at most `hit`. Parts a power reveals
+  // pay nothing. Marks: hit (green), near (yellow), other (in another kanji
+  // of the word, 2+ kanji modes).
+  perPart: { hit: 8, near: 3, other: 2 },
 
-  // Earned on a win: fewer guesses used = more points.
-  solve: { base: 50, perUnusedGuess: 15 },
+  // Earned on a win: fewer guesses used = more points. Unused rows are
+  // counted from the mode's own rows, so an extra-guess row never pays.
+  solve: { base: 80, perUnusedGuess: 20 },
 
   // Daily puzzles pay more than practice ones.
   dailyMultiplier: 1,
   practiceMultiplier: 0.5,
 
-  // Paid once when a daily streak reaches these lengths.
+  // Paid each time a daily streak reaches these lengths.
   streakRewards: [
     { days: 3,   points: 30 },
     { days: 7,   points: 100, power: 'extra-guess' },
@@ -28,9 +33,10 @@ export const ECONOMY = {
   ],
 
   // Random bonus hint after a win; which one is picked by each power's
-  // `drop` weight in powers.js.
+  // `drop` weight in powers.js, skipping powers already held at their limit.
   drops: {
     chanceOnWin: 0.3,
-    chanceOnPerfect: 0.6   // solved with half the rows or fewer
+    chanceOnPerfect: 0.6,  // a perfect solve: ...
+    perfectShare: 0.5      // ...using this share of the mode's rows or fewer
   }
 };
