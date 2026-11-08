@@ -13,27 +13,49 @@
 // Weakest first. Points per mark are in economy.js perPart.
 export const MARKS = ['miss', 'other', 'near', 'hit'];
 
-// Scores one guess.
+// Hands out the answer's parts, each once. take(s, test) finds the first
+// unused part of answer slot `s` that `test` accepts, uses it up and
+// returns { slot, part }, or null.
+function partTaker(answer) {
+  const used = answer.map((slot) => slot.parts.map(() => false));
+  return (s, test) => {
+    const i = answer[s].parts.findIndex((p, j) => !used[s][j] && test(p));
+    if (i < 0) return null;
+    used[s][i] = true;
+    return { slot: s, part: i };
+  };
+}
+
+// Longer words: a part still grey that is unused in another slot of the
+// answer is marked `other`. Slots left to right, parts in order, other
+// slots searched left to right.
+function markOthers(result, answer, take) {
+  if (answer.length <= 1) return;
+  result.forEach((slot, s) => {
+    slot.tiles.forEach((tile) => {
+      if (tile.mark !== 'miss') return;
+      for (let t = 0; t < answer.length; t += 1) {
+        if (t === s) continue;
+        const of = take(t, (p) => p.el === tile.el);
+        if (of) { Object.assign(tile, { mark: 'other', of }); break; }
+      }
+    });
+  });
+}
+
+// Scores one kanji guess (levels.js guess: 'kanji').
 //   guess, answer: arrays of slots, one per kanji: { kanji, parts: [...] }
 // Returns one entry per slot:
 //   { kanji, solved, tiles: [{ el, pos, form, mark, of }] }
 // `of` is the answer part a mark used up, { slot, part }, or null for miss.
 export function scoreGuess(guess, answer) {
   if (guess.length !== answer.length) throw new Error('guess and answer differ in length');
-  const used = answer.map((slot) => slot.parts.map(() => false));
+  const take = partTaker(answer);
   const result = guess.map((slot, s) => ({
     kanji: slot.kanji,
     solved: slot.kanji === answer[s].kanji,
     tiles: slot.parts.map((p) => ({ el: p.el, pos: p.pos, form: p.form || p.el, mark: 'miss', of: null }))
   }));
-
-  // Finds the first unused part of answer slot `s` that `test` accepts, and uses it up.
-  const take = (s, test) => {
-    const i = answer[s].parts.findIndex((p, j) => !used[s][j] && test(p));
-    if (i < 0) return null;
-    used[s][i] = true;
-    return { slot: s, part: i };
-  };
 
   // 1. Greens, then 2. yellows, within each slot, in stroke order.
   result.forEach((slot, s) => {
@@ -48,21 +70,35 @@ export function scoreGuess(guess, answer) {
     });
   });
 
-  // 3. Longer words: a part still grey that is unused in another slot of
-  //    the answer is marked `other`. Slots left to right, parts in stroke
-  //    order, other slots searched left to right.
-  if (answer.length > 1) {
-    result.forEach((slot, s) => {
-      slot.tiles.forEach((tile) => {
-        if (tile.mark !== 'miss') return;
-        for (let t = 0; t < answer.length; t += 1) {
-          if (t === s) continue;
-          const of = take(t, (p) => p.el === tile.el);
-          if (of) { Object.assign(tile, { mark: 'other', of }); break; }
-        }
-      });
-    });
-  }
+  // 3. Parts in another kanji of the word.
+  markOthers(result, answer, take);
+  return result;
+}
+
+// Scores one parts guess (levels.js guess: 'parts'): the tile ids picked
+// for each slot. The player picks parts, not places, so a part is green
+// (`hit`) when its slot of the answer has it anywhere; there is no yellow.
+// Longer words get `other` as above. A slot is solved when its parts are
+// exactly the answer's; its kanji is then the answer's, otherwise null
+// (the engine fills in a real kanji the parts make, if any).
+// Same return shape as scoreGuess; a hit tile takes its answer part's pos.
+export function scoreParts(picks, answer) {
+  if (picks.length !== answer.length) throw new Error('guess and answer differ in length');
+  const take = partTaker(answer);
+  const result = picks.map((els) => ({
+    kanji: null,
+    solved: false,
+    tiles: els.map((el) => ({ el, pos: null, form: el, mark: 'miss', of: null }))
+  }));
+  result.forEach((slot, s) => slot.tiles.forEach((tile) => {
+    const of = take(s, (p) => p.el === tile.el);
+    if (of) Object.assign(tile, { mark: 'hit', of, pos: answer[s].parts[of.part].pos });
+  }));
+  markOthers(result, answer, take);
+  result.forEach((slot, s) => {
+    slot.solved = slot.tiles.length === answer[s].parts.length && slot.tiles.every((tile) => tile.mark === 'hit');
+    if (slot.solved) slot.kanji = answer[s].kanji;
+  });
   return result;
 }
 

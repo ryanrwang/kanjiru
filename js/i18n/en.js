@@ -2,8 +2,8 @@
  * English interface text. This file is the reference: every key here must
  * exist in every other language file (validate() warns when one is missing).
  * {name} placeholders are filled in by t(key, { name: … }).
- * Catalogue text is keyed by the catalogue id: mode.<id>, skin.<slot>.<id>,
- * power.<id>, achievement.<id>.
+ * Catalogue text is keyed by the catalogue id: mode.<id>, level.<id>,
+ * skin.<slot>.<id>, power.<id>, achievement.<id>.
  */
 export default {
   meta: {
@@ -27,7 +27,10 @@ export default {
     body: 'Each guess colours its parts: right spot, wrong spot, or not in the answer.',
     hit: 'Right part, right spot',
     near: 'Right part, wrong spot',
-    miss: 'Not in the answer'
+    miss: 'Not in the answer',
+    // Levels with parts guesses (Normal, Hard)
+    partsBody: 'Fill the cells with parts. A part turns green if the answer has it, grey if not.',
+    partsHit: 'In the answer'
   },
 
   play: {
@@ -39,9 +42,11 @@ export default {
     loadFailed: 'The game didn’t load. Check your connection and reload.',
     practiceOnly: 'Practice only',
     dailyNew: 'Daily #{n}',
-    dailyStarted: 'Daily #{n} · {guesses} guessed',
-    dailyWon: 'Daily #{n} · solved in {guesses} ✓',
-    dailyLost: 'Daily #{n} · not solved',
+    dailyStarted: 'Daily #{n} · {level} · {guesses} guessed',
+    dailyWon: 'Daily #{n} · {level} · solved in {guesses} ✓',
+    dailyLost: 'Daily #{n} · {level} · not solved',
+    level: 'Level',
+    levelPoints: '×{mult} pts',
     daily: 'Play',
     continue: 'Continue',
     result: 'Result',
@@ -52,6 +57,7 @@ export default {
     home: 'Back to start',
     daily: 'Daily #{n}',
     practice: 'Practice',
+    kindLevel: '{kind} · {level}',
     count: '{n}/{rows}',
     countTitle: 'Guesses used',
     listSep: ', ',
@@ -59,7 +65,12 @@ export default {
     layoutSep: ' · ',
     board: 'Your guesses',
     rowLabel: 'Guess {n}: {word}. {parts}',
+    rowLabelParts: 'Guess {n}: {parts}',
     nextHint: 'Pick parts below, or type a kanji',
+    nextHintParts: 'Tap parts below to fill the {n} cells',
+    cells: 'Next guess: {n} of {cells} cells filled',
+    cellRemove: 'Take out {part}',
+    cellsFull: 'All cells are full. Tap a cell to take its part out.',
     typeLabel: 'Your guess',
     typePlaceholder: 'Type a kanji',
     guess: 'Guess',
@@ -75,6 +86,11 @@ export default {
     mark: {
       hit: 'right spot',
       near: 'wrong spot',
+      other: 'in another kanji',
+      miss: 'not in the answer'
+    },
+    markParts: {
+      hit: 'in the answer',
       other: 'in another kanji',
       miss: 'not in the answer'
     },
@@ -107,6 +123,9 @@ export default {
     },
     errors: {
       empty: 'Pick a kanji first.',
+      slots: 'Fill all {cells} cells first.',
+      'not-real': 'Those parts don’t make a kanji. Try another mix.',
+      level: 'That kind of guess isn’t used at this level.',
       over: 'The game is over.',
       length: 'The answer is {n} kanji long.',
       'not-kanji': 'Guess a jōyō kanji.',
@@ -145,8 +164,8 @@ export default {
   },
 
   share: {
-    daily: 'Kanjiru {numeral} #{puzzle} {score}{hints}',
-    practice: 'Kanjiru {numeral} practice {score}{hints}'
+    daily: 'Kanjiru {numeral} #{puzzle} {level} {score}{hints}',
+    practice: 'Kanjiru {numeral} practice {level} {score}{hints}'
   },
 
   looks: {
@@ -241,6 +260,12 @@ export default {
     k2: { name: 'Two kanji' },
     k3: { name: 'Three kanji' },
     k4: { name: 'Four kanji' }
+  },
+
+  level: {
+    easy: { name: 'Easy', desc: 'Guess kanji. The parts you pick list the kanji they make, with meanings, and the meaning shows for free after a few guesses.' },
+    normal: { name: 'Normal', desc: 'Guess parts only: fill each cell with a part. No kanji list and no free meaning.' },
+    hard: { name: 'Hard', desc: 'Like Normal, but the parts must make a real kanji.' }
   },
 
   slot: {

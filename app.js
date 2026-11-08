@@ -1,9 +1,9 @@
 /*
  * Kanjiru — the start screen and the way into a game.
  *
- * The start screen shows how a game reads, the modes, the skin picker and
- * the hints, all built from the catalogues in js/config/ and the text in
- * js/i18n/. Nothing here hard-codes a mode, skin, power or word of text:
+ * The start screen shows how a game reads, the level picker, the modes, the
+ * skin picker and the hints, all built from the catalogues in js/config/
+ * and the text in js/i18n/. Nothing here hard-codes a mode, skin, power or word of text:
  * add one to its catalogue and it appears.
  *
  * Routes (the URL hash, so the phone's back gesture works):
@@ -12,7 +12,7 @@
  *   #k1/practice    a practice game in that mode
  */
 import {
-  MODES, MODE, SLOTS, SKINS, POWERS, ECONOMY, ACHIEVEMENT, validate
+  MODES, MODE, LEVELS, LEVEL, SLOTS, SKINS, POWERS, ECONOMY, ACHIEVEMENT, validate
 } from './js/registry.js';
 import { t, setLang, nextLanguage } from './js/i18n.js';
 import { el } from './js/dom.js';
@@ -23,7 +23,7 @@ import { createEngine } from './js/engine/game.js';
 import { answersFor } from './js/engine/daily.js';
 import { glyphMaker } from './js/play/glyph.js';
 import { openGame } from './js/play/screen.js';
-import { dailyStatus } from './js/play/session.js';
+import { dailyStatus, currentLevel } from './js/play/session.js';
 
 const TOKENS = window.TOKENS;
 // Reassigned when a save arrives from another device (js/settings.js).
@@ -155,42 +155,63 @@ const playable = (mode) => !!(mode.playable && game.data && answersFor(game.data
 
 const app = document.getElementById('app');
 
-// A worked example: answer 明 (日 left, 月 right).
-const DEMO = [
-  { guess: '間', parts: [['門', 'miss'], ['日', 'near']] },
-  { guess: '時', parts: [['日', 'hit'], ['寺', 'miss']] },
-  { guess: '明', parts: [['日', 'hit'], ['月', 'hit']] }
-];
+// A worked example for each kind of guess (levels.js guess): answer 明
+// (日 left, 月 right). Parts rows show their kanji at a realKanji level,
+// or once solved.
+const DEMO = {
+  kanji: [
+    { guess: '間', parts: [['門', 'miss'], ['日', 'near']] },
+    { guess: '時', parts: [['日', 'hit'], ['寺', 'miss']] },
+    { guess: '明', parts: [['日', 'hit'], ['月', 'hit']] }
+  ],
+  parts: [
+    { guess: '好', parts: [['女', 'miss'], ['子', 'miss']] },
+    { guess: '星', parts: [['日', 'hit'], ['生', 'miss']] },
+    { guess: '明', parts: [['日', 'hit'], ['月', 'hit']] }
+  ]
+};
+
+let heroSection = null;
 
 function renderHero() {
-  return el('section', { class: 'card hero', 'aria-labelledby': 'hero-title' },
+  const level = LEVEL[currentLevel()];
+  const parts = level.guess === 'parts';
+  const legend = parts ? [['hit', 'hero.partsHit'], ['miss', 'hero.miss']]
+    : ['hit', 'near', 'miss'].map((state) => [state, `hero.${state}`]);
+  const fresh = el('section', { class: 'card hero', 'aria-labelledby': 'hero-title' },
     el('p', { class: 'tagline', id: 'hero-title' },
       t('hero.title'),
-      el('small', {}, t('hero.body'))
+      el('small', {}, t(parts ? 'hero.partsBody' : 'hero.body'))
     ),
     el('div', { class: 'demo', 'aria-hidden': 'true' },
-      DEMO.map((row) => el('div', { class: 'demo-row' },
-        el('span', { class: 'demo-guess kanji', lang: 'ja' }, row.guess),
-        row.parts.map(([part, state]) => el('span', { class: `tile is-${state}`, lang: 'ja' }, part))
-      ))
+      DEMO[level.guess].map((row) => {
+        const shown = !parts || level.realKanji || row.parts.every(([, state]) => state === 'hit');
+        return el('div', { class: 'demo-row' },
+          el('span', { class: 'demo-guess kanji', lang: 'ja' }, shown ? row.guess : ''),
+          row.parts.map(([part, state]) => el('span', { class: `tile is-${state}`, lang: 'ja' }, part)));
+      })
     ),
     el('p', { class: 'demo-legend' },
-      ['hit', 'near', 'miss'].map((state) =>
-        el('span', {}, el('span', { class: `legend-dot is-${state}-bg` }), t(`hero.${state}`)))
+      legend.map(([state, key]) =>
+        el('span', {}, el('span', { class: `legend-dot is-${state}-bg` }), t(key)))
     )
   );
+  if (heroSection && heroSection.isConnected) heroSection.replaceWith(fresh);
+  heroSection = fresh;
+  return fresh;
 }
 
 // Today's daily in a mode, as a line of text.
 function dailyText(status) {
   if (!status) return t('play.practiceOnly');
   const { puzzle, entry, started, guesses } = status;
+  const level = t(`level.${status.level}.name`);
   if (entry) {
     return entry.won
-      ? t('play.dailyWon', { n: puzzle, guesses: entry.guesses.length })
-      : t('play.dailyLost', { n: puzzle });
+      ? t('play.dailyWon', { n: puzzle, level, guesses: entry.guesses.length })
+      : t('play.dailyLost', { n: puzzle, level });
   }
-  return started ? t('play.dailyStarted', { n: puzzle, guesses }) : t('play.dailyNew', { n: puzzle });
+  return started ? t('play.dailyStarted', { n: puzzle, level, guesses }) : t('play.dailyNew', { n: puzzle });
 }
 
 function modeCard(mode) {
@@ -212,12 +233,35 @@ function modeCard(mode) {
   );
 }
 
+// The level for new games (save.settings.level). A game already begun
+// keeps its own, unless it has no moves yet (js/play/session.js).
+function levelPicker() {
+  const current = currentLevel();
+  return el('div', { class: 'level-picker' },
+    el('span', { class: 'look-slot-name', id: 'level-label' }, t('play.level')),
+    el('div', { class: 'chip-row', role: 'group', 'aria-labelledby': 'level-label' },
+      LEVELS.map((level) => el('button', {
+        class: 'chip', type: 'button',
+        'aria-pressed': String(level.id === current),
+        onclick: () => {
+          if (level.id === current) return;
+          store.update((s) => { s.settings.level = level.id; });
+          renderHero();
+          renderModes();
+        }
+      }, t(`level.${level.id}.name`)))),
+    el('p', { class: 'level-desc' },
+      t(`level.${current}.desc`), ' ',
+      el('span', { class: 'level-points' }, t('play.levelPoints', { mult: LEVEL[current].points }))));
+}
+
 let modesSection = null;
 
 function renderModes() {
   const fresh = el('section', { class: 'section', 'aria-labelledby': 'modes-title' },
     el('h2', { class: 'section-title', id: 'modes-title' },
       t('play.title'), el('span', { class: 'section-note' }, t('play.note'))),
+    levelPicker(),
     el('div', { class: 'mode-grid' }, MODES.map(modeCard))
   );
   if (modesSection && modesSection.isConnected) modesSection.replaceWith(fresh);

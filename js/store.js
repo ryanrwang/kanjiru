@@ -5,16 +5,18 @@
  *
  * Shape (v1)
  *   v             schema version
- *   settings      { theme, tiles, effect, scheme, lang }
- *                 scheme and lang null = follow the device
+ *   settings      { theme, tiles, effect, scheme, lang, level }
+ *                 scheme and lang null = follow the device; level: the
+ *                 difficulty for new games (js/config/levels.js)
  *   wallet        { points }
  *   inventory     { [powerId]: count }
  *   unlocked      { [slotId]: [skinId, …] }           free skins aren't listed
  *   achievements  { [achievementId]: 'YYYY-MM-DD' }
- *   history       { [modeId]: { [key]: { date, guesses, won, powers, answer } } }
+ *   history       { [modeId]: { [key]: { date, guesses, won, powers, answer, level } } }
  *                 key: the puzzle number for a daily, "p" + a timestamp for
  *                 practice (js/engine/daily.js historyKey). guesses: the words
- *                 guessed; powers: power ids used (js/engine/game.js record)
+ *                 guessed, or for parts guesses the tile ids per kanji;
+ *                 powers: power ids used (js/engine/game.js record)
  *   playing       { [modeId]: { daily, practice } }   games on the go, each
  *                 { start, log, done }: engine.replay(start, log) rebuilds it.
  *                 A finished daily stays (done) until the next one, so its
@@ -29,6 +31,7 @@
  */
 import { DEFAULT_LOOK } from './config/skins.js';
 import { ECONOMY } from './config/economy.js';
+import { DEFAULT_LEVEL } from './config/levels.js';
 
 export const SAVE_KEY = 'kanjiru';
 export const VERSION = 1;
@@ -41,7 +44,7 @@ const MIGRATIONS = {
 export function fresh() {
   return {
     v: VERSION,
-    settings: { ...DEFAULT_LOOK, scheme: null, lang: null },
+    settings: { ...DEFAULT_LOOK, scheme: null, lang: null, level: DEFAULT_LEVEL },
     wallet: { points: ECONOMY.startingPoints },
     inventory: {},
     unlocked: {},

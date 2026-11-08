@@ -57,10 +57,10 @@ export function renderClues({ engine, state, mode, glyph }) {
 
   if (c.meaning) {
     rows.push(clue('revealMeaning', t('game.clue.meaning'), c.meaning.join(t('game.meaningSep')), c.meaningFree ? t('game.clue.free') : null));
-  } else if (mode.freeMeaning !== null && mode.freeMeaning !== undefined && state.status === 'playing') {
+  } else if (c.meaningFreeAt !== null && state.status === 'playing') {
     rows.push(el('div', { class: 'clue is-soon' },
       el('span', { class: 'clue-icon', 'aria-hidden': 'true' }, iconOf('revealMeaning')),
-      el('span', { class: 'clue-body' }, t('game.clue.meaningSoon', { n: mode.freeMeaning }))));
+      el('span', { class: 'clue-body' }, t('game.clue.meaningSoon', { n: c.meaningFreeAt }))));
   }
   if (c.reading) rows.push(clue('revealReading', t('game.clue.reading'), readingNodes(c.reading)));
   if (c.strokes) rows.push(clue('revealStrokes', t('game.clue.strokes'), list(perSlot(c.strokes, String))));

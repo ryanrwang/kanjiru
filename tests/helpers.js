@@ -3,7 +3,7 @@
  * from the real ones, so a test that passes proves the engine read them.
  */
 import { KANJI, TILES } from './fixture-kanji.js';
-import { MODES, POWERS, ECONOMY, RULES } from '../js/registry.js';
+import { MODES, POWERS, ECONOMY, RULES, LEVELS, DEFAULT_LEVEL } from '../js/registry.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -26,12 +26,16 @@ export function testConfig(overrides = {}) {
       drops: { chanceOnWin: 0.3, chanceOnPerfect: 0.6, perfectShare: 0.5 }
     },
     rules: clone(RULES),
+    // Easy pays ×1 here, so the kanji-guess tests read plain numbers.
+    levels: clone(LEVELS).map((l) => ({ ...l, points: { easy: 1, normal: 2, hard: 3 }[l.id] || 1 })),
+    defaultLevel: DEFAULT_LEVEL,
     ...overrides
   };
 }
 
 // A start for engine.newGame.
-export const start = (modeId, answer, extra = {}) => ({ modeId, answer, seed: `test:${answer}`, daily: true, puzzle: 1, ...extra });
+// Level 'easy' (kanji guesses) unless extra says otherwise.
+export const start = (modeId, answer, extra = {}) => ({ modeId, answer, seed: `test:${answer}`, daily: true, puzzle: 1, level: 'easy', ...extra });
 
 // Kanji → scoreGuess slots.
 export const slots = (word) => [...word].map((kanji) => ({ kanji, parts: KANJI[kanji].parts }));

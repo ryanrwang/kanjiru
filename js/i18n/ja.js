@@ -24,7 +24,10 @@ export default {
     body: '答えるたびに、パーツの色でヒントがわかります。',
     hit: '正しいパーツ・正しい位置',
     near: '正しいパーツ・ちがう位置',
-    miss: '答えにないパーツ'
+    miss: '答えにないパーツ',
+    // パーツで答えるレベル（ふつう・むずかしい）
+    partsBody: 'パーツでマスを埋めます。答えにあるパーツは緑、ないパーツは灰色になります。',
+    partsHit: '答えにあるパーツ'
   },
 
   play: {
@@ -36,9 +39,11 @@ export default {
     loadFailed: 'ゲームを読み込めませんでした。通信状況を確認して、再読み込みしてください。',
     practiceOnly: '練習のみ',
     dailyNew: 'デイリー #{n}',
-    dailyStarted: 'デイリー #{n}・{guesses}回回答済み',
-    dailyWon: 'デイリー #{n}・{guesses}回でクリア ✓',
-    dailyLost: 'デイリー #{n}・クリアならず',
+    dailyStarted: 'デイリー #{n}・{level}・{guesses}回回答済み',
+    dailyWon: 'デイリー #{n}・{level}・{guesses}回でクリア ✓',
+    dailyLost: 'デイリー #{n}・{level}・クリアならず',
+    level: 'レベル',
+    levelPoints: 'ポイント×{mult}',
     daily: 'プレイ',
     continue: '続ける',
     result: '結果',
@@ -49,6 +54,7 @@ export default {
     home: 'スタートに戻る',
     daily: 'デイリー #{n}',
     practice: '練習',
+    kindLevel: '{kind}・{level}',
     count: '{n}/{rows}',
     countTitle: '回答した回数',
     listSep: '、',
@@ -57,7 +63,12 @@ export default {
     layoutSep: '・',
     board: 'あなたの回答',
     rowLabel: '{n}回目：{word}。{parts}',
+    rowLabelParts: '{n}回目：{parts}',
     nextHint: '下のパーツを選ぶか、漢字を入力',
+    nextHintParts: '下のパーツをタップして{n}マスを埋めよう',
+    cells: '次の回答：{cells}マス中{n}マス',
+    cellRemove: '{part}を外す',
+    cellsFull: 'マスがいっぱいです。マスをタップするとパーツを外せます。',
     typeLabel: '回答',
     typePlaceholder: '漢字を入力',
     guess: '回答',
@@ -73,6 +84,11 @@ export default {
     mark: {
       hit: '位置も正しい',
       near: '位置がちがう',
+      other: '別の字にある',
+      miss: '答えにない'
+    },
+    markParts: {
+      hit: '答えにある',
       other: '別の字にある',
       miss: '答えにない'
     },
@@ -105,6 +121,9 @@ export default {
     },
     errors: {
       empty: '先に漢字を選んでください。',
+      slots: '{cells}マスすべてを埋めてください。',
+      'not-real': 'そのパーツでは漢字になりません。別の組み合わせを試してください。',
+      level: 'このレベルではその答え方はできません。',
       over: 'ゲームは終了しました。',
       length: '答えは{n}字です。',
       'not-kanji': '常用漢字で回答してください。',
@@ -143,8 +162,8 @@ export default {
   },
 
   share: {
-    daily: '漢じる {numeral} #{puzzle} {score}{hints}',
-    practice: '漢じる {numeral} 練習 {score}{hints}'
+    daily: '漢じる {numeral} #{puzzle} {level} {score}{hints}',
+    practice: '漢じる {numeral} 練習 {level} {score}{hints}'
   },
 
   looks: {
@@ -239,6 +258,12 @@ export default {
     k2: { name: '二字熟語' },
     k3: { name: '三字熟語' },
     k4: { name: '四字熟語' }
+  },
+
+  level: {
+    easy: { name: 'かんたん', desc: '漢字で答えます。選んだパーツで作れる漢字が意味つきで並び、何回か答えると意味も無料で出ます。' },
+    normal: { name: 'ふつう', desc: 'パーツだけで答えます。マスごとにパーツを入れます。漢字の一覧も無料の意味もありません。' },
+    hard: { name: 'むずかしい', desc: 'ふつうと同じですが、パーツで実在する漢字を作る必要があります。' }
   },
 
   slot: {

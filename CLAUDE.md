@@ -32,6 +32,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `styles.css` | All styles, using token variables only |
 | `app.js` | Start screen built from the catalogues, data loading, and the routes (`#k1` daily, `#k1/practice`) |
 | `js/config/modes.js` | Game modes: one per answer length |
+| `js/config/levels.js` | Difficulty levels: Easy (kanji guesses), Normal and Hard (parts guesses) |
 | `js/config/skins.js` | Skin catalogue: colours, tile reveal, win effect |
 | `js/config/powers.js` | Hints and powers: effect, cost, when usable, drop weight |
 | `js/config/economy.js` | Every points number: per part, per win, streaks, drops |
@@ -49,7 +50,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/engine/stats.js` | Stats and streaks from history, achievement checks, streak rewards |
 | `js/engine/data.js` | Loads `data/game/*.json` and `data/parts.json` into the engine's shape |
 | `js/engine/random.js` | Seeded randomness, so dailies and powers come out the same for everyone |
-| `js/play/screen.js` | The game screen: board, hints, parts picker, result. `openGame(root, ctx)` |
+| `js/play/screen.js` | The game screen: board, hints, parts picker (kanji strip at Easy, cells at Normal and Hard), result. `openGame(root, ctx)` |
 | `js/play/session.js` | Games in the save: start or resume (`save.playing`), record to history, pay points, spend powers |
 | `js/play/hints.js` | Clues, the power bar and the sheet that uses a power |
 | `js/play/result.js` | The result card: answer, points, streak, share, countdown |
@@ -87,6 +88,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 - **Game data is compiled.** After a rebuild or a review session, run `python -I -X utf8 tools/compile_game.py` and commit `data/game/`. It never invents answers: with no Keep words the answer lists are empty.
 - **Testing the game before words are reviewed:** put a few answers in a local `data/game/answers.json` and run `git update-index --skip-worktree data/game/answers.json` so they can't be committed. Undo with `--no-skip-worktree` and `git checkout data/game/answers.json`. Never commit made-up answers.
 - **Which modes play:** a mode needs `playable: true` in `js/config/modes.js` (the game screen supports it) and answers. Until both, the start screen shows "soon".
+- **Levels:** a game's level lives in its start (`start.level`) and decides what a guess is (`levels.js` `guess`). Code checks the level's fields, never its id.
 - **Dev-only files don't deploy.** `tools/`, `review/`, `tests/`, `package.json`, `data/candidates.json` and `data/review.json` are excluded in `deploy.yml`. The review page writes files, so it must never reach the server.
 - **Server data stays put.** `api/transfer.php` writes codes to `api/codes/`, which is gitignored, blocked by `.htaccess` and excluded in `deploy.yml`.
 - **Back-to-apps mark:** this app's hover move is `rw-brush`, a left-to-right clip-path wipe. Keep it unique across the apps family.

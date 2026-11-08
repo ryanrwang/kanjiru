@@ -76,8 +76,10 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
     el('span', { class: 'part-chips' }, data.kanji[ch].parts.map((p) => partTile(p, glyph)))));
 
   const node = el('section', { class: 'card result', 'aria-labelledby': 'result-title' },
-    el('h2', { class: `result-title${won ? ' is-won' : ''}`, id: 'result-title' },
-      won ? t('result.won', { n: state.guesses.length }) : t('result.lost')),
+    el('header', { class: 'result-head' },
+      el('h2', { class: `result-title${won ? ' is-won' : ''}`, id: 'result-title' },
+        won ? t('result.won', { n: state.guesses.length }) : t('result.lost')),
+      el('span', { class: 'pill' }, t(`level.${state.level}.name`))),
 
     el('div', { class: 'answer' },
       el('span', { class: 'answer-kanji kanji', lang: 'ja' }, state.answer),

@@ -428,6 +428,25 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 }
 .chip.is-locked { color: var(--color-text-muted); }
 
+/* ── Level picker ──────────────────────────────────────────────────── */
+
+.level-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.level-desc {
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  color: var(--color-text-secondary);
+}
+
+.level-points {
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
 /* ── Hints and powers ──────────────────────────────────────────────── */
 
 .power-list {
@@ -873,6 +892,15 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 /* The next guess, not scored yet. A part missing from this puzzle's
    palette gets a red edge: that kanji can't be guessed here. */
 .tile.is-pending { border-style: dashed; }
+
+/* Parts levels: the next row's cells. A filled cell is a button that
+   takes its part out. */
+.tile.is-filled {
+  border-style: solid;
+  border-color: var(--color-border-focus);
+  cursor: pointer;
+}
+.tile.is-filled:hover { background: var(--color-interactive-selected); }
 .tile.is-absent {
   border-color: var(--color-status-danger);
   color: var(--color-text-muted);
@@ -1106,6 +1134,8 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   gap: var(--spacing-sm);
 }
 
+.entry.is-parts .btn-primary { flex: 1; }
+
 /* 20px text: phones don't zoom into it when it's tapped. */
 .entry-input {
   flex: 1;
@@ -1253,6 +1283,13 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   flex-direction: column;
   gap: var(--spacing-lg);
   padding: var(--spacing-lg);
+}
+
+.result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
 }
 
 .result-title {

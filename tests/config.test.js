@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { createEngine } from '../js/engine/game.js';
 import { daily } from '../js/engine/daily.js';
-import { MODES, POWERS, SKINS, validate } from '../js/registry.js';
+import { MODES, POWERS, SKINS, LEVELS, validate } from '../js/registry.js';
 import { fixtureData, testConfig } from './helpers.js';
 
 test('a new 5-kanji mode and a new power need only catalogue entries', () => {
@@ -20,7 +20,7 @@ test('a new 5-kanji mode and a new power need only catalogue entries', () => {
   const engine = createEngine(data, config);
 
   const mode = config.modes.find((m) => m.id === 'k5');
-  const start = daily(data, mode, '2026-11-01');
+  const start = { ...daily(data, mode, '2026-11-01'), level: 'easy' };
   let game = engine.newGame(start);
   assert.equal(game.rows, 9);
   assert.ok(engine.clues(game).meaning !== null, 'freeMeaning 0: shown from the start');
@@ -37,9 +37,9 @@ test('a new 5-kanji mode and a new power need only catalogue entries', () => {
   assert.equal(engine.canUse(engine.newGame({ ...start, modeId: 'k1', answer: '明' }), 'triple'), 'mode');
 });
 
-test('the engine source has no mode ids, power ids or loose numbers', () => {
+test('the engine source has no mode, power or level ids, or loose numbers', () => {
   const dir = new URL('../js/engine/', import.meta.url);
-  const ids = [...MODES.map((m) => m.id), ...POWERS.map((p) => p.id)];
+  const ids = [...MODES.map((m) => m.id), ...POWERS.map((p) => p.id), ...LEVELS.map((l) => l.id)];
   // Allowed numbers: 0 and 1, and the constants of the seeded random
   // generator and the date maths, which aren't game rules.
   const allowed = { 'random.js': true, 'daily.js': true };

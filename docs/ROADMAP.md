@@ -11,7 +11,7 @@ Last updated: 2026-11-07.
 - [x] **Parts & palette:** 251-tile palette in `data/parts.json`, fixed part breakdowns with positions, hand fixes in `data/parts-overrides.json`, and the parts check page (step 1)
 - [x] **Device transfer:** one-time codes from `api/transfer.php`, the Settings panel (gear in the header), Merge both or Replace this device, and copy/paste save text (step 7, PR #3)
 - [x] **Engine:** scoring, game state and every power, the per-puzzle palette, dailies, stats and achievements in `js/engine/`; `tools/compile_game.py` writes `data/game/`; 71 engine tests and 12 compile tests (step 2)
-- [x] **Game screen:** the one-kanji daily and practice in `js/play/`: board with flip reveal, parts palette and kanji strip, typed guesses, free meaning and powers, saved games, points paid, result card with share text and countdown (step 3)
+- [x] **Game screen:** the one-kanji daily and practice in `js/play/`: board with flip reveal, parts palette, saved games, powers, points paid, result card with share text and countdown. Three levels (`js/config/levels.js`): Easy guesses kanji from a strip with a free meaning; Normal (the default) and Hard guess parts only, one per cell, and Hard's must make a real kanji (step 3)
 
 ## Order
 
@@ -73,7 +73,7 @@ Done when the tests pass, the rules are in docs/DESIGN.md, and nothing in the en
 
 ## 3. Game screen
 
-**Done** (step 3). The game screen is `js/play/`.
+**Done** (step 3). The game screen is `js/play/`. After playing it, the user asked for levels: the prompt below is Easy, and Normal and Hard guess parts only (docs/DESIGN.md, "Levels").
 
 ```
 Kanjiru step 3: build the playable game screen for the 1-kanji daily and practice, on top of the engine in js/engine/.
@@ -100,8 +100,8 @@ Kanjiru step 4: turn on the 2, 3 and 4 kanji modes.
 
 Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first. Steps 1–3 are merged. Work on a new branch.
 
-1. Settle with me whether a guess must be a real word, and propose the input: fill slots with the parts palette, with the choices narrowing to real words as slots fill if we go that way.
-2. Board and scoring per slot, including the "in another kanji" marker from the engine.
+1. Settle with me whether a guess must be a real word, and propose the input for each level (js/config/levels.js; docs/DESIGN.md, "Levels"): Easy fills slots with kanji from the strip, Normal and Hard fill each kanji's cells with parts. The engine already scores parts guesses per kanji.
+2. Board and scoring per slot, including the "in another kanji" marker from the engine, at every level.
 3. The meaning (and maybe the reading) as the main clue, as decided in docs/DESIGN.md, plus the Reveal a kanji power.
 4. More rows for longer words (js/config/modes.js already sets 6/6/7/8).
 5. A daily for each mode, plus the "Full set" achievement when all are solved in a day.
