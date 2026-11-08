@@ -10,7 +10,8 @@
  * the game's level (js/config/levels.js): settings.level when it began.
  * A game with no moves yet follows a level picked since. A finished game goes
  * into history (the source of truth for stats) under daily.js historyKey(),
- * and its points into the wallet.
+ * and its points, streak rewards, bonus hint and achievements into the
+ * ledger (js/play/rewards.js), once.
  *
  * Each function returns a game: { start, state, done, exact }
  *   done   finished and recorded
@@ -21,6 +22,12 @@
 import * as store from '../store.js';
 import { RULES, LEVEL, DEFAULT_LEVEL } from '../registry.js';
 import { daily, practice, recentAnswers, historyKey, localDate } from '../engine/daily.js';
+import { stats } from '../engine/stats.js';
+import { rewardsOf } from '../ledger.js';
+import { payGame } from './rewards.js';
+
+// A game's name in the ledger: "modeId/historyKey".
+const gameRef = (mode, key) => `${mode.id}/${key}`;
 
 // Rebuilds a saved game, or null when it no longer replays (the data changed).
 function rebuild(engine, saved) {
@@ -122,33 +129,40 @@ export function progress(mode, game) {
   keep(mode.id, game.state.daily ? 'daily' : 'practice', game);
 }
 
-// The game is over: record it and pay its points, once.
-// Returns { game, points, paid }.
+// The game is over: record it and pay it, once.
+// Returns { game, points, paid, rewards }: rewards are the ledger entries
+// it paid besides its points (streak rewards, a bonus hint, achievements).
 export function finish(engine, mode, game) {
   const { start, state } = game;
   const key = historyKey(state);
   const date = state.daily ? start.date : localDate();
   const points = engine.points(state);
   let paid = false;
+  let rewards = [];
   store.update((s) => {
     s.history[mode.id] = s.history[mode.id] || {};
     s.playing[mode.id] = s.playing[mode.id] || {};
     if (!s.history[mode.id][key]) {
+      const streakBefore = stats(s.history, { today: date }).currentStreak;
       s.history[mode.id][key] = engine.record(state, date);
-      s.wallet.points += points.total;
+      rewards = payGame(s, { engine, state, game: gameRef(mode, key), date, points: points.total, streakBefore });
       paid = true;
     }
     if (state.daily) s.playing[mode.id].daily = { start, log: state.log, done: true };
     else delete s.playing[mode.id].practice;
   });
-  return { game: { ...game, done: true }, points, paid };
+  return { game: { ...game, done: true }, points, paid, rewards };
 }
 
-// Uses up one of a held power.
+// What a finished daily paid besides its points, from the ledger, so its
+// result shows them again after a reload. Practice games aren't shown again.
+export function rewardsFor(mode, state) {
+  return state.daily ? rewardsOf(store.get().ledger, gameRef(mode, historyKey(state))) : [];
+}
+
+// Uses up one of a held power, in the game it's used in.
 export function spendPower(powerId) {
-  store.update((s) => {
-    s.inventory[powerId] = Math.max(0, (s.inventory[powerId] || 0) - 1);
-  });
+  store.update((s) => store.enter(s, 'use', { hints: { [powerId]: -1 } }));
 }
 
 // For the start screen: today's daily in a mode, without starting it.

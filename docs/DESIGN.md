@@ -103,7 +103,7 @@ From `js/config/economy.js`, every number there:
 - **A year of dailies** needs 365 answers. The main list has 453 (step 4b).
 - **Practice:** a random Keep answer, skipping the last 30 played in that mode (`rules.js` `practice.avoidRecent`).
 - **Streak:** one streak across modes: days in a row with at least one daily won. A day not yet played doesn't break it. Streak rewards pay each time a run reaches their length.
-- **Stats:** wins, fastest win, clean wins and kanji collected count practice too. Streaks and full-set days count dailies only. Kanji collected counts every kanji of a solved word.
+- **Stats:** wins, fastest win, clean wins, Hard wins and kanji collected count practice too. Streaks count dailies only. Kanji collected counts every kanji of a solved word.
 - **History entries** (`js/store.js`): `{ date, guesses, won, powers: [ids], answer, level }`, under the puzzle number for a daily, or `p` + a timestamp for practice. `guesses` holds words, or for parts guesses the tile ids per kanji, so `engine.guess()` can replay either.
 
 ## The palette (Decided, step 2)
@@ -141,7 +141,7 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 - **Decided — Kanji frame (Guided):** a frame in each answer kanji's shape fills in with each part found green, in its place, whether by a guess or a power. A dot stands for each part still hidden. A solved kanji shows whole, on green.
 - **Proposed — Frame layout:** top and bottom span the frame; left, inner and right share the middle; an outer part (門, 辶) covers it all, with the inner inset. A place with several parts stacks them (土 over 寸 for 時). Several outer or crossing parts (日 and 疋 around 頁 in 題, 一 and 亻 in 存) would pile up past the frame, so they take a column of the middle, before the inner (step 4b). The frames catch up once the row has flipped.
 - **Decided — The board fits the screen:** the user found a narrow column in the middle of a phone a poor use of space, and asked for a board that scales to any number of kanji.
-- **Proposed — How it fits (`fitBoard()` in `js/play/screen.js`):** cells take the largest layout-token size (64, 56, 48, 40, 32 or 24 px) whose rows fit the width on one line and, with the head, frames, place names, clues found and keyboard, the screen's height. For those cells, Guided's frames take the largest size that fits (64 or 56 px, `layout.frame`, `frameSm`), no wider than their kanji's cells. Keys are 40 px high (`layout.key`) and drop to 32 (`keySm`) only to keep cells from shrinking below 40 px (2026-11-08: the user found the cells too small and the frames too big). The power bar comes and goes, so it doesn't count; a message floats just above the keyboard for 3 seconds (`transition.message` in `tokens.js`), so it takes no room. Hard leaves room on the right for the row's kanji. If even 24 px cells are too wide, rows wrap between kanji. It refits when the screen turns or resizes.
+- **Proposed — How it fits (`fitBoard()` in `js/play/screen.js`):** cells take the largest layout-token size (64, 56, 48, 40, 32 or 24 px) whose rows fit the width on one line and, with the head, frames, place names, clues found and keyboard, the screen's height. For those cells, Guided's frames take the largest size that fits (64 or 56 px, `layout.frame`, `frameSm`), no wider than their kanji's cells. Keys are 40 px high (`layout.key`) and drop to 32 (`keySm`) only to keep cells from shrinking below 40 px (2026-11-08: the user found the cells too small and the frames too big). The power bar and a message float just above the keyboard, over the board's last rows, so they take no room; the message stays 3 seconds (`transition.message` in `tokens.js`). Hard leaves room on the right for the row's kanji. If even 24 px cells are too wide, rows wrap between kanji. It refits when the screen turns or resizes.
 
   | Cells (frames) | Normal | Hard | Guided | Guided · Hard |
   |---|---|---|---|---|
@@ -171,9 +171,10 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 ## The game screen (steps 3 and 4)
 
 - **Reveal:** each new row flips tile by tile (`settings.tiles`; Flip for now, step 6 adds the rest). Off under reduced motion.
-- **Hints:** the bar of powers with the count held opens from the Hints button in the head, above the keyboard; clues already found stay on show there. Tapping a power opens a sheet that says what it does and why it can't be used now, if so. Using one spends it from the inventory. Parts it shows fill their cells on the board too ("Levels", "Hints under the new rules").
+- **Hints:** the bar of powers, with the count held and the points to spend, floats just above the keyboard (step 5). It's open before the first guess, so the before-the-game powers are easy to find, and closes after a guess or a power used; the Hints button in the head opens it again and shows how many hints are held. Clues already found stay on show under the head. Tapping a power opens a sheet that says what it does and why it can't be used now, if so; when you hold none, the sheet sells one (Buy, then a confirm that names the price). Using one spends it. Parts it shows fill their cells on the board too ("Levels", "Hints under the new rules").
 - **Saving:** the game on the go is saved as its start and log after every move (`save.playing`), so a reload carries on. A finished daily is recorded to history and can't be played again; its result shows until the next daily.
-- **Points:** paid into the wallet once, when a game ends: what `engine.points()` gives. Streak rewards, bonus drops and achievements are step 5.
+- **Points:** paid once, when a game ends: what `engine.points()` gives, then the streak rewards a won daily reaches, a bonus hint (`engine.rollDrop()`) and any achievements (`js/play/rewards.js`, step 5). Each is a ledger entry ("Saving and devices").
+- **Rewards on show:** the result card lists each reward and the new balance; each also shows as a toast (`transition.toast` in `tokens.js`), over sheets too. The points in the header rise with a small "+N pts" when you're back on the start screen, and fall with "−N" when you buy. Under reduced motion they show without moving.
 - **Result card:** the answer with its meanings, readings and parts, points, streak, share text and a countdown to the next daily, with Keep playing (after the daily) or Next puzzle (after another one). A game from another device (merged in) shows without points, since only its guesses are known.
 - **Readings:** kun readings show their okurigana muted (か + つ). KANJIDIC sometimes lists a reading both with and without it (か.つ and かつ for 勝; 47 kanji), so the one that marks the okurigana is kept (`uniqueKun()` in `js/play/hints.js`).
 - **Share text:** the mode's numeral, the daily number, the level, the score (X when lost) and one square per part per guess (`rules.js` `share`). 💡 marks a game that used a power.
@@ -186,6 +187,8 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 - **Decided — Point values:** `js/config/economy.js`, with the rules in "Scoring", "Points". Daily games pay more than practice, streak milestones pay a reward, and wins drop a random hint. Each mode multiplies its points.
 - **Decided — Base rules:** only the Meaning hint shows the meaning ("Levels"). (The retired Easy showed it free after guess 3.)
 - **Decided — Honest sharing:** the share text marks a game that used a power with 💡 (step 3).
+- **Decided — Shop (step 5):** the points in the header open it (`js/shop.js`): the hints for sale, then the locked looks with their price or the achievement that unlocks them and how far along you are. The start screen's Hints and Looks open it at that item, and a power's sheet in a game sells one. Every purchase takes two taps, Buy then a confirm with the price and what's left. Prices and hold limits come from `powers.js` and `skins.js`.
+- **Decided — Achievements (step 5):** checked after every game and when the page opens, each paid once with its reward (points, a hint, or the look it unlocks), shown as a toast and listed on the start screen with progress. A hint reward may take you past the hold limit. Full set (every daily mode in a day) meant only a daily won with one mode, so it's retired (`retired: true`: never earned again, saves keep it) and **Hard win** (solve with Hard on, 200 pts) takes its place.
 - **Open — Japanese mode:** the 意味 (Meaning) hint shows the English gloss, because the dictionary data is English only. For native speakers, the reading or example words may suit better.
 
 ## Skins
@@ -197,6 +200,7 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
   - Urushi 漆 (800 pts, dark only) and Kinpaku 金箔 (30-day streak)
   - Ink bleed tiles (400 pts) and Hanko stamp tiles (7-day streak)
   - Petal fall (600 pts) and Hanabi 花火 (solve in 2 guesses)
+- **Coming soon:** Ink bleed, Hanko, Petal fall and Hanabi aren't built yet (step 6), so they're marked `soon` in `skins.js`: the shop doesn't sell them, and an achievement that unlocks one still does, ready for when it's built.
 - **Decided — Brand colour:** vermilion 朱 (#B8331F on buttons).
 
 ## Saving and devices
@@ -216,12 +220,12 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 | Games (`history`) | Both kept. The same puzzle on both: the better result (a win, then fewer guesses, then fewer hints) |
 | Streaks and stats | Worked out again from the joined games |
 | Skins unlocked, achievements | Both kept; an achievement keeps the earlier date |
-| Points, hints held | The higher of the two, not the sum |
+| Points and hints held (`ledger`) | Both sets of entries kept, joined by id, so each game, reward and purchase counts once and points add up exactly. A device's starting points join only when neither has progress |
 | Looks, language and level (`settings`) | This device's stay |
 | Games on the go (`playing`) | This device's stay; a daily the other device finished is in history, which wins |
 
 - **Rule:** a new top-level key in the save needs a merge rule; `validate()` warns when one is missing.
-- **Proposed — Exact points (step 5):** record the points each game paid and each purchase in the save, so a merge can add points exactly instead of taking the higher.
+- **Decided — Ledger (step 5):** points and hints held are a ledger (`js/ledger.js`, save v2): every gain and spend is an entry with its own random id (`why`: start, game, streak, drop, achievement, buy, use, or v1 for what a v1 save held), and the balance is their sum, never below 0. Merging joins the entries, so it's exact and safe to repeat. A v1 save's wallet and hints become one `v1` entry; two devices that each had one keep the higher, as v1 merges did.
 - **Server:** the site runs PHP 8.2 (`ea-php82` in the site's root `.htaccess`). The endpoint is written for PHP 7.4 and up, with core functions only.
 - **Risk:** iOS Safari wipes a site's storage after 7 days without a visit. Installing to the home screen avoids it, and the save text is a backup.
 

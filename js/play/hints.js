@@ -1,13 +1,17 @@
 /*
  * Hints on the game screen: what the player knows about the answer (clues),
- * the powers they hold, and the sheet that uses one.
+ * the powers they hold, and the sheet that uses one, or buys one when they
+ * hold none (js/shop.js).
  *
  * Clue icons are the icons of the powers that reveal them (js/config/powers.js),
  * so nothing here names a power.
  */
-import { POWERS } from '../registry.js';
+import { POWERS, ECONOMY } from '../registry.js';
 import { t } from '../i18n.js';
 import { el } from '../dom.js';
+import { bump } from '../toast.js';
+
+const pts = (n) => t('currency.amount', { n });
 
 const iconOf = (effect) => (POWERS.find((p) => p.effect === effect) || {}).icon || '';
 const list = (items) => items.filter(Boolean).join(t('game.listSep'));
@@ -94,62 +98,125 @@ export function renderClues({ engine, state, mode, glyph }) {
   return rows.length ? el('div', { class: 'clues', 'aria-live': 'polite' }, rows) : null;
 }
 
-// The powers this answer's length allows, as buttons with the count held.
-export function renderPowerBar({ engine, state, inventory, onPick }) {
+// The powers this answer's length allows, as buttons with the count held,
+// and the points to buy more. A power that can't be used now is dimmed; one
+// you hold none of has a muted count (its sheet sells one).
+export function renderPowerBar({ engine, state, held, points, onPick }) {
   const offered = POWERS.filter((p) => (p.minLength || 1) <= [...state.answer].length);
   if (!offered.length || state.status !== 'playing') return null;
-  return el('div', { class: 'power-bar' },
-    el('span', { class: 'power-bar-title' }, t('game.powers.title')),
+  return el('div', { class: 'power-bar', role: 'group', 'aria-labelledby': 'power-bar-title' },
+    el('span', { class: 'power-bar-title', id: 'power-bar-title' },
+      el('span', {}, t('game.powers.title')),
+      el('span', { class: 'power-bar-points' }, `${ECONOMY.currency.icon} ${pts(points)}`)),
     el('div', { class: 'power-chips' }, offered.map((p) => {
-      const held = inventory[p.id] || 0;
-      const ready = held > 0 && !engine.canUse(state, p.id);
+      const n = held[p.id] || 0;
+      const off = !!engine.canUse(state, p.id);
       const name = t(`power.${p.id}.name`);
       return el('button', {
-        class: `power-chip${ready ? '' : ' is-off'}`,
+        class: `power-chip${off ? ' is-off' : ''}${n ? '' : ' is-none'}`,
         type: 'button',
         title: name,
-        'aria-label': `${name} · ${t('powers.have', { n: held })}`,
+        'aria-label': `${name} · ${t('powers.have', { n })}`,
         onclick: () => onPick(p.id)
       },
         el('span', { 'aria-hidden': 'true' }, p.icon),
-        el('span', { class: 'power-chip-count', 'aria-hidden': 'true' }, String(held)));
+        el('span', { class: 'power-chip-count', 'aria-hidden': 'true' }, String(n)));
     })));
 }
 
-// Why a power can't be used now, as text, or ''.
+// Why a power can't be used now, as text, or ''. The rules come first, so
+// a power you couldn't use anyway doesn't just say you have none.
 export function whyNot(engine, state, power, held) {
-  if (!held) return t('game.powers.why.none');
   const code = engine.canUse(state, power.id);
-  if (!code) return '';
   if (code === 'when') return t(power.when.includes('before') ? 'game.powers.why.before' : 'game.powers.why.during');
-  return t(`game.powers.why.${code}`, { n: power.minLength || 1 });
+  if (code) return t(`game.powers.why.${code}`, { n: power.minLength || 1 });
+  return held ? '' : t('game.powers.why.none');
 }
 
-// The sheet for one power: what it does, how many you hold, and Use.
+// The sheet for one power: what it does, how many you hold, and Use. When
+// you hold none and could use one now, it sells one first, in two taps
+// (Buy, then the confirm that names the price).
+//   read()   the latest { held, points, why, offer }; offer is js/shop.js
+//            powerOffer(), or null when it can't be bought here
+//   onBuy()  buys one; true when it did
 let sheet = null;
-export function openPowerSheet({ power, held, why, onUse }) {
+export function openPowerSheet({ power, read, onBuy, onUse }) {
   if (!sheet) {
     sheet = el('dialog', { class: 'sheet power-sheet', 'aria-labelledby': 'power-sheet-title' });
     sheet.addEventListener('click', (event) => { if (event.target === sheet) sheet.close(); });
     document.body.append(sheet);
   }
-  const use = el('button', {
-    class: 'btn btn-primary', type: 'button', disabled: !!why,
-    onclick: () => { sheet.close(); onUse(); }
-  }, t('game.powers.use'));
-  sheet.replaceChildren(el('div', { class: 'sheet-body' },
-    el('header', { class: 'power-sheet-head' },
-      el('span', { class: 'power-icon', 'aria-hidden': 'true' }, power.icon),
-      el('h2', { class: 'sheet-title', id: 'power-sheet-title' }, t(`power.${power.id}.name`))),
-    el('p', {}, t(`power.${power.id}.desc`)),
-    el('p', { class: 'sheet-note' }, t('powers.have', { n: held })),
-    why ? el('p', { class: 'status-line is-error' }, why) : null,
-    el('div', { class: 'btn-row' },
-      use,
-      el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => sheet.close() }, t('game.powers.cancel')))
-  ));
+  const name = t(`power.${power.id}.name`);
+  let confirming = false;
+  let bought = false;
+
+  const draw = (spent = 0) => {
+    const { held, points, why, offer } = read();
+    const selling = !!offer && offer.why !== 'not-for-sale' && (!held || bought);
+    const pointsNode = el('span', { class: 'power-sheet-points' }, `${ECONOMY.currency.icon} ${pts(points)}`);
+    const use = el('button', {
+      class: 'btn btn-primary', type: 'button', disabled: !!why,
+      onclick: () => { sheet.close(); onUse(); }
+    }, t('game.powers.use'));
+    const yes = el('button', {
+      class: 'btn btn-primary btn-small', type: 'button',
+      onclick: () => {
+        if (!onBuy()) return;
+        confirming = false;
+        bought = true;
+        draw(power.cost);
+      }
+    }, t('shop.confirmYes', { cost: power.cost }));
+
+    let buyRow = null;
+    if (selling && bought) {
+      buyRow = el('p', { class: 'status-line is-ok', role: 'status' }, t('game.powers.bought', { n: held }));
+    } else if (selling && confirming && !offer.why) {
+      buyRow = el('div', { class: 'shop-confirm' },
+        el('p', {}, t('shop.confirm', { cost: power.cost, have: points, left: points - power.cost, name })),
+        el('div', { class: 'btn-row' }, yes,
+          el('button', {
+            class: 'btn btn-ghost btn-small', type: 'button',
+            onclick: () => { confirming = false; draw(); }
+          }, t('shop.cancel'))));
+    } else if (selling) {
+      buyRow = el('div', { class: 'power-sheet-buy' },
+        el('button', {
+          class: 'btn btn-secondary', type: 'button', disabled: !!offer.why,
+          onclick: () => { confirming = true; draw(); }
+        }, t('game.powers.buy', { cost: power.cost })),
+        offer.why ? el('span', { class: 'sheet-note' },
+          offer.why === 'short' ? t('shop.short', { n: offer.need }) : t('shop.full', { hold: power.hold })) : null);
+    }
+
+    sheet.replaceChildren(el('div', { class: 'sheet-body' },
+      el('header', { class: 'power-sheet-head' },
+        el('span', { class: 'power-icon', 'aria-hidden': 'true' }, power.icon),
+        el('h2', { class: 'sheet-title', id: 'power-sheet-title' }, name)),
+      el('p', {}, t(`power.${power.id}.desc`)),
+      el('p', { class: 'sheet-note' }, t('powers.have', { n: held }), t('reward.sep'), pointsNode),
+      why && !confirming ? el('p', { class: 'status-line is-error' }, why) : null,
+      buyRow,
+      // While the confirm shows, its own buttons are the only ones.
+      confirming ? null : el('div', { class: 'btn-row' },
+        use,
+        el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => sheet.close() }, t('game.powers.cancel')))
+    ));
+    if (spent) bump(pointsNode, -spent);
+    return { use, yes, why };
+  };
+
+  const first = draw();
   sheet.showModal();
-  if (!why) use.focus();
+  if (!first.why) first.use.focus();
+  // Focus follows the step: the confirm, then Use once it's bought.
+  sheet.onclick = (event) => {
+    if (event.target === sheet) return;
+    queueMicrotask(() => {
+      const next = sheet.querySelector('.shop-confirm .btn-primary') || sheet.querySelector('.btn-row > .btn-primary:not(:disabled)');
+      if (next && sheet.open && !sheet.contains(document.activeElement)) next.focus();
+    });
+  };
 }
 
 export function closePowerSheet() {

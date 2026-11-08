@@ -23,8 +23,12 @@
  *               kanji still fit (countLeft), and the keys that can't go in
  *               the selected cell dimmed (tilesForPlace in js/engine/palette.js).
  *   Hard        (realKanji) each row shows the kanji its parts make.
- * Hints (the power bar) open from a button in the head, above the keyboard;
- * clues already found stay on show there.
+ * Hints (the power bar) open from a button in the head and float just above
+ * the keyboard, over the bottom of the board, like a message, so they never
+ * move the board. They're open before the first guess, so they're easy to
+ * find, and close with a guess. Clues already found stay on show above the
+ * keyboard. A hint you hold none of can be bought from its sheet (js/shop.js).
+ * When the game ends, its rewards show as toasts and on the result card.
  *
  * The board keeps the rows already drawn, so a new row's reveal plays once
  * and redrawing the keyboard never replays it.
@@ -40,6 +44,9 @@ import { localDate, answersFor } from '../engine/daily.js';
 import * as session from './session.js';
 import { renderClues, renderPowerBar, whyNot, openPowerSheet, closePowerSheet } from './hints.js';
 import { renderResult } from './result.js';
+import { describe } from './rewards.js';
+import { powerOffer, buyPower } from '../shop.js';
+import { toast } from '../toast.js';
 
 const BULB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>';
 const DELETE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H9l-7 7 7 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M17 9l-6 6M11 9l6 6"/></svg>';
@@ -76,9 +83,13 @@ export function openGame(root, ctx) {
   const boardDone = el('div', { class: 'board-rows', role: 'list' });
   const boardNext = el('div', { class: 'board-rows' });
   const head = el('div');
-  const hints = el('div', { class: 'game-hints', id: 'game-hints' });
+  const hints = el('div', { class: 'game-hints' });
   const picker = el('div', { class: 'picker' });
+  // Floats above the keyboard: the message, then the power bar.
+  const float = el('div', { class: 'picker-float' });
   const message = el('p', { class: 'status-line', role: 'status' });
+  const powers = el('div', { class: 'game-powers', id: 'game-powers' });
+  float.append(message, powers);
   const choices = el('div', { class: 'picker-choices' });
   const result = el('div', { class: 'game-result' });
   const live = el('p', { class: 'visually-hidden', 'aria-live': 'polite' });
@@ -90,10 +101,15 @@ export function openGame(root, ctx) {
       cells: game ? emptyCells() : [],   // a tile id or null per cell
       active: 0,       // the selected cell, which a tapped part fills
       frameFrom: null, // the state the frames show while a row reveals
-      hintsOpen: false, // the power bar is open
+      // The power bar is open: before the first guess, so hints are easy to find.
+      hintsOpen: !!game && !game.done && game.state.status === 'playing' && game.state.guesses.length === 0,
       message: null,   // { kind: 'error' | 'info', text }
       newRow: -1,      // the row to reveal
-      points: game && game.done ? engine.points(game.state) : null
+      points: game && game.done ? engine.points(game.state) : null,
+      // What the game paid besides its points (session.finish), and whether
+      // their toasts have shown.
+      rewards: null,
+      toasted: false
     };
   }
 
@@ -189,15 +205,19 @@ export function openGame(root, ctx) {
       playing() ? hintsButton() : null));
   }
 
-  // Opens and closes the power bar (renderHints).
+  // Opens and closes the power bar (renderHints), with the number of hints
+  // held on it.
   function hintsButton() {
+    const held = Object.values(store.held()).reduce((a, n) => a + n, 0);
+    const label = held ? t('game.powers.titleHeld', { n: held }) : t('game.powers.title');
     const node = el('button', {
       class: `icon-btn hints-btn${ui.hintsOpen ? ' is-open' : ''}`, type: 'button',
-      title: t('game.powers.title'), 'aria-label': t('game.powers.title'),
-      'aria-expanded': String(ui.hintsOpen), 'aria-controls': 'game-hints',
+      title: label, 'aria-label': label,
+      'aria-expanded': String(ui.hintsOpen), 'aria-controls': 'game-powers',
       onclick: () => { ui.hintsOpen = !ui.hintsOpen; renderHead(); renderHints(); }
     });
     node.innerHTML = BULB;
+    if (held) node.append(el('span', { class: 'hints-count', 'aria-hidden': 'true' }, String(held)));
     return node;
   }
 
@@ -386,17 +406,14 @@ export function openGame(root, ctx) {
     // Height: everything else on the screen while the keyboard is up (the
     // keys at a given height), plus the frames (with their count) and place
     // names; else a share of the screen. The clues count, since they stay
-    // once found; the power bar comes and goes, so it doesn't. The message
-    // floats over the board, so it takes no room.
+    // once found, in the keyboard; the message and the power bar float over
+    // the board (.picker-float), so they take no room.
     let others = () => 0;
     if (keyboard) {
       const keyRows = fitKeys(tk, px);
       const keyNow = px(tk.layout[(KEY_SIZES.find(([id]) => id === picker.dataset.keys) || KEY_SIZES[0])[1]]);
-      const clueRows = hints.querySelector('.clues');
-      const hintsRoom = hints.offsetHeight ? hints.offsetHeight + sm : 0;
-      const cluesRoom = clueRows ? clueRows.offsetHeight + sm : 0;
       const above = Math.max(0, head.getBoundingClientRect().top + window.scrollY);
-      const fixed = above + head.offsetHeight + 2 * md + picker.offsetHeight - hintsRoom + cluesRoom
+      const fixed = above + head.offsetHeight + 2 * md + picker.offsetHeight
         + (pl ? px(tk.spacing.lg) + xs : 0) - keyRows * keyNow;
       others = (k) => fixed + keyRows * k;
     }
@@ -564,30 +581,53 @@ export function openGame(root, ctx) {
 
   // ── Hints ──────────────────────────────────────────────────────────
 
-  // Clues already found always show; the power bar only while it's open
-  // (the Hints button in the head).
+  // Clues already found always show above the keyboard; the power bar
+  // floats over the board while it's open (the Hints button in the head).
   function renderHints() {
-    if (!playing()) { hints.replaceChildren(); return; }
-    hints.replaceChildren(...[
-      renderClues({ engine, state: state(), mode, glyph }),
-      ui.hintsOpen ? renderPowerBar({ engine, state: state(), inventory: store.get().inventory, onPick: pickPower }) : null
-    ].filter(Boolean));
+    if (!playing()) { hints.replaceChildren(); powers.replaceChildren(); return; }
+    hints.replaceChildren(...[renderClues({ engine, state: state(), mode, glyph })].filter(Boolean));
+    powers.replaceChildren(...[ui.hintsOpen
+      ? renderPowerBar({ engine, state: state(), held: store.held(), points: store.points(), onPick: pickPower })
+      : null].filter(Boolean));
   }
 
+  // A power's sheet: Use, or Buy one first when none is held and it could
+  // be used now.
   function pickPower(id) {
     const power = POWER[id];
-    const held = store.get().inventory[id] || 0;
-    openPowerSheet({ power, held, why: whyNot(engine, state(), power, held), onUse: () => usePower(id) });
+    openPowerSheet({
+      power,
+      read: () => {
+        const held = store.held()[id] || 0;
+        return {
+          held,
+          points: store.points(),
+          why: whyNot(engine, state(), power, held),
+          offer: engine.canUse(state(), id) ? null : powerOffer(id)
+        };
+      },
+      onBuy: () => {
+        if (!buyPower(id)) return false;
+        ctx.onWallet();
+        renderHead();
+        renderHints();
+        return true;
+      },
+      onUse: () => usePower(id)
+    });
   }
 
   function usePower(id) {
-    if (!(store.get().inventory[id] > 0)) return;
+    if (!(store.held()[id] > 0)) return;
     const r = engine.usePower(state(), id);
     if (r.error) { say('error', whyNot(engine, state(), POWER[id], 1)); return; }
     session.spendPower(id);
     game = { ...game, state: r.state };
     session.progress(mode, game);
     prefill();
+    // Before the first guess the bar stays open for more; after it, it
+    // gets out of the way.
+    ui.hintsOpen = state().guesses.length === 0;
     say('info', t('game.powers.used', { name: t(`power.${id}.name`) }));
     renderHead();
     renderHints();   // before the board, which fits around the clues
@@ -610,7 +650,8 @@ export function openGame(root, ctx) {
   }
 
   // With the keyboard up, a message floats over the bottom of the board for
-  // a moment (styles.css), so it never moves the board or scrolls the page.
+  // a moment (.picker-float in styles.css), so it never moves the board or
+  // scrolls the page.
   let messageTimer = 0;
   function say(kind, text) {
     clearTimeout(messageTimer);
@@ -715,13 +756,13 @@ export function openGame(root, ctx) {
     choices.replaceChildren(partsChoices());
   }
 
-  // A keyboard at the bottom, as in Wordle: the clues and hints (so they
-  // show above it), any message, then the parts with Delete and Guess.
+  // A keyboard at the bottom, as in Wordle: floating above it any message
+  // and the power bar; then the clues, and the parts with Delete and Guess.
   function renderPicker() {
     const on = playing() && partsMode();
     picker.classList.toggle('is-keyboard', on);
     if (!on) { picker.replaceChildren(); return; }
-    picker.replaceChildren(hints, message, choices);
+    picker.replaceChildren(float, hints, choices);
     renderChoices();
   }
 
@@ -743,6 +784,7 @@ export function openGame(root, ctx) {
     game = { ...game, state: r.state };
     const row = r.state.guesses.length - 1;
     ui.newRow = row;
+    ui.hintsOpen = false;
     ui.cells = emptyCells();
     ui.active = 0;
     prefill();
@@ -783,7 +825,10 @@ export function openGame(root, ctx) {
     const done = session.finish(engine, mode, game);
     game = done.game;
     ui.points = done.points;
-    if (done.paid) ctx.onWallet();
+    if (done.paid) {
+      ui.rewards = done.rewards;
+      ctx.onWallet();
+    }
   }
 
   // ── Result ─────────────────────────────────────────────────────────
@@ -796,14 +841,25 @@ export function openGame(root, ctx) {
   function renderResultCard() {
     clearInterval(timer);
     if (playing()) { result.replaceChildren(); return; }
+    // Just finished: its rewards, shown once as toasts too. A daily shown
+    // again: its rewards from the ledger.
+    const fresh = !!ui.rewards;
+    const rewards = ui.rewards || session.rewardsFor(mode, state());
     const card = renderResult({
       engine, data, mode, game, glyph,
       points: ui.points || engine.points(state()),
       streak: streak(),
+      rewards: rewards.map(describe),
+      balance: store.points(),
+      fresh,
       onPractice: () => (kind === 'practice' ? playAgain() : ctx.onPractice()),
       onHome: ctx.onHome
     });
     result.replaceChildren(card.node);
+    if (fresh && !ui.toasted) {
+      ui.toasted = true;
+      rewards.forEach((entry) => toast(describe(entry)));
+    }
     // At midnight a finished daily makes way for the new one.
     const day = localDate();
     timer = setInterval(() => {

@@ -1204,18 +1204,31 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .picker.is-keyboard .picker-choices { gap: var(--spacing-xs); }
 
-/* With the keyboard up, a message floats just above it, over the bottom
-   of the board, and goes after a moment (say() in js/play/screen.js), so
-   it never moves the board or makes the page scroll. The coloured bar on
-   the left comes from .status-line. */
-.picker.is-keyboard .status-line {
+/* With the keyboard up, a message and the open power bar float just above
+   it, over the bottom of the board (.picker-float), so they never move the
+   board or make the page scroll. The message goes after a moment (say() in
+   js/play/screen.js). The coloured bar on the message's left comes from
+   .status-line. */
+.picker-float {
   position: absolute;
   bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
+  pointer-events: none;
+}
+
+.picker-float > * { pointer-events: auto; }
+.game-powers:empty { display: none; }
+.game-powers { max-width: 100%; }
+
+.picker.is-keyboard .status-line {
   width: max-content;
   max-width: 100%;
-  margin-bottom: var(--spacing-xs);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-top: var(--stroke-thin) solid var(--color-border-default);
   border-right: var(--stroke-thin) solid var(--color-border-default);
@@ -1433,11 +1446,28 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   gap: var(--spacing-sm);
 }
 
+/* Floating over the board: a raised strip, like the message. */
+.picker-float .power-bar {
+  padding: var(--spacing-sm);
+  border: var(--stroke-thin) solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-raised);
+  box-shadow: var(--shadow-md);
+}
+
 .power-bar-title {
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-snug);
   color: var(--color-text-muted);
+}
+
+.power-bar-points {
+  font-weight: var(--font-weight-regular);
+  white-space: nowrap;
 }
 
 .power-chips {
@@ -1485,9 +1515,38 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   text-align: center;
 }
 
-.power-chip.is-off .power-chip-count {
+.power-chip.is-off .power-chip-count,
+.power-chip.is-none .power-chip-count {
   background: var(--color-bg-sunken);
   color: var(--color-text-muted);
+}
+
+/* The Hints button carries the number of hints held. */
+.hints-btn { position: relative; }
+
+.hints-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: var(--spacing-md);
+  height: var(--spacing-md);
+  padding: 0 var(--spacing-xs);
+  border-radius: var(--radius-full);
+  background: var(--color-action-primary-bg);
+  color: var(--color-action-primary-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--spacing-md);
+  text-align: center;
+}
+
+.power-sheet-points { white-space: nowrap; }
+
+.power-sheet-buy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .power-sheet-head {
@@ -1648,6 +1707,68 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   color: var(--color-text-secondary);
 }
 
+/* Just paid: the points pop in. */
+.result-points.is-new {
+  display: inline-block;
+  animation: points-pop var(--transition-reveal) var(--transition-bounce) both;
+}
+
+@keyframes points-pop {
+  0%   { transform: scale(0.8); opacity: var(--opacity-hidden); }
+  100% { transform: scale(1); opacity: var(--opacity-full); }
+}
+
+.result-rewards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result-reward {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-sunken);
+}
+
+.result-reward-icon,
+.toast-icon,
+.achievement-icon {
+  flex: 0 0 auto;
+  width: var(--spacing-lg);
+  font-size: var(--font-size-lg);
+  line-height: var(--font-lineHeight-snug);
+  text-align: center;
+}
+
+.result-reward-text,
+.toast-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.result-reward-title,
+.toast-title { font-weight: var(--font-weight-bold); }
+
+.result-reward-body,
+.toast-body {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.result-balance {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.result-balance-amount { font-weight: var(--font-weight-bold); }
+
 .share {
   display: flex;
   flex-direction: column;
@@ -1675,6 +1796,233 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   font-weight: var(--font-weight-bold);
   font-variant-numeric: tabular-nums;
   color: var(--color-text-primary);
+}
+
+/* ── Points: the header's wallet, and "+50" rising from a total ───── */
+
+.wallet-btn {
+  cursor: pointer;
+  transition: background-color var(--transition-fast) var(--transition-ease);
+}
+
+.wallet-btn:hover { background: var(--color-interactive-hover); }
+.wallet-btn:active { background: var(--color-interactive-active); }
+
+.has-bump { position: relative; }
+
+/* js/toast.js bump(): rises and fades; under reduced motion it just shows
+   for a moment. */
+.points-bump {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 var(--spacing-xs);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-raised);
+  color: var(--color-status-success);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: points-rise calc(var(--transition-long) * 2) var(--transition-ease) both;
+}
+
+.points-bump.is-spent { color: var(--color-text-secondary); }
+
+@keyframes points-rise {
+  0%   { transform: translate(-50%, 0); opacity: var(--opacity-hidden); }
+  20%  { transform: translate(-50%, calc(var(--spacing-xs) * -1)); opacity: var(--opacity-full); }
+  70%  { opacity: var(--opacity-full); }
+  100% { transform: translate(-50%, calc(var(--spacing-lg) * -1)); opacity: var(--opacity-hidden); }
+}
+
+/* ── Toasts (js/toast.js) ──────────────────────────────────────────── */
+
+/* A popover where the browser has them (the top layer, over sheets);
+   otherwise a fixed box. */
+.toasts {
+  position: fixed;
+  inset: auto;
+  top: calc(env(safe-area-inset-top) + var(--spacing-md));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: min(var(--layout-container), calc(100% - var(--spacing-md) * 2));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  pointer-events: none;
+}
+
+.toasts:empty { display: none; }
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: var(--stroke-thin) solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-raised);
+  box-shadow: var(--shadow-lg);
+  text-align: start;
+  pointer-events: auto;
+  animation: toast-in var(--transition-slow) var(--transition-bounce) both;
+}
+
+.toast.is-leaving {
+  opacity: var(--opacity-hidden);
+  transition: opacity var(--transition-base) var(--transition-ease);
+}
+
+@keyframes toast-in {
+  0%   { transform: translateY(calc(var(--spacing-md) * -1)); opacity: var(--opacity-hidden); }
+  100% { transform: translateY(0); opacity: var(--opacity-full); }
+}
+
+/* ── Start screen: a section's title with a button beside it ───────── */
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.section-head .section-title { flex: 1; min-width: 0; }
+
+/* The hints on the start screen open the shop at that hint. */
+button.power {
+  width: 100%;
+  text-align: start;
+  transition: border-color var(--transition-fast) var(--transition-ease);
+}
+
+button.power:hover { border-color: var(--color-border-default); }
+
+/* ── Achievements ──────────────────────────────────────────────────── */
+
+.achievement-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--layout-powerMin), 1fr));
+  gap: var(--spacing-sm);
+}
+
+.achievement {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.achievement-icon { color: var(--color-text-muted); }
+
+.achievement-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.achievement-name { font-weight: var(--font-weight-bold); }
+
+.achievement-desc,
+.achievement-reward,
+.achievement-state { font-size: var(--font-size-xs); }
+
+.achievement-desc { color: var(--color-text-secondary); }
+.achievement-reward { color: var(--color-text-accent); }
+.achievement-state { color: var(--color-text-muted); }
+.achievement:not(.is-earned) .achievement-name { color: var(--color-text-secondary); }
+
+/* ── Shop (js/shop.js) ─────────────────────────────────────────────── */
+
+.shop-balance {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.shop-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border: var(--stroke-thin) solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-base) var(--transition-ease);
+}
+
+.shop-item.is-focus { border-color: var(--color-border-focus); }
+
+.shop-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--spacing-xl);
+  height: var(--spacing-xl);
+  font-size: var(--font-size-lg);
+}
+
+.shop-swatch {
+  gap: var(--stroke-thick);
+  border-radius: var(--radius-md);
+  border: var(--stroke-thin) solid var(--color-border-subtle);
+}
+
+.shop-swatch .swatch-dot {
+  width: var(--spacing-xs);
+  height: var(--spacing-md);
+}
+
+.shop-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.shop-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: var(--spacing-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.shop-price {
+  color: var(--color-text-accent);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.shop-desc { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+.shop-meta { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+
+.shop-action { flex: 0 0 auto; align-self: center; }
+
+.shop-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-sunken);
+  font-size: var(--font-size-xs);
 }
 
 /* ── Back-to-apps mark ─────────────────────────────────────────────── */
@@ -1720,4 +2068,7 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   .frame-part.is-new,
   .kanji-frame.is-new { animation: none; }
   .palette-tile[aria-pressed="true"] { transform: none; }
+  .points-bump,
+  .toast,
+  .result-points.is-new { animation: none; }
 }

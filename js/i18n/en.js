@@ -11,10 +11,11 @@ export default {
   },
 
   header: {
-    points: 'Your points',
     schemeDark: 'Switch to dark mode',
     schemeLight: 'Switch to light mode',
-    schemeFixed: 'This skin has one colour scheme only'
+    schemeFixed: 'This skin has one colour scheme only',
+    shop: 'Shop',
+    wallet: 'Your points: {amount}. Open the shop'
   },
 
   currency: {
@@ -110,11 +111,14 @@ export default {
     },
     powers: {
       title: 'Hints',
+      titleHeld: 'Hints: you have {n}',
       use: 'Use',
       cancel: 'Cancel',
       used: '{name} used.',
+      buy: 'Buy 1 · {cost} pts',
+      bought: 'Bought. You have {n}.',
       why: {
-        none: 'You have none yet. Wins can drop bonus hints; the shop is coming soon.',
+        none: 'You have none. Buy one, or win for a chance at a bonus hint.',
         before: 'Only before your first guess.',
         during: 'Only after your first guess.',
         useless: 'It wouldn’t show anything new.',
@@ -169,6 +173,8 @@ export default {
     points: 'Points',
     pointsEarned: '+{n} pts',
     pointsWhy: 'parts {parts} + solve {solve}, ×{mult}',
+    rewards: 'Rewards',
+    balance: 'You have {icon} {n} pts',
     streak: 'Daily streak',
     streakDays: '{n} in a row',
     share: 'Share',
@@ -189,7 +195,7 @@ export default {
     note: 'Mix colours, tiles and effects',
     lockPoints: '🔒 {cost} pts',
     lockAchievement: '🔒 {name}',
-    buyHint: 'Buy for {cost} points (shop coming soon)',
+    buyHint: 'Buy for {cost} pts in the shop',
     achievementHint: 'Unlock: {desc}'
   },
 
@@ -203,6 +209,56 @@ export default {
     whenDuring: 'During a game',
     minLength: 'Answers of {n}+ kanji',
     have: 'You have {n}'
+  },
+
+  shop: {
+    open: 'Shop',
+    title: 'Shop',
+    close: 'Close',
+    intro: 'Earn points by playing: every part you find, every win, streaks and achievements. Spend them here.',
+    hints: 'Hints',
+    looks: 'Looks',
+    buy: 'Buy',
+    confirm: 'Spend {cost} of your {have} pts on {name}? You’ll have {left} left.',
+    confirmYes: 'Buy for {cost} pts',
+    cancel: 'Cancel',
+    have: 'You have {n} of {hold}',
+    full: 'The most you can hold is {hold}',
+    short: '{n} more pts needed',
+    soon: 'Coming soon',
+    owned: 'Yours',
+    ownedSoon: 'Yours · coming soon',
+    inUse: 'In use',
+    use: 'Use',
+    using: '{name} is on.',
+    byAchievement: 'Achievement',
+    earn: '“{name}”: {desc}',
+    bought: '{name} bought: you have {n}. {left} pts left.',
+    boughtSkin: '{name} is yours. {left} pts left.'
+  },
+
+  reward: {
+    points: '+{n} pts',
+    spent: '−{n} pts',
+    hint: '{icon} {name}',
+    hints: '{icon} {name} ×{n}',
+    sep: ' · ',
+    streak: '{n} days in a row!',
+    drop: 'Bonus hint',
+    achievement: 'Achievement: {name}',
+    unlocks: 'Unlocks {name}'
+  },
+
+  achievements: {
+    title: 'Achievements',
+    note: '{n} of {total} earned',
+    earned: 'Earned {date}',
+    progress: '{n} of {goal}',
+    best: 'Best so far: {n}'
+  },
+
+  toast: {
+    dismiss: 'Dismiss'
   },
 
   settings: {
@@ -247,7 +303,7 @@ export default {
     ask: {
       title: 'This device has progress of its own. What should happen to it?',
       merge: 'Merge both',
-      mergeDesc: 'Keeps the games from both devices and recounts streaks. Points and hints take the higher of the two.',
+      mergeDesc: 'Keeps the games from both devices and recounts streaks. Points and hints from both add up.',
       replace: 'Replace this device',
       replaceDesc: 'This device’s own progress is lost.',
       cancel: 'Cancel'
@@ -372,6 +428,7 @@ export default {
     'streak-30': { name: 'One month', desc: 'Solve 30 dailies in a row.' },
     'sharp-eye': { name: 'Sharp eye', desc: 'Solve a puzzle in 2 guesses.' },
     unaided: { name: 'Unaided', desc: 'Win without any hints.' },
+    'hard-win': { name: 'Hard win', desc: 'Solve a puzzle with Hard on.' },
     'collector-50': { name: 'Collector', desc: 'Solve 50 different kanji.' },
     'full-set': { name: 'Full set', desc: 'Solve every daily length in one day.' }
   }

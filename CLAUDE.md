@@ -41,7 +41,10 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/config/achievements.js` | Achievements as stat + threshold |
 | `js/config/rules.js` | Rules that aren't points or modes: the palette's always-shown tiles and decoy weights, palette-only guesses, practice repeats, share squares |
 | `js/registry.js` | One import for all catalogues, plus a start-up check that their ids agree |
-| `js/store.js` | The save in localStorage: versioned, with migrations, plus export, import and the merge rules (`MERGE`). Games on the go are in `playing` |
+| `js/store.js` | The save in localStorage: versioned (v2), with migrations, plus export, import and the merge rules (`MERGE`). Games on the go are in `playing`; points and hints held are the `ledger` (`points()`, `held()`, `enter()`) |
+| `js/ledger.js` | The ledger: every gain and spend of points or hints as an entry with its own id, the balance, the v1 migration and the merge that joins entries |
+| `js/shop.js` | The shop sheet (opened by the points in the header): hints and locked looks, two-tap buying, `powerOffer()` / `buyPower()` for the game screen |
+| `js/toast.js` | Toasts over everything (`toast()`) and the "+N pts" tag on a balance that changed (`bump()`) |
 | `js/settings.js` | Settings panel (gear in the header): the Hard and Guided switches; send, receive and the save text, with Merge / Replace |
 | `js/transfer.js` | Calls `api/transfer.php` |
 | `js/dom.js` | `el()`, the small DOM helper |
@@ -54,8 +57,9 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/engine/random.js` | Seeded randomness, so dailies and powers come out the same for everyone |
 | `js/play/screen.js` | The game screen: board (one row of cells, or Guided's split, places and frames), keyboard, hints, result. Parts a power showed start each row in their cells. `openGame(root, ctx)` |
 | `js/play/session.js` | Games in the save: start or resume (`save.playing`), record to history, pay points, spend powers |
-| `js/play/hints.js` | Clues, the power bar and the sheet that uses a power |
-| `js/play/result.js` | The result card: answer, points, streak, share, countdown |
+| `js/play/rewards.js` | What a finished game pays as ledger entries: its points, streak rewards, a bonus hint, achievements (`payGame()`, `earnAchievements()`), and `describe()` for the toasts and result card |
+| `js/play/hints.js` | Clues, the power bar (floats above the keyboard) and the sheet that uses a power, or buys one |
+| `js/play/result.js` | The result card: answer, points, rewards, balance, streak, share, countdown |
 | `js/play/share.js` | The share text and emoji grid (squares in `rules.js` `share`) |
 | `js/play/glyph.js` | Part glyphs as text, or KanjiVG strokes where fonts may lack them |
 | `tests/` | `node --test` tests for the engine, on fixtures (never the real word list) |

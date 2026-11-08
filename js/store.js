@@ -3,14 +3,17 @@
  * tokens.js also reads settings.theme and settings.scheme from it before
  * first paint, so keep those two names.
  *
- * Shape (v1)
+ * Shape (v2)
  *   v             schema version
  *   settings      { theme, tiles, effect, scheme, lang, level }
  *                 scheme and lang null = follow the device; level: the
  *                 difficulty for new games (js/config/levels.js)
- *   wallet        { points }
- *   inventory     { [powerId]: count }
- *   unlocked      { [slotId]: [skinId, …] }           free skins aren't listed
+ *   ledger        { [id]: { why, at, pts?, hints?, game?, what? } }   every
+ *                 change to points and hints held (js/ledger.js); points()
+ *                 and held() sum it. v1 kept wallet { points } and
+ *                 inventory { [powerId]: count } instead
+ *   unlocked      { [slotId]: [skinId, …] }           skins bought; free skins
+ *                 and those an achievement unlocks aren't listed
  *   achievements  { [achievementId]: 'YYYY-MM-DD' }
  *   history       { [modeId]: { [key]: { date, guesses, won, powers, answer, level } } }
  *                 key: the puzzle number for a daily, "p" + a timestamp for
@@ -22,8 +25,9 @@
  *                 A finished daily stays (done) until the next one, so its
  *                 result can be shown again (js/play/session.js)
  *
- * History is the source of truth: streaks and stats are worked out from it,
- * which also makes merging two devices simple (MERGE, below).
+ * History and the ledger are the source of truth: streaks and stats are
+ * worked out from history, points and hints from the ledger, which also
+ * makes merging two devices simple (MERGE, below).
  *
  * Changing the shape: bump VERSION and add a step to MIGRATIONS that turns
  * the old shape into the new one. Adding a key needs no migration, because
@@ -32,21 +36,29 @@
 import { DEFAULT_LOOK } from './config/skins.js';
 import { ECONOMY } from './config/economy.js';
 import { DEFAULT_LEVEL } from './config/levels.js';
+import * as ledger from './ledger.js';
 
 export const SAVE_KEY = 'kanjiru';
-export const VERSION = 1;
+export const VERSION = 2;
 
 // MIGRATIONS[n] turns a version-n save into version n + 1.
 const MIGRATIONS = {
-  // 1: (save) => { /* reshape */ return save; },
+  // v1 → v2: the wallet and hints held become one ledger entry.
+  1: (save) => {
+    save.ledger = { ...ledger.fromV1(save.wallet, save.inventory), ...(isObject(save.ledger) ? save.ledger : {}) };
+    delete save.wallet;
+    delete save.inventory;
+    return save;
+  }
 };
 
 export function fresh() {
+  const start = {};
+  ledger.add(start, 'start', { pts: ECONOMY.startingPoints });
   return {
     v: VERSION,
     settings: { ...DEFAULT_LOOK, scheme: null, lang: null, level: DEFAULT_LEVEL },
-    wallet: { points: ECONOMY.startingPoints },
-    inventory: {},
+    ledger: start,
     unlocked: {},
     achievements: {},
     history: {},
@@ -56,11 +68,15 @@ export function fresh() {
 
 const isObject = (v) => v && typeof v === 'object' && !Array.isArray(v);
 
-// Adds keys that are missing; never overwrites what the save has.
+// Adds keys that are missing; never overwrites what the save has. Only the
+// settings are filled inside: the other keys hold the player's own records
+// (a new save's starting points must never join an old ledger).
 function fillDefaults(target, defaults) {
   Object.keys(defaults).forEach((key) => {
     if (!(key in target)) target[key] = defaults[key];
-    else if (isObject(target[key]) && isObject(defaults[key])) fillDefaults(target[key], defaults[key]);
+    else if (key === 'settings' && isObject(target[key])) {
+      Object.keys(defaults[key]).forEach((k) => { if (!(k in target[key])) target[key][k] = defaults[key][k]; });
+    }
   });
   return target;
 }
@@ -99,12 +115,27 @@ export function get() {
   return state || load();
 }
 
-// Change the save and write it: store.update((s) => { s.wallet.points += 10; })
+// Change the save and write it: store.update((s) => { s.settings.lang = 'ja'; })
 export function update(change) {
   const s = get();
   change(s);
   persist();
   return s;
+}
+
+// Points and hints held, summed from the ledger (js/ledger.js).
+export function points(save = get()) {
+  return ledger.balance(save.ledger).points;
+}
+
+export function held(save = get()) {
+  return ledger.balance(save.ledger).hints;
+}
+
+// Adds a ledger entry to a save, inside update():
+//   store.update((s) => store.enter(s, 'buy', { pts: -60, hints: { sweep: 1 } }))
+export function enter(save, why, fields) {
+  return ledger.add(save.ledger, why, fields);
 }
 
 function persist() {
@@ -164,8 +195,11 @@ export function readSave(text) {
 // games played, points earned or spent, hints, unlocks, achievements.
 export function hasProgress(save = get()) {
   const base = fresh();
-  return Object.keys(save).some((key) =>
-    key !== 'v' && key !== 'settings' && JSON.stringify(save[key]) !== JSON.stringify(base[key]));
+  return Object.keys(save).some((key) => {
+    if (key === 'v' || key === 'settings') return false;
+    if (key === 'ledger') return ledger.hasProgress(save.ledger);
+    return JSON.stringify(save[key]) !== JSON.stringify(base[key]);
+  });
 }
 
 // how: 'replace' (this device's save is thrown away) or 'merge'.
@@ -209,16 +243,15 @@ function eachKey(pick) {
   };
 }
 
-const higher = eachKey((a, b) => Math.max(Number(a) || 0, Number(b) || 0));
 const list = (x) => (Array.isArray(x) ? x : []);
 
 export const MERGE = {
   // Looks and language belong to the device in your hand.
   settings: (mine) => mine,
-  // The higher number, not the sum, so merging twice can't create points.
-  wallet: higher,
-  inventory: higher,
-  // Skins unlocked on either device, in the order they were unlocked here.
+  // Every entry from both, once each, so points and hints add up
+  // (js/ledger.js mergeLedgers).
+  ledger: ledger.mergeLedgers,
+  // Skins bought on either device, in the order they were bought here.
   unlocked: eachKey((a, b) => [...new Set([...list(a), ...list(b)])]),
   // Achievements from both, with the earlier date.
   achievements: eachKey((a, b) => (String(b) < String(a) ? b : a)),
