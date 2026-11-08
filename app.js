@@ -2,9 +2,10 @@
  * Kanjiru — the start screen and the way into a game.
  *
  * The start screen shows how a game reads, which level is on, the modes, the
- * skin picker and the hints, all built from the catalogues in js/config/
- * and the text in js/i18n/. Nothing here hard-codes a mode, skin, power or word of text:
- * add one to its catalogue and it appears.
+ * skin picker, the hints and the achievements, all built from the catalogues
+ * in js/config/ and the text in js/i18n/. Nothing here hard-codes a mode,
+ * skin, power or word of text: add one to its catalogue and it appears.
+ * The points in the header open the shop (js/shop.js).
  *
  * Routes (the URL hash, so the phone's back gesture works):
  *   (none)            the start screen
@@ -12,18 +13,22 @@
  *   #main/practice    another puzzle after it ("keep playing")
  */
 import {
-  MODES, MODE, SLOTS, SKINS, POWERS, ECONOMY, ACHIEVEMENT, validate
+  MODES, MODE, SLOTS, SKINS, POWERS, ECONOMY, ACHIEVEMENTS, ACHIEVEMENT, validate
 } from './js/registry.js';
 import { t, setLang, nextLanguage } from './js/i18n.js';
 import { el } from './js/dom.js';
 import * as store from './js/store.js';
 import { openSettings } from './js/settings.js';
+import { openShop, isUnlocked as unlockedFor } from './js/shop.js';
+import { toast, bump } from './js/toast.js';
 import { loadData } from './js/engine/data.js';
 import { createEngine } from './js/engine/game.js';
-import { answersFor } from './js/engine/daily.js';
+import { answersFor, localDate } from './js/engine/daily.js';
+import { stats, progress } from './js/engine/stats.js';
 import { glyphMaker } from './js/play/glyph.js';
 import { openGame } from './js/play/screen.js';
 import { dailyStatus, currentLevel } from './js/play/session.js';
+import { earnAchievements, describe, amounts, skinsFor } from './js/play/rewards.js';
 
 const TOKENS = window.TOKENS;
 // Reassigned when a save arrives from another device (js/settings.js).
@@ -71,9 +76,37 @@ function renderHeader() {
   settingsBtn.setAttribute('aria-label', t('settings.open'));
   settingsBtn.title = t('settings.open');
 
+  // The points open the shop. A change since they last showed rises from
+  // them, once they're on screen (a game hides the header).
   const wallet = document.getElementById('wallet');
-  wallet.textContent = `${ECONOMY.currency.icon} ${pts(save.wallet.points)}`;
-  wallet.title = `${t('header.points')} (${t('currency.name')})`;
+  const now = store.points(save);
+  const amount = el('span', { class: 'wallet-amount' }, `${ECONOMY.currency.icon} ${pts(now)}`);
+  wallet.replaceChildren(amount);
+  wallet.title = t('header.shop');
+  wallet.setAttribute('aria-label', t('header.wallet', { amount: pts(now) }));
+  if (!document.body.classList.contains('is-game')) {
+    if (shownPoints !== null && now !== shownPoints) bump(amount, now - shownPoints);
+    shownPoints = now;
+  }
+}
+
+let shownPoints = null;   // the points the header last showed on screen
+
+document.getElementById('wallet').addEventListener('click', () => shop());
+
+// The shop, from the header or a locked look or hint; it redraws what a
+// purchase changes.
+function shop(focus = null) {
+  openShop({ focus, onChange: () => { applyLook(); renderLooks(); renderPowersAgain(); } });
+}
+
+// Achievements the history has earned and the save hasn't yet (a save from
+// before they existed, or one just merged): earned now, with their toasts.
+function catchUp() {
+  let earned = [];
+  store.update((s) => { earned = earnAchievements(s, { date: localDate() }); });
+  earned.forEach((entry) => toast(describe(entry)));
+  return earned.length > 0;
 }
 
 document.getElementById('lang-toggle').addEventListener('click', () => {
@@ -93,6 +126,7 @@ document.getElementById('scheme-toggle').addEventListener('click', () => {
 // A save arrived from another device: redraw with its progress, looks and language.
 function reloadSave() {
   save = store.get();
+  catchUp();
   setLang(save.settings.lang);
   applyLook();
   renderAll();
@@ -112,9 +146,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 
 // ── Unlock rules ─────────────────────────────────────────────────────
 
-function isUnlocked(slot, item) {
-  return item.unlock.type === 'free' || (save.unlocked[slot] || []).includes(item.id);
-}
+const isUnlocked = (slot, item) => unlockedFor(slot, item, save);
 
 function unlockText(unlock) {
   if (unlock.type === 'points') return t('looks.lockPoints', { cost: unlock.cost });
@@ -262,7 +294,7 @@ function themeSwatch(item) {
     'aria-disabled': unlocked ? null : 'true',
     title: unlocked ? name : unlockHint(item.unlock),
     onclick: () => {
-      if (!unlocked) return;
+      if (!unlocked) { shop(`skin:theme:${item.id}`); return; }
       store.update((s) => { s.settings.theme = item.id; });
       applyLook();
       renderLooks();
@@ -287,7 +319,7 @@ function skinChip(slot, item) {
     'aria-disabled': unlocked ? null : 'true',
     title: unlocked ? name : unlockHint(item.unlock),
     onclick: () => {
-      if (!unlocked) return;
+      if (!unlocked) { shop(`skin:${slot}:${item.id}`); return; }
       store.update((s) => { s.settings[slot] = item.id; });
       renderLooks();
     }
@@ -317,12 +349,25 @@ function whenText(when) {
   return when.includes('before') ? t('powers.whenBefore') : t('powers.whenDuring');
 }
 
+let powersSection = null;
+
+function renderPowersAgain() {
+  if (powersSection && powersSection.isConnected) renderPowers();
+}
+
 function renderPowers() {
-  return el('section', { class: 'section', 'aria-labelledby': 'powers-title' },
-    el('h2', { class: 'section-title', id: 'powers-title' },
-      t('powers.title'), el('span', { class: 'section-note' }, t('powers.note'))),
+  const held = store.held(save);
+  const fresh = el('section', { class: 'section', 'aria-labelledby': 'powers-title' },
+    el('div', { class: 'section-head' },
+      el('h2', { class: 'section-title', id: 'powers-title' },
+        t('powers.title'), el('span', { class: 'section-note' }, t('powers.note'))),
+      el('button', { class: 'btn btn-secondary btn-small', type: 'button', onclick: () => shop() }, t('shop.open'))),
     el('div', { class: 'power-list' },
-      POWERS.map((p) => el('div', { class: 'card power' },
+      POWERS.map((p) => el('button', {
+        class: 'card power', type: 'button',
+        'aria-label': `${t(`power.${p.id}.name`)} · ${t('powers.have', { n: held[p.id] || 0 })}`,
+        onclick: () => shop(`power:${p.id}`)
+      },
         el('span', { class: 'power-icon', 'aria-hidden': 'true' }, p.icon),
         el('div', { class: 'power-body' },
           el('div', { class: 'power-name' },
@@ -334,12 +379,54 @@ function renderPowers() {
             [
               whenText(p.when),
               p.minLength > 1 ? t('powers.minLength', { n: p.minLength }) : null,
-              t('powers.have', { n: save.inventory[p.id] || 0 })
-            ].filter(Boolean).join(' · '))
+              t('powers.have', { n: held[p.id] || 0 })
+            ].filter(Boolean).join(t('reward.sep')))
         )
       ))
     )
   );
+  if (powersSection && powersSection.isConnected) powersSection.replaceWith(fresh);
+  powersSection = fresh;
+  return fresh;
+}
+
+// ── Achievements ─────────────────────────────────────────────────────
+
+// Each one with its reward and the looks it unlocks; earned ones show
+// when, the rest how far along you are.
+function achievementCard(a, values) {
+  const date = save.achievements[a.id];
+  const now = progress(a.test, values);
+  const reward = [
+    ...amounts({ pts: (a.reward || {}).points || 0, hints: (a.reward || {}).power ? { [a.reward.power]: 1 } : {} }),
+    ...skinsFor(a.id).map(({ slot, item }) => t('reward.unlocks', { name: t(`skin.${slot}.${item.id}`) }))
+  ];
+  let state = '';
+  if (date) state = t('achievements.earned', { date });
+  else if ('atLeast' in a.test) state = t('achievements.progress', { n: now.value, goal: now.goal });
+  else if (now.value !== null) state = t('achievements.best', { n: now.value });
+  return el('div', { class: `card achievement${date ? ' is-earned' : ''}` },
+    el('span', { class: 'achievement-icon', 'aria-hidden': 'true' }, date ? ECONOMY.rewardIcons.achievement : '○'),
+    el('div', { class: 'achievement-body' },
+      el('p', { class: 'achievement-name' }, t(`achievement.${a.id}.name`)),
+      el('p', { class: 'achievement-desc' }, t(`achievement.${a.id}.desc`)),
+      reward.length ? el('p', { class: 'achievement-reward' }, reward.join(t('reward.sep'))) : null,
+      state ? el('p', { class: 'achievement-state' }, state) : null));
+}
+
+let achievementsSection = null;
+
+function renderAchievements() {
+  const shown = ACHIEVEMENTS.filter((a) => !a.retired || save.achievements[a.id]);
+  const values = stats(save.history, { today: localDate() });
+  const earned = shown.filter((a) => save.achievements[a.id]).length;
+  const fresh = el('section', { class: 'section', 'aria-labelledby': 'achievements-title' },
+    el('h2', { class: 'section-title', id: 'achievements-title' },
+      t('achievements.title'), el('span', { class: 'section-note' }, t('achievements.note', { n: earned, total: shown.length }))),
+    el('div', { class: 'achievement-list' }, shown.map((a) => achievementCard(a, values))));
+  if (achievementsSection && achievementsSection.isConnected) achievementsSection.replaceWith(fresh);
+  achievementsSection = fresh;
+  return fresh;
 }
 
 // ── Routes ───────────────────────────────────────────────────────────
@@ -365,7 +452,7 @@ function home() {
 }
 
 function renderStart() {
-  app.replaceChildren(renderHero(), renderModes(), renderLooks(), renderPowers());
+  app.replaceChildren(renderHero(), renderModes(), renderLooks(), renderPowers(), renderAchievements());
 }
 
 async function renderGame({ mode, kind }) {
@@ -390,10 +477,11 @@ async function renderGame({ mode, kind }) {
 }
 
 function renderAll() {
-  renderHeader();
   if (screen) { screen.destroy(); screen = null; }
   const r = route();
+  // Before the header, so points won in a game rise from it on the way out.
   document.body.classList.toggle('is-game', !!r);
+  renderHeader();
   if (r) renderGame(r);
   else renderStart();
 }
@@ -404,6 +492,7 @@ window.addEventListener('hashchange', () => {
   window.scrollTo(0, 0);
 });
 
+catchUp();
 applyLook();
 renderAll();
 // The mode cards wait for the data.

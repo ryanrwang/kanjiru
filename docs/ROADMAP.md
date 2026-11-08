@@ -14,19 +14,20 @@ Last updated: 2026-11-08.
 - [x] **Game screen:** the one-kanji daily and practice in `js/play/`: board with flip reveal, parts palette, saved games, powers, points paid, result card with share text and countdown. Three levels (`js/config/levels.js`): Easy guesses kanji from a strip with a free meaning; Normal (the default) and Hard guess parts only, one per cell, with each cell a place in the kanji so parts go green or yellow. Normal has fewer tiles and counts the kanji that still fit; Hard's parts must make a real kanji (step 3, PR #5)
 - [x] **One daily of 4–6 parts:** one `main` mode whose answers are 1–4 kanji with 4–6 parts in all; k1–k4 retired. One game for everyone: the parts in writing order, like Wordle's letters, with the split between kanji hidden. Settings switches: Hard (real kanji, use what's found) and Guided (split, places, frames, dimmed keys). Easy retired. A Wordle-style screen with a fixed 28-key keyboard pinned to the bottom. Keep playing after the daily, for full points. Claude's first word review: 603 Keep words (step 4)
 - [x] **Loose strokes and hints:** answers with a loose single stroke (丨 丶 丿 乙 亅) leave the daily (`LISTS` `without`); 10 kanji fixed in `data/parts-overrides.json` bring back 25 words, so the daily has 453 answers. Parts a power shows (Reveal a part, Head start, Reveal a kanji) fill their cells, green, on each new row, and stay put at Hard. No page scroll while playing (step 4b)
+- [x] **Points, shop & achievements:** points and hints held are a ledger (save v2), so merging devices adds them up exactly. A finished game pays its points, streak rewards, a bonus hint and achievements, shown on the result card and as toasts. The shop opens from the points in the header: hints and locked looks, two taps to buy. The power bar floats above the keyboard, open before the first guess. Hard win replaces Full set (step 5)
 
 ## Order
 
 ```
 1 Parts & palette ✓ ──► 2 Engine ✓ ──► 3 Game screen ✓ ──► 4 One daily ✓ ──► 4b Loose strokes & hints ✓
-                                          ├──► 5 Points, shop & achievements
+                                          ├──► 5 Points, shop & achievements ✓
                                           ├──► 8 Launch
                                           └──► 6 Skin effects (after launch)
 7 Device transfer  ✓ done
 You: review words  (any time; the game only uses words marked Keep)
 ```
 
-- **Next:** step 5, then 8. Step 6 can wait until after launch. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
+- **Next:** step 8. Step 6 can wait until after launch. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
 - **Words:** 453 daily answers from 603 Keep words are enough for launch (about 1.2 years). More can be added any time on the review page, then `tools/compile_game.py`. 146 Keep words with loose strokes come back as their kanji are fixed.
 
 **Running threads at the same time:** every thread shares this one folder, and Git can only have one branch checked out in it. Two threads in the same folder will switch each other's branches. So either run one thread at a time, or start each one in its own worktree (the app's worktree option when you start a session).
@@ -120,7 +121,7 @@ Done when the daily has no loose-stroke answers, revealed parts sit in their cel
 
 ## 5. Points, shop & achievements
 
-**Needs:** step 3.
+**Done** (step 5). Points became a ledger so a merge adds them exactly (docs/DESIGN.md, "Saving and devices"), the shop opens from the points in the header, and Hard win took Full set's place.
 
 ```
 Kanjiru step 5: make the points economy real.
@@ -153,7 +154,7 @@ Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first. Work on a new branch.
 5. Structure it so a new effect is one catalogue entry plus one small module or CSS block.
 6. Smooth on a mid-range phone, and off under prefers-reduced-motion.
 
-Done when every skin in js/config/skins.js has its real look and effect and can be previewed.
+Done when every skin in js/config/skins.js has its real look and effect and can be previewed, and none is still marked `soon` (the shop won't sell a `soon` skin, and one an achievement unlocks can't be used until it's built).
 ```
 
 ## 7. Device transfer

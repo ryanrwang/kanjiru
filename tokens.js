@@ -143,7 +143,7 @@
       lgDark: '0 12px 32px rgba(0, 0, 0, 0.56)'
     },
 
-    duration: { 0: '0ms', 100: '100ms', 200: '200ms', 300: '300ms', 500: '500ms', 800: '800ms', 3000: '3000ms' },
+    duration: { 0: '0ms', 100: '100ms', 200: '200ms', 300: '300ms', 500: '500ms', 800: '800ms', 3000: '3000ms', 5000: '5000ms' },
     easing: {
       standard:   'cubic-bezier(0.2, 0, 0, 1)',
       emphasized: 'cubic-bezier(0.3, 0, 0, 1.3)',
@@ -311,6 +311,7 @@
       reveal: primitives.duration[500],
       long:   primitives.duration[800],
       message: primitives.duration[3000],   // how long a game message stays up
+      toast:  primitives.duration[5000],    // how long a toast stays up
       ease:   primitives.easing.standard,
       bounce: primitives.easing.emphasized,
       ink:    primitives.easing.ink
