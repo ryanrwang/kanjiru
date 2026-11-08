@@ -62,7 +62,10 @@ export function openGame(root, ctx) {
   let input;
   let guessButton;
   let clearButton;
+  // The board: the rows in a column, and at parts levels the kanji frame,
+  // beside the rows or above them (fitBoard).
   const board = el('div', { class: 'board' });
+  const grid = el('div', { class: 'board-grid' });
   const frames = el('div', { class: 'board-frames' });
   const shape = el('div', { class: 'board-shape' });
   const boardDone = el('div', { class: 'board-rows', role: 'list' });
@@ -74,7 +77,8 @@ export function openGame(root, ctx) {
   const choices = el('div', { class: 'picker-choices' });
   const result = el('div', { class: 'game-result' });
   const live = el('p', { class: 'visually-hidden', 'aria-live': 'polite' });
-  board.append(frames, shape, boardDone, boardNext);
+  grid.append(frames, shape, boardDone, boardNext);
+  board.append(grid);
 
   function freshUi() {
     return {
@@ -106,14 +110,16 @@ export function openGame(root, ctx) {
   // Each cell's place, per slot, at a level with places; otherwise null.
   const places = () => (partsMode() && level().places
     ? [...state().answer].map((ch) => data.kanji[ch].parts.map((p) => p.pos)) : null);
-  // Cells, per slot, with a gap between kanji and between places.
+  // Cells, one group per kanji (kept together when rows wrap), with a gap
+  // where the place changes.
   const laidOut = (perSlot) => {
     const pl = places();
-    return perSlot.map((nodes, s) => [
-      s ? el('span', { class: 'row-gap' }) : null,
-      nodes.map((node, i) => [pl && i && pl[s][i] !== pl[s][i - 1] ? el('span', { class: 'cell-gap' }) : null, node])
-    ]);
+    return perSlot.map((nodes, s) => el('span', { class: 'row-slot' },
+      nodes.map((node, i) => [pl && i && pl[s][i] !== pl[s][i - 1] ? el('span', { class: 'cell-gap' }) : null, node])));
   };
+  // One kanji: each row has a column on the right (its kanji or the count).
+  // Longer words show the count under each kanji's frame instead.
+  const oneKanji = () => cellCounts().length === 1;
   // How many kanji still fit (engine.fits), for the next row; one state at a time.
   let fitsFor = null;
   let fitsCount = null;
@@ -184,16 +190,26 @@ export function openGame(root, ctx) {
     return g.left ? t('game.rowLabelFit', { label, fit: fitText(g.left) }) : label;
   }
 
+  // Parts levels: the column on the right of a row's cells. The kanji the
+  // row makes (Hard, or a solved row), else how many kanji fit (countLeft).
+  // speak: read the count out (the next row; scored rows have it in their label).
+  function rowSide(word, counts, speak = false) {
+    if (word) return el('span', { class: 'row-side row-kanji kanji', lang: 'ja', 'aria-hidden': 'true' }, word);
+    return el('span', { class: 'row-side row-count', title: counts ? fitText(counts) : null, 'aria-hidden': speak ? null : 'true' },
+      counts ? [el('span', { 'aria-hidden': 'true' }, countText(counts)), speak ? el('span', { class: 'visually-hidden' }, fitText(counts)) : null] : null);
+  }
+
   function guessRow(g, i, reveal) {
     let n = 0;
     const perSlot = g.slots.map((slot) => slot.tiles.map((tile) => tileNode(tile, n++)));
-    const tiles = g.parts ? laidOut(perSlot) : perSlot.map((nodes, s) => [s ? el('span', { class: 'row-gap' }) : null, nodes]);
-    const row = el('div', { class: `board-row${reveal ? ' is-new' : ''}`, role: 'listitem', 'aria-label': rowLabel(g, i) },
-      el('span', { class: 'row-kanji kanji', lang: 'ja', 'aria-hidden': 'true' }, g.word || ''),
-      el('span', { class: 'row-tiles', 'aria-hidden': 'true' }, tiles),
-      g.parts
-        ? el('span', { class: 'row-count', 'aria-hidden': 'true', title: g.left ? fitText(g.left) : null }, g.left ? countText(g.left) : '')
-        : el('span', { class: 'row-meaning', 'aria-hidden': 'true' }, rowMeaning(g.word)));
+    const row = g.parts
+      ? el('div', { class: `board-row${reveal ? ' is-new' : ''}`, role: 'listitem', 'aria-label': rowLabel(g, i) },
+        el('span', { class: 'row-tiles', 'aria-hidden': 'true' }, laidOut(perSlot)),
+        oneKanji() ? rowSide(g.word, g.left) : null)
+      : el('div', { class: `board-row${reveal ? ' is-new' : ''}`, role: 'listitem', 'aria-label': rowLabel(g, i) },
+        el('span', { class: 'row-kanji kanji', lang: 'ja', 'aria-hidden': 'true' }, g.word || ''),
+        el('span', { class: 'row-tiles', 'aria-hidden': 'true' }, perSlot.map((nodes, s) => [s ? el('span', { class: 'row-gap' }) : null, nodes])),
+        el('span', { class: 'row-meaning', 'aria-hidden': 'true' }, rowMeaning(g.word)));
     if (reveal) setTimeout(() => row.classList.remove('is-new'), revealTime(g));
     return row;
   }
@@ -236,24 +252,26 @@ export function openGame(root, ctx) {
     const last = state().guesses[state().guesses.length - 1];
     const count = level().countLeft && (!last || !last.left || last.left.join() !== fitsNow().join());
     return el('div', { class: 'board-row is-next', role: 'group', 'aria-label': t('game.cells', { n: filled, cells: ui.cells.length }) },
-      el('span', { class: 'row-kanji kanji', 'aria-hidden': 'true' }),
       el('span', { class: 'row-tiles' }, laidOut(perSlot)),
-      el('span', { class: 'row-count', title: count ? fitText(fitsNow()) : null },
-        count ? [el('span', { 'aria-hidden': 'true' }, countText(fitsNow())), el('span', { class: 'visually-hidden' }, fitText(fitsNow()))] : null));
+      oneKanji() ? rowSide(null, count ? fitsNow() : null, true) : null);
   }
 
   // Parts levels: a row not reached yet.
   function blankRow() {
     const perSlot = cellCounts().map((count) => Array.from({ length: count }, () => el('span', { class: 'tile is-cell is-blank' })));
     return el('div', { class: 'board-row is-blank', 'aria-hidden': 'true' },
-      el('span', { class: 'row-kanji' }),
       el('span', { class: 'row-tiles' }, laidOut(perSlot)),
-      el('span', { class: 'row-count' }));
+      oneKanji() ? el('span', { class: 'row-side' }) : null);
   }
 
-  // A place's name over its run of n cells (styles.css .shape-place).
+  // A place's name over its run of n cells (styles.css .shape-place); the
+  // short name when the run is narrower than a base cell.
   function placeLabel({ pos, n }) {
-    const node = el('span', { class: 'shape-place' }, t(`pos.${pos}`));
+    const tk = window.TOKENS.active();
+    const size = CELL_SIZES.find(([id]) => id === board.dataset.cell);
+    const cell = parseFloat(tk.layout[size ? size[1] : 'cell']);
+    const wide = n * cell + (n - 1) * parseFloat(tk.spacing.xs) >= parseFloat(tk.layout.cell);
+    const node = el('span', { class: 'shape-place', title: t(`pos.${pos}`) }, t(`${wide ? 'pos' : 'posShort'}.${pos}`));
     node.style.setProperty('--n', n);
     return node;
   }
@@ -261,6 +279,7 @@ export function openGame(root, ctx) {
   // At a level with places: each cell's place, above the board.
   function renderShape() {
     const pl = places();
+    board.classList.toggle('has-shape', !!pl);
     if (!pl) { shape.replaceChildren(); return; }
     const groups = pl.map((slot) => {
       const out = [];
@@ -270,22 +289,99 @@ export function openGame(root, ctx) {
       });
       return out;
     });
-    let s = 0;
+    const head = level().countLeft;
     shape.replaceChildren(
       el('span', { class: 'visually-hidden' }, t('game.shape', {
         places: pl.map((slot) => slot.map((pos) => t(`pos.${pos}`)).join(t('game.listSep'))).join(' / ')
       })),
       el('div', { class: 'board-row', 'aria-hidden': 'true' },
-        el('span', { class: 'row-kanji' }),
-        el('span', { class: 'row-tiles' }, groups.map((slot) => [
-          s++ ? el('span', { class: 'row-gap' }) : null,
-          slot.map((g, i) => [
-            i ? el('span', { class: 'cell-gap' }) : null,
-            placeLabel(g)
-          ])
-        ])),
-        el('span', { class: 'row-count is-head', title: level().countLeft ? t('game.fitTitle') : null },
-          level().countLeft ? t('game.fitHead') : null)));
+        el('span', { class: 'row-tiles' }, groups.map((slot) => el('span', { class: 'row-slot' },
+          slot.map((g, i) => [i ? el('span', { class: 'cell-gap' }) : null, placeLabel(g)])))),
+        oneKanji()
+          ? el('span', { class: 'row-side row-count', title: head ? t('game.fitTitle') : null }, head ? t('game.fitHead') : null)
+          : null));
+  }
+
+  // ── Board size (parts levels) ──────────────────────────────────────
+
+  // Largest first: the board takes the biggest cells and frame that fit.
+  const CELL_SIZES = [['lg', 'cellLg'], ['md', 'cellMd'], ['base', 'cell'], ['sm', 'cellSm'], ['xs', 'cellXs']];
+  const FRAME_SIZES = [['lg', 'frameLg'], ['md', 'frameMd'], ['base', 'frame'], ['sm', 'frameSm']];
+  // The rows may take this share of the screen's height, so the parts and
+  // Guess stay close below them.
+  const ROWS_HEIGHT = 0.42;
+
+  // Parts levels: sizes the board to the space and the answer, so it works
+  // for any number of kanji and parts. Cells are the largest size whose rows
+  // fit the width on one line (and their share of the height). One kanji
+  // with room to spare gets its frame beside the rows, as big as fits;
+  // otherwise each kanji's frame sits above its cells. If even the smallest
+  // cells are too wide, rows wrap between kanji (data-wrap).
+  // Sizes are layout tokens; styles.css keys on data-cell and data-frame.
+  function fitBoard() {
+    if (!partsMode()) {
+      ['cell', 'frame', 'layout', 'wrap'].forEach((k) => board.removeAttribute(`data-${k}`));
+      if (frames.parentNode !== grid) grid.prepend(frames);
+      return;
+    }
+    const tk = window.TOKENS.active();
+    const px = (v) => parseFloat(v) || 0;
+    const xs = px(tk.spacing.xs);
+    const sm = px(tk.spacing.sm);
+    const md = px(tk.spacing.md);
+    const counts = cellCounts();
+    const pl = places();
+    // Per kanji: its place changes, each a wider gap (laidOut).
+    const turns = counts.map((n, s) => (pl ? pl[s].filter((pos, i) => i && pos !== pl[s][i - 1]).length : 0));
+    const slotWidth = (c, s) => counts[s] * c + (counts[s] - 1) * xs + turns[s] * sm;
+    const slotWidths = (c) => counts.map((n, s) => slotWidth(c, s));
+    // The side column, a cell wide, comes with one kanji only.
+    const side = (c) => (oneKanji() ? sm + c : 0);
+    const rowWidth = (c) => slotWidths(c).reduce((a, b) => a + b, 0) + (counts.length - 1) * md + side(c);
+    const width = board.clientWidth;
+    const rows = state().rows;
+    const cells = CELL_SIZES.map(([id, key]) => ({ id, px: px(tk.layout[key]) }));
+    const frameSizes = FRAME_SIZES.map(([id, key]) => ({ id, px: px(tk.layout[key]) }));
+    const fitsHeight = (c) => rows * (c + xs) <= window.innerHeight * ROWS_HEIGHT;
+    // Above the rows: each frame no wider than its kanji's cells, and no
+    // bigger than the base size, to save height.
+    const frameAbove = (c) => {
+      const narrowest = Math.min(...slotWidths(c));
+      const base = frameSizes.findIndex((x) => x.id === 'base');
+      return (frameSizes.slice(base).find((x) => x.px <= narrowest) || frameSizes[frameSizes.length - 1]).id;
+    };
+
+    let pick = null;
+    const tall = cells.filter((c) => fitsHeight(c.px));
+    for (const c of (tall.length ? tall : cells.slice(-1))) {
+      if (oneKanji()) {
+        const f = frameSizes.find((x) => rowWidth(c.px) + md + x.px <= width);
+        if (f) { pick = { cell: c.id, frame: f.id, layout: 'beside' }; break; }
+      }
+      if (rowWidth(c.px) <= width) { pick = { cell: c.id, frame: frameAbove(c.px), layout: 'above' }; break; }
+    }
+    if (!pick) {
+      // Wrap between kanji: the largest cells whose kanji fit the width
+      // and whose wrapped rows (lines × rows) fit the height.
+      const lines = (c) => {
+        let n = 1;
+        let used = 0;
+        slotWidths(c).forEach((w) => {
+          if (used && used + md + w > width) { n += 1; used = w; } else used += (used ? md : 0) + w;
+        });
+        return n;
+      };
+      const fits = (x) => Math.max(...slotWidths(x.px)) + side(x.px) <= width;
+      const c = cells.find((x) => fits(x) && rows * lines(x.px) * (x.px + xs) <= window.innerHeight * ROWS_HEIGHT)
+        || [...cells].reverse().find(fits) || cells[cells.length - 1];
+      pick = { cell: c.id, frame: frameAbove(c.px), layout: 'above', wrap: true };
+    }
+    board.dataset.cell = pick.cell;
+    board.dataset.frame = pick.frame;
+    board.dataset.layout = pick.layout;
+    board.toggleAttribute('data-wrap', !!pick.wrap);
+    if (pick.layout === 'beside' && frames.parentNode !== board) board.prepend(frames);
+    if (pick.layout === 'above' && frames.parentNode !== grid) grid.prepend(frames);
   }
 
   // ── Kanji frame (parts levels) ─────────────────────────────────────
@@ -312,50 +408,67 @@ export function openGame(root, ctx) {
   // (by a guess or a power: state.found) in its place, and a dot for each
   // part still hidden. A solved kanji shows whole. While a row reveals, the
   // frame shows the state before it (ui.frameFrom), then catches up.
+  // The frames are laid out like a row (styles.css), so above the rows each
+  // one centres over its kanji's cells: a slot n cells and g place gaps wide.
   function renderFrame() {
     if (!partsMode()) { frames.replaceChildren(); return; }
     const s = ui.frameFrom || state();
+    const pl = places();
+    const counts = cellCounts();
     const solved = new Set(engine.clues(s).solved);
     const seen = new Set();
     const isNew = (k) => { seen.add(k); return frameShown !== null && !frameShown.has(k); };
-    frames.replaceChildren(...[...s.answer].map((ch, slot) => {
-      if (solved.has(slot)) {
-        return el('span', {
-          class: `kanji-frame is-solved kanji${isNew(`solved:${slot}`) ? ' is-new' : ''}`,
-          lang: 'ja', role: 'img', 'aria-label': t('game.frameSolved', { kanji: ch })
-        }, ch);
-      }
-      const parts = data.kanji[ch].parts;
-      const order = [...new Set(parts.map((p) => p.pos))];
-      const found = (i) => s.found[`${slot}:${i}`] === 'hit';
-      const said = parts.filter((p, i) => found(i)).map((p) => t('game.framePart', { part: p.form || p.el, place: t(`pos.${p.pos}`) }));
+    // Longer words: how many kanji fit each slot, under its frame.
+    const fit = !oneKanji() && level().countLeft ? (s === state() ? fitsNow() : engine.fits(s).map((list) => list.length)) : null;
+    const slots = [...s.answer].map((ch, slot) => {
+      const node = el('span', { class: 'frame-slot' },
+        frameOf(s, ch, slot, solved.has(slot), isNew),
+        fit && !solved.has(slot) ? el('span', { class: 'frame-count', title: t('game.fitTitle') }, t('game.fitCount', { n: fit[slot] })) : null);
+      node.style.setProperty('--n', counts[slot]);
+      node.style.setProperty('--g', pl ? pl[slot].filter((pos, i) => i && pos !== pl[slot][i - 1]).length : 0);
+      return node;
+    });
+    frames.replaceChildren(...[el('span', { class: 'row-tiles' }, slots), oneKanji() ? el('span', { class: 'row-side' }) : null].filter(Boolean));
+    frameShown = seen;
+  }
+
+  function frameOf(s, ch, slot, solved, isNew) {
+    if (solved) {
       return el('span', {
-        class: `kanji-frame${order.includes('outer') ? ' has-outer' : ''}`,
-        style: frameAreas(order),
-        role: 'img',
-        'aria-label': t('game.frameLabel', { parts: said.length ? said.join(t('game.listSep')) : t('game.frameEmpty') })
-      }, order.map((pos) => {
-        const here = parts.map((p, i) => ({ p, i })).filter(({ p }) => p.pos === pos);
-        const cover = COVER.includes(pos);
-        return el('span', {
-          class: `frame-zone is-${pos}${cover ? ' is-cover' : ''}`,
-          'data-n': String(Math.min(here.length, 4)),
-          style: cover ? null : { gridArea: pos }
-        }, here.map(({ p, i }) => {
-          if (found(i)) {
-            return el('span', { class: `frame-part${isNew(`${slot}:${i}`) ? ' is-new' : ''}`, lang: 'ja' }, glyph(p.form || p.el));
-          }
-          // A covering part has no room for a dot: the inset inner shows it.
-          return cover ? null : el('span', { class: 'frame-part is-hidden' });
-        }));
+        class: `kanji-frame is-solved kanji${isNew(`solved:${slot}`) ? ' is-new' : ''}`,
+        lang: 'ja', role: 'img', 'aria-label': t('game.frameSolved', { kanji: ch })
+      }, ch);
+    }
+    const parts = data.kanji[ch].parts;
+    const order = [...new Set(parts.map((p) => p.pos))];
+    const found = (i) => s.found[`${slot}:${i}`] === 'hit';
+    const said = parts.filter((p, i) => found(i)).map((p) => t('game.framePart', { part: p.form || p.el, place: t(`pos.${p.pos}`) }));
+    return el('span', {
+      class: `kanji-frame${order.includes('outer') ? ' has-outer' : ''}`,
+      style: frameAreas(order),
+      role: 'img',
+      'aria-label': t('game.frameLabel', { parts: said.length ? said.join(t('game.listSep')) : t('game.frameEmpty') })
+    }, order.map((pos) => {
+      const here = parts.map((p, i) => ({ p, i })).filter(({ p }) => p.pos === pos);
+      const cover = COVER.includes(pos);
+      return el('span', {
+        class: `frame-zone is-${pos}${cover ? ' is-cover' : ''}`,
+        'data-n': String(Math.min(here.length, 4)),
+        style: cover ? null : { gridArea: pos }
+      }, here.map(({ p, i }) => {
+        if (found(i)) {
+          return el('span', { class: `frame-part${isNew(`${slot}:${i}`) ? ' is-new' : ''}`, lang: 'ja' }, glyph(p.form || p.el));
+        }
+        // A covering part has no room for a dot: the inset inner shows it.
+        return cover ? null : el('span', { class: 'frame-part is-hidden' });
       }));
     }));
-    frameShown = seen;
   }
 
   function renderBoard() {
     const s = state();
     board.classList.toggle('is-parts', partsMode());
+    if (board.isConnected) fitBoard();
     renderFrame();
     renderShape();
     boardDone.setAttribute('aria-label', t('game.board'));
@@ -737,6 +850,7 @@ export function openGame(root, ctx) {
     renderResultCard();
     root.replaceChildren(el('section', { class: 'game', 'aria-labelledby': 'game-title' },
       head, board, hints, picker, result, live));
+    renderBoard();   // again, sized now that the board has a width (fitBoard)
   }
 
   if (!game) {
@@ -748,8 +862,16 @@ export function openGame(root, ctx) {
   }
 
   build();
+  // A turned phone or a resized window may fit other sizes.
+  let resizeFrame = 0;
+  const onResize = () => { cancelAnimationFrame(resizeFrame); resizeFrame = requestAnimationFrame(renderBoard); };
+  window.addEventListener('resize', onResize);
   return {
     refresh() { ui.message = null; build(); },
-    destroy() { clearInterval(timer); clearTimeout(resultTimer); clearTimeout(frameTimer); closePowerSheet(); }
+    destroy() {
+      clearInterval(timer); clearTimeout(resultTimer); clearTimeout(frameTimer); closePowerSheet();
+      cancelAnimationFrame(resizeFrame);
+      window.removeEventListener('resize', onResize);
+    }
   };
 }

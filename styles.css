@@ -840,7 +840,79 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 /* ── Board ─────────────────────────────────────────────────────────── */
 
-.board,
+/* At Normal and Hard, fitBoard() in js/play/screen.js sizes the board:
+   data-cell and data-frame pick layout tokens (largest that fit), and
+   data-layout puts the kanji frame beside the rows or above them. */
+.board {
+  --board-cell: var(--layout-cell);
+  --board-font: var(--font-size-lg);
+  --board-kanji: var(--font-size-2xl);
+  --board-frame: var(--layout-frame);
+  --frame-1: var(--font-size-xl);
+  --frame-2: var(--font-size-lg);
+  --frame-3: var(--font-size-md);
+  --frame-4: var(--font-size-xs);
+  --frame-cover: var(--font-size-display);
+  --frame-inner: var(--font-size-lg);
+  --frame-inset: var(--spacing-md);
+  --frame-solved: var(--font-size-3xl);
+}
+
+.board[data-cell="xs"] {
+  --board-cell: var(--layout-cellXs);
+  --board-font: var(--font-size-md);
+  --board-kanji: var(--font-size-lg);
+}
+
+.board[data-cell="sm"] {
+  --board-cell: var(--layout-cellSm);
+  --board-kanji: var(--font-size-xl);
+}
+
+.board[data-cell="md"] {
+  --board-cell: var(--layout-cellMd);
+  --board-font: var(--font-size-xl);
+}
+
+.board[data-cell="lg"] {
+  --board-cell: var(--layout-cellLg);
+  --board-font: var(--font-size-2xl);
+  --board-kanji: var(--font-size-3xl);
+}
+
+.board[data-frame="sm"] {
+  --board-frame: var(--layout-frameSm);
+  --frame-1: var(--font-size-lg);
+  --frame-2: var(--font-size-md);
+  --frame-3: var(--font-size-xs);
+  --frame-cover: var(--font-size-3xl);
+  --frame-inner: var(--font-size-xs);
+}
+
+.board[data-frame="md"] {
+  --board-frame: var(--layout-frameMd);
+  --frame-1: var(--font-size-2xl);
+  --frame-2: var(--font-size-xl);
+  --frame-3: var(--font-size-lg);
+  --frame-4: var(--font-size-md);
+  --frame-inner: var(--font-size-xl);
+  --frame-inset: var(--spacing-lg);
+  --frame-solved: var(--font-size-display);
+}
+
+.board[data-frame="lg"] {
+  --board-frame: var(--layout-frameLg);
+  --frame-1: var(--font-size-3xl);
+  --frame-2: var(--font-size-2xl);
+  --frame-3: var(--font-size-xl);
+  --frame-4: var(--font-size-lg);
+  --frame-cover: var(--font-size-hero);
+  --frame-inner: var(--font-size-2xl);
+  --frame-inset: var(--spacing-xl);
+  --frame-solved: var(--font-size-hero);
+}
+
+.board-grid,
 .board-rows {
   display: flex;
   flex-direction: column;
@@ -893,7 +965,7 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 .board-shape .row-kanji { height: auto; }
 
 .shape-place {
-  width: calc(var(--layout-cell) * var(--n, 1) + var(--spacing-xs) * (var(--n, 1) - 1));
+  width: calc(var(--board-cell) * var(--n, 1) + var(--spacing-xs) * (var(--n, 1) - 1));
   font-size: var(--font-size-xs);
   line-height: var(--font-lineHeight-snug);
   color: var(--color-text-muted);
@@ -901,19 +973,59 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   white-space: nowrap;
 }
 
-/* Parts levels: every row, with the cells centred, the row's kanji on
-   their left and how many kanji fit on their right. */
-.board.is-parts .board-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  column-gap: var(--spacing-sm);
+/* Parts levels: the rows, centred, each with a column on the right of its
+   cells: the kanji it makes, or how many kanji fit. Every row is as wide
+   as the others, so the cells line up under the places. */
+.board.is-parts {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--spacing-md);
 }
 
-.board.is-parts .row-kanji { justify-self: end; }
-.board.is-parts .row-tiles { flex-wrap: nowrap; }
+.board.is-parts .board-grid { align-items: flex-start; }
+.board.is-parts .board-row { min-height: var(--board-cell); }
+
+/* Each kanji's cells stay together; a wider gap between kanji. Rows too
+   wide for the screen wrap between kanji (data-wrap), all alike. */
+.board.is-parts .row-tiles {
+  flex-wrap: nowrap;
+  gap: var(--spacing-xs) var(--spacing-md);
+}
+
+.board[data-wrap] .row-tiles { flex-wrap: wrap; }
+.board[data-wrap] .board-rows { gap: var(--spacing-md); }
+.row-slot,
+.shape-place { flex: 0 0 auto; }
+
+.row-slot {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.board.is-parts .tile.is-cell {
+  width: var(--board-cell);
+  height: var(--board-cell);
+  font-size: var(--board-font);
+}
+
+.board.is-parts .board-shape .board-row {
+  min-height: 0;
+  height: var(--spacing-lg);
+  align-items: flex-end;
+}
+
+.row-side {
+  flex: 0 0 auto;
+  width: var(--board-cell);
+}
+
+.board.is-parts .row-kanji {
+  height: var(--board-cell);
+  font-size: var(--board-kanji);
+}
 
 .row-count {
-  justify-self: start;
   font-size: var(--font-size-xs);
   line-height: var(--font-lineHeight-snug);
   color: var(--color-text-muted);
@@ -973,21 +1085,49 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 /* The kanji frame (parts levels): the answer's shape, filled in with the
    parts found green. Top and bottom span it; left, inner and right share
-   the middle; an outer part covers it all, with the inner inset. */
-.board-frames {
+   the middle; an outer part covers it all, with the inner inset.
+   Beside the rows, it lines up with the first row. Above them, it's laid
+   out like a row, each kanji's frame centred over its cells. */
+.board-frames:empty { display: none; }
+
+.board.is-parts .board-frames {
   display: flex;
-  justify-content: center;
+  align-items: center;
   gap: var(--spacing-sm);
-  padding-bottom: var(--spacing-xs);
 }
 
-.board-frames:empty { display: none; }
+.board[data-layout="above"] .board-frames { padding-bottom: var(--spacing-xs); }
+
+.board[data-layout="above"] .frame-slot {
+  flex: 0 0 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  width: calc(var(--board-cell) * var(--n, 1) + var(--spacing-xs) * (var(--n, 1) - 1) + var(--spacing-sm) * var(--g, 0));
+}
+
+.board[data-layout="beside"] .board-frames .row-side { display: none; }
+
+/* Longer words: how many kanji still fit, under each kanji's frame. */
+.frame-count {
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.board[data-layout="beside"].has-shape .board-frames {
+  margin-top: calc(var(--spacing-lg) + var(--spacing-xs));
+}
 
 .kanji-frame {
   display: grid;
   gap: var(--spacing-xs);
-  width: var(--layout-frame);
-  height: var(--layout-frame);
+  width: var(--board-frame);
+  height: var(--board-frame);
   padding: var(--spacing-xs);
   border: var(--stroke-thick) solid var(--color-border-default);
   border-radius: var(--radius-md);
@@ -1005,7 +1145,7 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   border: var(--stroke-thin) dashed var(--color-border-subtle);
   border-radius: var(--radius-sm);
   font-family: var(--font-family-kanji);
-  font-size: var(--font-size-xl);
+  font-size: var(--frame-1);
   font-weight: var(--font-weight-bold);
   line-height: var(--font-lineHeight-tight);
   color: var(--color-feedback-hit);
@@ -1013,20 +1153,20 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .frame-zone.is-top,
 .frame-zone.is-bottom { flex-direction: row; }
-.frame-zone[data-n="2"] { font-size: var(--font-size-lg); }
-.frame-zone[data-n="3"] { font-size: var(--font-size-md); }
-.frame-zone[data-n="4"] { font-size: var(--font-size-xs); }
+.frame-zone[data-n="2"] { font-size: var(--frame-2); }
+.frame-zone[data-n="3"] { font-size: var(--frame-3); }
+.frame-zone[data-n="4"] { font-size: var(--frame-4); }
 
 .frame-zone.is-cover {
   z-index: 0;
   grid-area: 1 / 1 / -1 / -1;
   border: 0;
-  font-size: var(--font-size-display);
+  font-size: var(--frame-cover);
 }
 
 .kanji-frame.has-outer .frame-zone.is-inner {
-  margin: var(--spacing-md);
-  font-size: var(--font-size-lg);
+  margin: var(--frame-inset);
+  font-size: var(--frame-inner);
 }
 
 .frame-part { display: inline-flex; }
@@ -1046,7 +1186,7 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   border-color: transparent;
   background: var(--color-feedback-hit);
   color: var(--color-feedback-text);
-  font-size: var(--font-size-3xl);
+  font-size: var(--frame-solved);
   line-height: var(--font-lineHeight-tight);
 }
 
@@ -1055,10 +1195,16 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   animation: kanji-in var(--transition-base) var(--transition-bounce) both;
 }
 
-/* Parts levels: one place's parts at a time, picked here or by tapping a cell. */
+/* Parts levels: one place's parts at a time, picked here or by tapping a
+   cell. Longer words have more places, so the buttons stay on one line
+   each and share the rows they need. */
+.place-tabs { gap: var(--spacing-xs); }
+
 .place-tab {
-  flex: 1;
+  flex: 1 1 auto;
   justify-content: center;
+  padding: var(--spacing-sm);
+  white-space: nowrap;
 }
 
 /* Tile reveal (settings.tiles). Flip is the default; a tile style from

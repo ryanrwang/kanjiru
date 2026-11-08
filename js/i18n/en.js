@@ -74,6 +74,7 @@ export default {
     fit: 'Kanji that fit: {n}',
     fitHead: 'fit',
     fitTitle: 'How many kanji still fit',
+    fitCount: '{n} fit',
     placeTabs: 'Parts for',
     placeOfSlot: '{n}: {place}',
     palettePlace: 'Parts for {place}',
@@ -154,6 +155,18 @@ export default {
     inner: 'inside',
     whole: 'whole',
     none: 'across'
+  },
+
+  // Place names over narrow cells on the board.
+  posShort: {
+    left: 'L',
+    right: 'R',
+    top: 'top',
+    bottom: 'btm',
+    outer: 'out',
+    inner: 'in',
+    whole: 'all',
+    none: '—'
   },
 
   result: {

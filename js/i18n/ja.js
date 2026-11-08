@@ -72,6 +72,7 @@ export default {
     fit: '当てはまる漢字：{n}',
     fitHead: '候補',
     fitTitle: '当てはまる漢字の数',
+    fitCount: '候補{n}',
     placeTabs: 'パーツの場所',
     placeOfSlot: '{n}字目の{place}',
     palettePlace: '{place}のパーツ',
@@ -144,6 +145,18 @@ export default {
   },
 
   pos: {
+    left: '左',
+    right: '右',
+    top: '上',
+    bottom: '下',
+    outer: '外',
+    inner: '内',
+    whole: '全体',
+    none: '交差'
+  },
+
+  // 狭いマスの上の場所名（日本語は一字なので同じ）
+  posShort: {
     left: '左',
     right: '右',
     top: '上',

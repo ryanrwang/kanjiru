@@ -273,7 +273,17 @@
       guessCol:  s[64],
       tile:      s[48],
       cell:      s[40],  // game screen: board and palette tiles
-      frame:     s[80]   // game screen: the kanji built from found parts
+      // Board cells at Normal and Hard: the game screen picks the largest
+      // that fits the screen and the answer's number of parts.
+      cellXs:    s[24],
+      cellSm:    s[32],
+      cellMd:    s[48],
+      cellLg:    s[56],
+      // The kanji built from found parts, picked the same way.
+      frameSm:   s[64],
+      frame:     s[80],
+      frameMd:   s[96],
+      frameLg:   s[128]
     },
 
     radius: {
