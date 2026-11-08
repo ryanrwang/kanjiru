@@ -92,6 +92,8 @@ export default {
     guess: 'Guess',
     delete: 'Delete',
     palette: 'Parts',
+    keysHelp: 'Arrow keys move between parts. Enter or Space puts one in the selected cell; Backspace takes it out.',
+    cellsHelp: 'Left and right arrows pick a cell.',
     debugCells: 'answer cell {cells}',
     soon: 'This mode is coming soon: its words need reviewing first.',
     on: 'On',
@@ -193,7 +195,9 @@ export default {
     copyManually: 'Select the text above and copy it.',
     nextDaily: 'Next daily in',
     practice: 'Play again',
-    again: 'Next puzzle'
+    again: 'Next puzzle',
+    source: 'Meanings and readings from JMdict and KANJIDIC (EDRDG).',
+    credits: 'Credits'
   },
 
   share: {
@@ -292,6 +296,69 @@ export default {
       body: 'For testing: numbered dots on the game’s keys show the answer in writing order, and you can add points.',
       add: 'Add {n} pts',
       added: 'Added {n} pts. You have {total} pts.'
+    }
+  },
+
+  // Adding Kanjiru to the home screen (js/install.js): a tip on the play
+  // page, and a section in Settings.
+  install: {
+    title: 'Add Kanjiru to your home screen',
+    why: {
+      ios: 'Safari clears a site’s saved progress after 7 days without a visit. From your home screen, it’s kept.',
+      android: 'It opens full screen, like an app, with your progress.',
+      other: 'On a phone it opens like an app. On iPhone it also keeps your progress, which Safari clears after 7 days without a visit.'
+    },
+    ios: {
+      name: 'iPhone and iPad',
+      share: 'In Safari, tap Share (on iOS 26, it’s under ⋯).',
+      add: 'Tap Add to Home Screen, then Add.',
+      move: 'Kanjiru on your home screen starts empty. To bring your progress, tap Get a code in Settings here, then enter it in the app’s Settings.'
+    },
+    android: {
+      name: 'Android',
+      menu: 'In Chrome, tap ⋮, then Add to Home screen or Install app.',
+      keeps: 'Your progress comes with it.'
+    },
+    button: 'Install',
+    later: 'Not now',
+    backup: 'The save text below is a backup too, wherever you play.',
+    tipBackup: 'Your save text in Settings is a backup too.'
+  },
+
+  // The About page (js/about.js, #about from Settings): the game, your
+  // progress and the credits. EDRDG asks for its credit on a screen of its own.
+  about: {
+    title: 'About',
+    open: 'About and credits',
+    lead: 'A daily kanji puzzle: guess the word from its parts, like Wordle.',
+    name: 'The name is 感じる (kanjiru, “to sense”), with the 漢 of 漢字 (kanji).',
+    by: 'Made by Ryan Wang',
+    privacy: {
+      title: 'Your progress',
+      body: 'No account needed. Your progress is saved in this browser only. A transfer code keeps a copy on the server until it’s used, 15 minutes at most.'
+    },
+    credits: {
+      title: 'Credits',
+      note: 'Thank you',
+      edrdg: 'Kanjiru uses the JMdict and KANJIDIC dictionary files. These files are the property of the Electronic Dictionary Research and Development Group, and are used in conformance with the Group’s licence.',
+      data: 'Kanjiru’s word and parts data adapt these sources, so they’re shared under CC BY-SA 4.0, with the source code.'
+    },
+    source: {
+      jmdict: { name: 'JMdict', by: 'EDRDG. JSON by Dmitry Shpika (jmdict-simplified)', use: 'The words: spelling, reading and English meanings.' },
+      kanjidic: { name: 'KANJIDIC2', by: 'EDRDG', use: 'Each kanji’s meanings, readings, stroke count and frequency.' },
+      kanjivg: { name: 'KanjiVG', by: 'Ulrich Apel and contributors', use: 'Each kanji’s parts, their places and writing order, and drawings of parts some fonts lack.' },
+      waller: { name: 'JLPT lists', by: 'Jonathan Waller (JLPT Resources). JMdict links by Stephen Kraus (yomitan-jlpt-vocab)', use: 'Which kanji and words are N5 to N3, so answers stay learnable.' },
+      noto: { name: 'Noto Sans JP and Noto Serif JP', by: 'Google', use: 'The fonts.' }
+    },
+    link: {
+      project: 'Project page',
+      edrdg: 'EDRDG',
+      licence: 'EDRDG licence',
+      json: 'jmdict-simplified',
+      site: 'tanos.co.uk (archived)',
+      lists: 'yomitan-jlpt-vocab',
+      fonts: 'Google Fonts',
+      code: 'Source code'
     }
   },
 

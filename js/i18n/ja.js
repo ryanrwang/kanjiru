@@ -90,6 +90,8 @@ export default {
     guess: '回答',
     delete: '消す',
     palette: 'パーツ',
+    keysHelp: '矢印キーでパーツを移動。EnterかSpaceで選んだマスに入れ、Backspaceで消します。',
+    cellsHelp: '左右の矢印キーでマスを選びます。',
     debugCells: '答えの{cells}マス目',
     soon: 'このモードは近日公開です（単語の確認待ち）。',
     on: '音',
@@ -191,7 +193,9 @@ export default {
     copyManually: '上のテキストを選択して、コピーしてください。',
     nextDaily: '次のデイリーまで',
     practice: 'もう一度遊ぶ',
-    again: '次の問題'
+    again: '次の問題',
+    source: '意味と読みはJMdictとKANJIDIC（EDRDG）より。',
+    credits: 'クレジット'
   },
 
   share: {
@@ -290,6 +294,67 @@ export default {
       body: 'テスト用：ゲームのキーに番号付きの点で答えを書き順に表示し、ポイントを追加できます。',
       add: '{n}ptを追加',
       added: '{n}ptを追加しました。所持{total}pt。'
+    }
+  },
+
+  // ホーム画面に追加（js/install.js）：プレイページのヒントと設定の項目
+  install: {
+    title: 'ホーム画面に漢じるを追加',
+    why: {
+      ios: 'Safariは、7日間アクセスのないサイトの保存データを消去します。ホーム画面から開けば消えません。',
+      android: 'アプリのように全画面で開き、進行状況もそのまま使えます。',
+      other: 'スマホではアプリのように開けます。iPhoneでは、7日間アクセスがないとSafariが保存データを消すので、追加すると安心です。'
+    },
+    ios: {
+      name: 'iPhone・iPad',
+      share: 'Safariで共有ボタンをタップします（iOS 26では「⋯」の中）。',
+      add: '「ホーム画面に追加」をタップし、「追加」をタップします。',
+      move: 'ホーム画面の漢じるは、最初はデータがありません。進行状況を移すには、ここの設定で「コードを発行」し、アプリの設定でそのコードを入力します。'
+    },
+    android: {
+      name: 'Android',
+      menu: 'Chromeで「⋮」をタップし、「ホーム画面に追加」または「アプリをインストール」を選びます。',
+      keeps: '進行状況はそのまま引き継がれます。'
+    },
+    button: 'インストール',
+    later: '今はしない',
+    backup: '下のセーブテキストも、どこで遊ぶ場合でもバックアップになります。',
+    tipBackup: '設定のセーブテキストもバックアップになります。'
+  },
+
+  // このアプリについて（js/about.js、設定から #about）：EDRDGは専用の画面での表記を求めている
+  about: {
+    title: 'アプリ情報',
+    open: 'アプリ情報・クレジット',
+    lead: 'パーツからことばを当てる、毎日の漢字パズル。Wordleのように遊べます。',
+    name: '名前は「感じる」の「感」を、漢字の「漢」にしたものです。',
+    by: '制作：Ryan Wang',
+    privacy: {
+      title: '進行状況',
+      body: 'アカウントは不要です。進行状況はこのブラウザにだけ保存されます。引き継ぎコードを発行すると、使われるまで（最長15分）サーバーにコピーが残ります。'
+    },
+    credits: {
+      title: 'クレジット',
+      note: 'ありがとうございます',
+      edrdg: '漢じるは、JMdictとKANJIDICの辞書ファイルを使用しています。これらのファイルはElectronic Dictionary Research and Development Group（EDRDG）の所有物であり、同グループのライセンスに従って使用しています。',
+      data: '漢じるのことばとパーツのデータはこれらを改変したものなので、ソースコードとともにCC BY-SA 4.0で公開しています。'
+    },
+    source: {
+      jmdict: { name: 'JMdict', by: 'EDRDG。JSON化：Dmitry Shpika（jmdict-simplified）', use: 'ことばの表記・読み・英語の意味。' },
+      kanjidic: { name: 'KANJIDIC2', by: 'EDRDG', use: '各漢字の意味・読み・画数・使用頻度。' },
+      kanjivg: { name: 'KanjiVG', by: 'Ulrich Apelと協力者のみなさん', use: '各漢字のパーツと位置・書き順、一部のフォントにないパーツの字形。' },
+      waller: { name: 'JLPTリスト', by: 'Jonathan Waller（JLPT Resources）。JMdictとの対応：Stephen Kraus（yomitan-jlpt-vocab）', use: 'N5〜N3の漢字とことば。答えを学びやすい範囲にするため。' },
+      noto: { name: 'Noto Sans JP・Noto Serif JP', by: 'Google', use: 'フォント。' }
+    },
+    link: {
+      project: 'プロジェクトページ',
+      edrdg: 'EDRDG',
+      licence: 'EDRDGライセンス',
+      json: 'jmdict-simplified',
+      site: 'tanos.co.uk（アーカイブ）',
+      lists: 'yomitan-jlpt-vocab',
+      fonts: 'Google Fonts',
+      code: 'ソースコード'
     }
   },
 

@@ -5,10 +5,12 @@
  *
  * Shape (v2)
  *   v             schema version
- *   settings      { theme, tiles, effect, scheme, lang, level, debug }
+ *   settings      { theme, tiles, effect, scheme, lang, level, debug, installLater }
  *                 scheme and lang null = follow the device; level: the
  *                 difficulty for new games (js/config/levels.js); debug:
- *                 the answer on the game's keys, and points to add (Settings)
+ *                 the answer on the game's keys, and points to add (Settings);
+ *                 installLater: the date the home-screen tip was put off
+ *                 (js/install.js), or null
  *   ledger        { [id]: { why, at, pts?, hints?, game?, what? } }   every
  *                 change to points and hints held (js/ledger.js); points()
  *                 and held() sum it. v1 kept wallet { points } and
@@ -61,7 +63,7 @@ export function fresh() {
   ledger.add(start, 'start', { pts: ECONOMY.startingPoints });
   return {
     v: VERSION,
-    settings: { ...DEFAULT_LOOK, scheme: null, lang: null, level: DEFAULT_LEVEL, debug: false },
+    settings: { ...DEFAULT_LOOK, scheme: null, lang: null, level: DEFAULT_LEVEL, debug: false, installLater: null },
     ledger: start,
     unlocked: {},
     achievements: {},

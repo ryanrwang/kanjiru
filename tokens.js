@@ -398,13 +398,17 @@
 
   // Builds a light + dark skin from any palette with the standard stops.
   // A plain colour skin is then one line: `ai: accentTheme(c.ai)`.
+  // Contrast (WCAG): text 4.5:1 and focus rings and borders 3:1 in every
+  // skin, so the focus ring is the 700 stop on light (Sakura's and Kin's
+  // 500 fell under 3:1), sheets and toasts sit on the 900 stop on dark
+  // (on 800, muted text fell to 3.2:1), and strong borders are gray 400.
   function accentTheme(p) {
     return {
       light: {
         color: {
           bg:          { page: p[50] },
           text:        { accent: p[700] },
-          border:      { focus: p[500] },
+          border:      { focus: p[700] },
           interactive: { selected: p[100] },
           action:      { primary: { bg: p[700], hover: p[800] } },
           link:        { default: p[700], hover: p[800] }
@@ -412,9 +416,9 @@
       },
       dark: {
         color: {
-          bg:          { page: p[950], surface: p[900], raised: p[800], sunken: p[950] },
+          bg:          { page: p[950], surface: p[900], raised: p[900], sunken: p[950] },
           text:        { accent: p[300] },
-          border:      { focus: p[300], subtle: p[800] },
+          border:      { focus: p[300], subtle: p[800], strong: c.gray[400] },
           interactive: { selected: p[800], hover: p[800] },
           action:      { primary: { bg: p[700], hover: p[800] } },
           link:        { default: p[300], hover: p[100] },

@@ -37,21 +37,23 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `.htaccess` | Gzips the JSON data and has it rechecked every visit (the site's root `.htaccess` does pages, CSS and JS) |
 | `tokens.js` | Design tokens, skins' colours (`THEMES`) and `TOKENS.applyLook()` |
 | `styles.css` | All styles, using token variables only |
-| `app.js` | The header (a breadcrumb on the Points page), the play page (How to play, then the play card with the level switches), data loading, and the routes (`''` play page, `#points`, `#main` daily, `#main/practice` keep playing) |
+| `app.js` | The header (a breadcrumb on the Points and About pages), the play page (How to play, the play card with the level switches, then the install tip), data loading, and the routes (`''` play page, `#points`, `#about`, `#main` daily, `#main/practice` keep playing) |
 | `js/config/modes.js` | Game modes: the main daily (4–6 parts, 1–4 kanji); k1–k4 retired |
 | `js/config/levels.js` | Levels: Normal, plus the Hard and Guided switches on the play card (`settingsLevel()`); Easy retired |
 | `js/config/skins.js` | Skin catalogue: colours, tile reveal, win effect |
 | `js/config/powers.js` | Hints and powers: effect, cost, when usable, drop weight |
 | `js/config/economy.js` | Every points number: per part, per win, streaks, drops |
 | `js/config/achievements.js` | Achievements as stat + threshold |
-| `js/config/rules.js` | Rules that aren't points or modes: the palette's always-shown tiles and decoy weights, palette-only guesses, practice repeats, share squares |
+| `js/config/rules.js` | Rules that aren't points or modes: the palette's always-shown tiles and decoy weights, palette-only guesses, practice repeats, share squares, how long Not now hides the install tip |
 | `js/registry.js` | One import for all catalogues, plus a start-up check that their ids agree |
 | `js/store.js` | The save in localStorage: versioned (v2), with migrations, plus export, import and the merge rules (`MERGE`). Games on the go are in `playing`; points and hints held are the `ledger` (`points()`, `held()`, `enter()`) |
 | `js/ledger.js` | The ledger: every gain and spend of points or hints as an entry with its own id, the balance, the v1 migration and the merge that joins entries |
 | `js/points.js` | The Points page (`#points`, opened by the points in the header, which then reads 漢 › Points): the wallet, Looks with an example of every look, Hints & powers and Achievements, with Buy confirmed in a modal. `openPoints(root, ctx)` |
+| `js/about.js` | The About page (`#about`): who made it, where progress lives, and the credits EDRDG's licence asks for, with every source in `data/ATTRIBUTION.md`. `openAbout(root)` |
+| `js/install.js` | Home-screen install: `installed()`, `platform()`, the one-tap prompt where the browser offers it (`canPrompt()`, `promptInstall()`), the steps (`installSteps()`) and when the play page's tip is due (`tipDue()`) |
 | `js/shop.js` | The buying rules: `isUnlocked()`, `powerOffer()`, `skinOffer()`, `buyPower()`, `buySkin()` |
 | `js/toast.js` | Toasts over everything (`toast()`) and the "+N pts" tag on a balance that changed (`bump()`) |
-| `js/settings.js` | Settings panel (gear in the header): language, appearance, moving devices (send, receive and the save text, with Merge / Replace) and debug mode (answer dots on the keys, add points) |
+| `js/settings.js` | Settings panel (gear in the header): language, appearance, home-screen steps (until installed), moving devices (send, receive and the save text, with Merge / Replace), debug mode (answer dots on the keys, add points) and a link to About |
 | `js/transfer.js` | Calls `api/transfer.php` |
 | `js/dom.js` | `el()`, the small DOM helper, plus `switchRow()` (a toggle switch) and `segmented()` (one of a few) |
 | `js/engine/score.js` | Scoring: a guess against the answer, part by part (rules in `docs/DESIGN.md`, "Scoring") |
@@ -61,11 +63,11 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/engine/stats.js` | Stats and streaks from history, achievement checks, streak rewards |
 | `js/engine/data.js` | Loads `data/game/*.json` and `data/parts.json` into the engine's shape |
 | `js/engine/random.js` | Seeded randomness, so dailies and powers come out the same for everyone |
-| `js/play/screen.js` | The game screen: board (one row of cells, or Guided's split, places and frames), keyboard, hints, result. Parts a power showed start each row in their cells; in debug mode the keys show the answer as numbered dots. `openGame(root, ctx)` |
+| `js/play/screen.js` | The game screen: board (one row of cells, or Guided's split, places and frames), keyboard, hints, result, and keyboard play (arrows, Enter, Backspace). Parts a power showed start each row in their cells; in debug mode the keys show the answer as numbered dots. `openGame(root, ctx)` |
 | `js/play/session.js` | Games in the save: start or resume (`save.playing`), record to history, pay points, spend powers |
 | `js/play/rewards.js` | What a finished game pays as ledger entries: its points, streak rewards, a bonus hint, achievements (`payGame()`, `earnAchievements()`), and `describe()` for the toasts and result card |
 | `js/play/hints.js` | Clues, the power bar (floats above the keyboard) and the sheet that uses a power, or buys one when you hold none |
-| `js/play/result.js` | The result card: answer, points, rewards, balance (with a link to the Points page), streak, share (hidden while `rules.js` `share.show` is false), countdown |
+| `js/play/result.js` | The result card: answer, its source with a link to Credits, points, rewards, balance (with a link to the Points page), streak, share (hidden while `rules.js` `share.show` is false), countdown |
 | `js/play/share.js` | The share text and emoji grid (squares in `rules.js` `share`) |
 | `js/play/glyph.js` | Part glyphs as text, or KanjiVG strokes where fonts may lack them |
 | `tests/` | `node --test` tests for the engine, on fixtures (never the real word list) |
@@ -80,7 +82,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `tools/make_images.py` | Draws `icons/` from the favicon's design (needs Pillow and the Noto JP fonts) |
 | `data/game/kanji.json` | Every guessable kanji: strokes, JLPT, frequency, meanings, readings, parts |
 | `data/game/answers.json` | The daily schedule: the epoch and each mode's answer list (`LISTS` in `tools/compile_game.py`), Keep words only |
-| `data/ATTRIBUTION.md` | Exact source versions and licences; the app's About screen must credit them |
+| `data/ATTRIBUTION.md` | Exact source versions and licences; the About page (`js/about.js`) credits them, so keep the two in step |
 | `review/` | Dev-only word review page: Keep / Maybe / Cut per word, flag a kanji's parts. Saves to `data/review.json` through `review.php`, which only runs under `php -S` |
 | `data/review.json` | The user's review decisions. Never overwrite it from a script |
 
@@ -102,6 +104,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 - **The epoch is fixed after launch.** Dailies from another epoch become keep-playing games (`settleDailies()` in `js/store.js`), so moving it never breaks a save, but it does change every player's puzzle numbers.
 - **A new module needs a preload.** Add its `<link rel="modulepreload">` to `index.html`'s `<head>`; `node --test` (`tests/head.test.js`) names any that are missing or extra.
 - **Service worker:** `sw.js` answers from the network first, so a deploy reaches players at once; never let it cache `api/`. The app's browser pane can't run service workers, so check it in Chrome on `localhost` (the LAN link is plain http, so phones run without it). To clear one: DevTools → Application → Service workers → Unregister.
+- **Accessibility:** the game plays by keyboard and every look keeps WCAG AA contrast (docs/DESIGN.md, "Accessibility"). Check a new control or colour in every skin and both schemes.
 - **Check the console.** `validate()` logs `[kanjiru config]` warnings at start-up when catalogues disagree. Fix them before committing.
 - **Answers are N3 or easier.** Guesses may use any jōyō kanji built from the puzzle's palette.
 - **Game data is compiled.** After a rebuild or a review session, run `python -I -X utf8 tools/compile_game.py` and commit `data/game/`. It never invents answers: with no Keep words the answer lists are empty.

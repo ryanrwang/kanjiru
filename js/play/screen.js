@@ -34,6 +34,12 @@
  *
  * The board keeps the rows already drawn, so a new row's reveal plays once
  * and redrawing the keyboard never replays it.
+ *
+ * Keyboard play: the cells and the keys are each one tab stop. Arrows move
+ * between keys (by row too) and between cells, which selects the cell;
+ * Enter or Space puts a part in, Backspace or Delete takes one out, and
+ * Enter away from a button guesses. A redraw puts the focus back on the
+ * same key or cell, and the result takes it when the game ends.
  */
 import { MODES, POWER, LEVEL } from '../registry.js';
 import { t } from '../i18n.js';
@@ -72,6 +78,7 @@ export function openGame(root, ctx) {
   let frameTimer = null;
   let frameShown = null;   // keys the frame last showed, so new ones animate
   let doneRows = 0;
+  let byKeyboard = false;  // the last move came from the keyboard
 
   // Parts that stay put between redraws.
   let guessButton;
@@ -102,6 +109,7 @@ export function openGame(root, ctx) {
     return {
       cells: game ? emptyCells() : [],   // a tile id or null per cell
       active: 0,       // the selected cell, which a tapped part fills
+      keyFocus: null,  // the key that takes Tab into the keyboard
       frameFrom: null, // the state the frames show while a row reveals
       // The power bar is open: before the first guess, so hints are easy to find.
       hintsOpen: !!game && !game.done && game.state.status === 'playing' && game.state.guesses.length === 0,
@@ -193,7 +201,7 @@ export function openGame(root, ctx) {
   function renderHead() {
     const s = state();
     const back = el('button', {
-      class: 'icon-btn', type: 'button', title: t('game.home'), 'aria-label': t('game.home'), onclick: ctx.onHome
+      class: 'icon-btn', type: 'button', 'data-id': 'back', title: t('game.home'), 'aria-label': t('game.home'), onclick: ctx.onHome
     });
     back.innerHTML = BACK;
     head.replaceChildren(el('header', { class: 'game-head' },
@@ -213,10 +221,10 @@ export function openGame(root, ctx) {
     const held = Object.values(store.held()).reduce((a, n) => a + n, 0);
     const label = held ? t('game.powers.titleHeld', { n: held }) : t('game.powers.title');
     const node = el('button', {
-      class: `icon-btn hints-btn${ui.hintsOpen ? ' is-open' : ''}`, type: 'button',
+      class: `icon-btn hints-btn${ui.hintsOpen ? ' is-open' : ''}`, type: 'button', 'data-id': 'hints',
       title: label, 'aria-label': label,
       'aria-expanded': String(ui.hintsOpen), 'aria-controls': 'game-powers',
-      onclick: () => { ui.hintsOpen = !ui.hintsOpen; renderHead(); renderHints(); }
+      onclick: () => keepFocus(() => { ui.hintsOpen = !ui.hintsOpen; renderHead(); renderHints(); })
     });
     node.innerHTML = BULB;
     if (held) node.append(el('span', { class: 'hints-count', 'aria-hidden': 'true' }, String(held)));
@@ -272,13 +280,17 @@ export function openGame(root, ctx) {
       const label = known ? 'game.cellShown' : id ? 'game.cellFilled' : 'game.cellEmpty';
       return el('button', {
         class: `tile is-cell is-pending ${known ? 'is-hit' : id ? 'is-filled' : 'is-empty'}${i === ui.active ? ' is-active' : ''}`,
-        type: 'button', lang: 'ja',
+        type: 'button', lang: 'ja', 'data-id': `cell-${i}`, 'data-index': i,
+        tabindex: i === ui.active ? '0' : '-1',
         'aria-pressed': String(i === ui.active),
         'aria-label': t(label, { cell: cellName(i), part: id }),
         onclick: () => selectCell(i)
       }, id ? glyph(known ? shown.get(i).form : id) : null);
     }));
-    return el('div', { class: 'board-row is-next', role: 'group', 'aria-label': t('game.cells', { n: filled, cells: ui.cells.length }) },
+    return el('div', {
+      class: 'board-row is-next', role: 'group', 'aria-describedby': 'game-cells-help',
+      'aria-label': t('game.cells', { n: filled, cells: ui.cells.length })
+    },
       el('span', { class: 'row-tiles' }, laidOut(perSlot)));
   }
 
@@ -664,9 +676,9 @@ export function openGame(root, ctx) {
   }
 
   function makeKeys() {
-    guessButton = el('button', { class: 'btn btn-primary', type: 'button', onclick: submit }, t('game.guess'));
+    guessButton = el('button', { class: 'btn btn-primary', type: 'button', 'data-id': 'guess', onclick: submit }, t('game.guess'));
     deleteButton = el('button', {
-      class: 'btn btn-secondary key-delete', type: 'button', title: t('game.delete'), 'aria-label': t('game.delete'),
+      class: 'btn btn-secondary key-delete', type: 'button', 'data-id': 'delete', title: t('game.delete'), 'aria-label': t('game.delete'),
       onclick: deletePart
     });
     deleteButton.innerHTML = DELETE;
@@ -675,6 +687,7 @@ export function openGame(root, ctx) {
   // A tapped part fills the selected cell, then the next empty cell is
   // selected (the selection stays put when all are full).
   function addPart(id) {
+    const filled = ui.active;
     ui.cells[ui.active] = id;
     const n = ui.cells.length;
     for (let k = 1; k < n; k += 1) {
@@ -682,14 +695,13 @@ export function openGame(root, ctx) {
       if (!ui.cells[i]) { ui.active = i; break; }
     }
     say(null, '');
-    renderBoard();
-    renderChoices();
+    live.textContent = t('game.cellFilled', { cell: cellName(filled), part: id });
+    keepFocus(() => { renderBoard(); renderChoices(); });
   }
 
   function selectCell(i) {
     ui.active = i;
-    renderBoard();
-    renderChoices();
+    keepFocus(() => { renderBoard(); renderChoices(); });
   }
 
   // Delete empties the selected cell, or when it's already empty, the one
@@ -700,8 +712,101 @@ export function openGame(root, ctx) {
     ui.cells[i] = null;
     ui.active = i;
     say(null, '');
-    renderBoard();
-    renderChoices();
+    live.textContent = t('game.cellEmpty', { cell: cellName(i) });
+    keepFocus(() => { renderBoard(); renderChoices(); });
+  }
+
+  // Redraws make new cells and keys: the focus goes to the new one in the
+  // same place (on the cells, the selected one), so keyboard play keeps
+  // its spot. Delete and Guess are the same buttons, moved, which loses
+  // the focus too.
+  function keepFocus(draw) {
+    const was = document.activeElement;
+    const id = was && root.contains(was) ? was.dataset.id : null;
+    draw();
+    if (!id || (document.activeElement === was && was.isConnected)) return;
+    const target = id.startsWith('cell-') ? `cell-${ui.active}` : id;
+    const now = root.querySelector(`[data-id="${CSS.escape(target)}"]`);
+    if (now) now.focus({ preventScroll: true });
+  }
+
+  // ── Keyboard play ──────────────────────────────────────────────────
+
+  // An arrow from a key: the one before or after, or the nearest in the
+  // row above or below. Up from the top row goes to the selected cell.
+  function moveKey(from, dir) {
+    const keys = [...from.closest('.palette').querySelectorAll('button:not(:disabled)')];
+    const i = keys.indexOf(from);
+    let to = null;
+    if (dir === 'ArrowLeft') to = keys[i - 1];
+    else if (dir === 'ArrowRight') to = keys[i + 1];
+    else {
+      const box = from.getBoundingClientRect();
+      const mid = (r) => r.left + r.width / 2;
+      const away = (k) => Math.abs(mid(k.getBoundingClientRect()) - mid(box));
+      const down = dir === 'ArrowDown';
+      const row = keys.filter((k) => {
+        const r = k.getBoundingClientRect();
+        return down ? r.top >= box.bottom - 1 : r.bottom <= box.top + 1;
+      });
+      if (row.length) {
+        const tops = row.map((k) => k.getBoundingClientRect().top);
+        const edge = down ? Math.min(...tops) : Math.max(...tops);
+        to = row.filter((k) => Math.abs(k.getBoundingClientRect().top - edge) < 1)
+          .sort((a, b) => away(a) - away(b))[0];
+      } else if (!down) to = boardNext.querySelector(`[data-index="${ui.active}"]`);
+    }
+    if (to) to.focus();
+  }
+
+  // An arrow on the cells (or with nothing focused): left and right pick the
+  // cell; down goes to the keys.
+  function moveCell(dir, focused) {
+    if (dir === 'ArrowDown') {
+      const key = choices.querySelector('.palette button[tabindex="0"]');
+      if (key) key.focus();
+      return;
+    }
+    if (dir === 'ArrowUp') return;
+    const i = ui.active + (dir === 'ArrowLeft' ? -1 : 1);
+    if (i < 0 || i >= ui.cells.length) return;
+    selectCell(i);
+    if (focused) {
+      const cell = boardNext.querySelector(`[data-index="${i}"]`);
+      if (cell) cell.focus();
+    }
+  }
+
+  function onKey(event) {
+    byKeyboard = true;
+    if (!playing() || !partsMode() || event.defaultPrevented) return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
+    if (document.querySelector('dialog[open]')) return;   // a sheet has the keys
+    const target = event.target instanceof Element ? event.target : null;
+    if (target && target.closest('input, textarea, select, [contenteditable]')) return;
+    const onBody = !target || target === document.body;
+    const key = target && target.closest('.palette button');
+    const cell = target && target.closest('[data-index]');
+    switch (event.key) {
+      case 'Backspace':
+      case 'Delete':
+        event.preventDefault();
+        deletePart();
+        return;
+      case 'Enter':
+        if (!onBody && target.closest('button, a')) return;   // the button's own
+        event.preventDefault();
+        submit();
+        return;
+      case 'ArrowLeft':
+      case 'ArrowRight':
+      case 'ArrowUp':
+      case 'ArrowDown':
+        if (key) { event.preventDefault(); moveKey(key, event.key); }
+        else if (cell || onBody) { event.preventDefault(); moveCell(event.key, !!cell); }
+        return;
+      default:
+    }
   }
 
   // The palette's keys, in palette order (fewest strokes first).
@@ -715,16 +820,22 @@ export function openGame(root, ctx) {
   //   answer   debug mode: id → the cells (from 1) it fills in the answer
   function palette({ ids, marks, pressed, usable = null, onTap, label, after = [], answer = null }) {
     const tileOf = new Map(data.tiles.map((tile) => [tile.id, tile]));
+    const isOn = (id) => !usable || pressed(id) || usable.has(id);
+    // One key takes Tab into the keyboard: the last one focused, if it can
+    // still be tapped, else the first that can.
+    const onIds = ids.filter(isOn);
+    const roving = onIds.includes(ui.keyFocus) ? ui.keyFocus : onIds[0];
     const key = (id) => {
       const tile = tileOf.get(id);
-      const on = !usable || pressed(id) || usable.has(id);
+      const on = isOn(id);
       const mark = marks.get(id);
       // The most used other form (氵 for 水) shows small in the corner.
       const variants = tile.forms.filter((f) => f.glyph !== id).sort((a, b) => b.uses - a.uses).slice(0, 1);
       const cells = answer && answer.get(id);
       return el('button', {
         class: `tile is-cell palette-tile${mark ? ` is-${mark}` : ''}${on ? '' : ' is-out'}`,
-        type: 'button', lang: 'ja',
+        type: 'button', lang: 'ja', 'data-id': `key-${id}`, 'data-key': id,
+        tabindex: id === roving ? '0' : '-1',
         'aria-pressed': String(pressed(id)),
         disabled: !on,
         'aria-label': [mark ? `${id} ${markText(mark)}` : id, cells ? t('game.debugCells', { cells: cells.join(t('game.listSep')) }) : null].filter(Boolean).join(t('game.listSep')),
@@ -735,7 +846,18 @@ export function openGame(root, ctx) {
         cells ? el('span', { class: 'key-dots', 'aria-hidden': 'true' },
           cells.map((n) => el('span', { class: 'key-dot' }, String(n)))) : null);
     };
-    return el('div', { class: 'palette', role: 'group', 'aria-label': label }, ids.map(key), after);
+    return el('div', {
+      class: 'palette', role: 'group', 'aria-label': label, 'aria-describedby': 'game-keys-help',
+      // The key focused last takes Tab next time.
+      onfocusin: (event) => {
+        const id = event.target.dataset.key;
+        if (!id) return;
+        ui.keyFocus = id;
+        event.currentTarget.querySelectorAll('[data-key]').forEach((node) => {
+          node.setAttribute('tabindex', node === event.target ? '0' : '-1');
+        });
+      }
+    }, ids.map(key), after);
   }
 
   // The keyboard: every key of the puzzle's palette, always in the same
@@ -817,11 +939,13 @@ export function openGame(root, ctx) {
     if (playing()) session.progress(mode, game);
     else finish();
 
-    renderHead();
-    renderBoard();
-    ui.newRow = -1;
-    renderHints();
-    renderPicker();
+    keepFocus(() => {
+      renderHead();
+      renderBoard();
+      ui.newRow = -1;
+      renderHints();
+      renderPicker();
+    });
     const shown = boardDone.lastElementChild;
     if (shown) shown.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
     // The result waits for the last row's reveal.
@@ -873,6 +997,11 @@ export function openGame(root, ctx) {
       onHome: ctx.onHome
     });
     result.replaceChildren(card.node);
+    // Played from the keyboard: the result takes the focus the keys had.
+    if (fresh && !ui.toasted && byKeyboard && (document.activeElement === document.body || !document.activeElement)) {
+      const title = card.node.querySelector('#result-title');
+      if (title) { title.setAttribute('tabindex', '-1'); title.focus(); }
+    }
     if (fresh && !ui.toasted) {
       ui.toasted = true;
       rewards.forEach((entry) => toast(describe(entry)));
@@ -913,7 +1042,9 @@ export function openGame(root, ctx) {
     renderResultCard();
     // The hints live inside the keyboard (renderPicker).
     root.replaceChildren(el('section', { class: 'game', 'aria-labelledby': 'game-title' },
-      head, board, picker, result, live));
+      head, board, picker, result, live,
+      el('p', { class: 'visually-hidden', id: 'game-cells-help' }, t('game.cellsHelp')),
+      el('p', { class: 'visually-hidden', id: 'game-keys-help' }, t('game.keysHelp'))));
     renderBoard();   // again, sized now that the board has a width (fitBoard)
   }
 
@@ -930,12 +1061,17 @@ export function openGame(root, ctx) {
   let resizeFrame = 0;
   const onResize = () => { cancelAnimationFrame(resizeFrame); resizeFrame = requestAnimationFrame(renderBoard); };
   window.addEventListener('resize', onResize);
+  const onPointer = () => { byKeyboard = false; };
+  document.addEventListener('keydown', onKey);
+  document.addEventListener('pointerdown', onPointer);
   return {
     refresh() { ui.message = null; build(); },
     destroy() {
       clearInterval(timer); clearTimeout(resultTimer); clearTimeout(frameTimer); closePowerSheet();
       cancelAnimationFrame(resizeFrame);
       window.removeEventListener('resize', onResize);
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer);
     }
   };
 }
