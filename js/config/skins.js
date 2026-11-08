@@ -15,16 +15,20 @@
  *   id      stable key used in saves (never rename)
  *   tier    'basic' or 'fancy' (fancy ones get the textures and animations)
  *   unlock  { type: 'free' }
- *           { type: 'points', cost: 400 }            — buy with points
+ *           { type: 'points', cost: 400 }            — buy in the shop (js/shop.js)
  *           { type: 'achievement', id: 'streak-7' }  — see achievements.js
+ *   soon    true: its look isn't built yet (step 6), so the shop doesn't
+ *           sell it. An achievement still unlocks it
+ *
+ * A slot's icon stands for its skins in the shop.
  */
 
 const FREE = { type: 'free' };
 
 export const SLOTS = [
-  { id: 'theme' },
-  { id: 'tiles' },
-  { id: 'effect' }
+  { id: 'theme',  icon: '🎨' },
+  { id: 'tiles',  icon: '🔲' },
+  { id: 'effect', icon: '✨' }
 ];
 
 export const SKINS = {
@@ -39,15 +43,15 @@ export const SKINS = {
 
   tiles: [
     { id: 'flip',  tier: 'basic', unlock: FREE },
-    { id: 'ink',   tier: 'fancy', unlock: { type: 'points', cost: 400 } },
-    { id: 'stamp', tier: 'fancy', unlock: { type: 'achievement', id: 'streak-7' } }
+    { id: 'ink',   tier: 'fancy', unlock: { type: 'points', cost: 400 }, soon: true },
+    { id: 'stamp', tier: 'fancy', unlock: { type: 'achievement', id: 'streak-7' }, soon: true }
   ],
 
   effect: [
     { id: 'none',   tier: 'basic', unlock: FREE },
     { id: 'draw',   tier: 'basic', unlock: FREE },
-    { id: 'petals', tier: 'fancy', unlock: { type: 'points', cost: 600 } },
-    { id: 'hanabi', tier: 'fancy', unlock: { type: 'achievement', id: 'sharp-eye' } }
+    { id: 'petals', tier: 'fancy', unlock: { type: 'points', cost: 600 }, soon: true },
+    { id: 'hanabi', tier: 'fancy', unlock: { type: 'achievement', id: 'sharp-eye' }, soon: true }
   ]
 };
 

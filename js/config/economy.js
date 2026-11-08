@@ -7,6 +7,12 @@ export const ECONOMY = {
   // 小判, the old gold coin. Its name and "{n} pts" wording are in js/i18n/*.js.
   currency: { icon: '🪙' },
 
+  // Shown on the toasts and the result card for each kind of reward.
+  rewardIcons: { streak: '🔥', drop: '🎁', achievement: '🏅' },
+
+  // A new save's points. Each device starts with these, and a merge adds
+  // both devices' points (js/ledger.js), so a device that never played adds
+  // nothing.
   startingPoints: 150,
 
   // Earned during a game, for each part of the answer a guess marks for the

@@ -1,13 +1,16 @@
 /*
  * The result card at the end of a game: the answer with its meanings,
- * readings and parts, the points it paid, the streak, the share text, a
- * countdown to the next daily, and what to play next.
+ * readings and parts, the points it paid and the points you have now, its
+ * rewards (streak, bonus hint, achievements: js/play/rewards.js describe()),
+ * the streak, the share text, a countdown to the next daily, and what to
+ * play next. Just finished (fresh), the points rise in.
  *
  *   const card = renderResult({ ... });   // card.node, card.tick()
  */
-import { RULES, LEVEL } from '../registry.js';
+import { RULES, LEVEL, ECONOMY } from '../registry.js';
 import { t } from '../i18n.js';
 import { el } from '../dom.js';
+import { bump } from '../toast.js';
 import { msToNextDaily } from '../engine/daily.js';
 import { shareText } from './share.js';
 import { readingNodes, partTile } from './hints.js';
@@ -50,7 +53,7 @@ async function shareOut(text) {
   return (await copy(text)) ? 'copied' : 'failed';
 }
 
-export function renderResult({ engine, data, mode, game, points, streak, glyph, onPractice, onHome }) {
+export function renderResult({ engine, data, mode, game, points, streak, glyph, rewards = [], balance = null, fresh = false, onPractice, onHome }) {
   const { state } = game;
   const won = state.status === 'won';
   const info = engine.answerInfo(state.answer);
@@ -94,11 +97,21 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
     el('dl', { class: 'result-stats' },
       game.exact ? el('div', { class: 'result-stat' },
         el('dt', {}, t('result.points')),
-        el('dd', {}, t('result.pointsEarned', { n: points.total }),
+        el('dd', {}, el('span', { class: `result-points${fresh ? ' is-new' : ''}` }, t('result.pointsEarned', { n: points.total })),
           el('small', {}, t('result.pointsWhy', { parts: points.parts, solve: points.solve, mult: points.multiplier })))) : null,
       el('div', { class: 'result-stat' },
         el('dt', {}, t('result.streak')),
         el('dd', {}, t('result.streakDays', { n: streak })))),
+
+    rewards.length ? el('ul', { class: 'result-rewards', 'aria-label': t('result.rewards') },
+      rewards.map((r) => el('li', { class: 'result-reward' },
+        el('span', { class: 'result-reward-icon', 'aria-hidden': 'true' }, r.icon),
+        el('span', { class: 'result-reward-text' },
+          el('span', { class: 'result-reward-title' }, r.title),
+          r.body ? el('span', { class: 'result-reward-body' }, r.body) : null)))) : null,
+
+    balance !== null ? el('p', { class: 'result-balance' },
+      el('span', { class: 'result-balance-amount' }, t('result.balance', { icon: ECONOMY.currency.icon, n: balance }))) : null,
 
     el('div', { class: 'share' },
       preview,
@@ -112,6 +125,11 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
         state.daily ? t('result.practice') : t('result.again')),
       el('button', { class: 'btn btn-ghost', type: 'button', onclick: onHome }, t('game.home')))
   );
+
+  // The points just paid rise from the total, once the card is on screen.
+  if (fresh && game.exact && points.total) {
+    requestAnimationFrame(() => bump(node.querySelector('.result-balance-amount'), points.total));
+  }
 
   const tick = () => {
     const ms = msToNextDaily();

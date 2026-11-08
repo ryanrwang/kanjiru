@@ -9,10 +9,11 @@
  * The rules (docs/DESIGN.md, "Dailies and stats"):
  *   - One streak across modes: days in a row with at least one daily won.
  *     A day not played yet doesn't break it.
- *   - Wins, fastest win, clean wins and kanji collected count practice too.
+ *   - Wins, fastest win, clean wins, Hard wins and kanji collected count
+ *     practice too.
  *   - Streaks and full-set days count dailies only.
  */
-import { ACHIEVEMENTS, ECONOMY } from '../registry.js';
+import { ACHIEVEMENTS, ECONOMY, LEVELS } from '../registry.js';
 import { dayIndex, isDailyKey } from './daily.js';
 
 const guessCount = (g) => (Array.isArray(g.guesses) ? g.guesses.length : Number(g.guesses) || 0);
@@ -45,7 +46,8 @@ export function runs(dates, today) {
 
 // options.today: 'YYYY-MM-DD'. options.dailyModes: the mode ids that have a
 // daily now (with answers); a full-set day needs a won daily in each.
-export function stats(history, { today, dailyModes = [] } = {}) {
+// options.levels: the level catalogue, for Hard wins (a level's `hard`).
+export function stats(history, { today, dailyModes = [], levels = LEVELS } = {}) {
   const all = games(history);
   const wins = all.filter((g) => g.won);
   const dailyWins = wins.filter((g) => g.daily);
@@ -72,6 +74,7 @@ export function stats(history, { today, dailyModes = [] } = {}) {
     bestStreak: streak.best,
     fastestWin: wins.length ? Math.min(...wins.map(guessCount)) : null,
     cleanWins: wins.filter((g) => powerCount(g) === 0).length,
+    hardWins: wins.filter((g) => levels.some((l) => l.id === g.level && l.hard)).length,
     collected: collected.size,
     fullSetDays
   };
@@ -86,9 +89,17 @@ export function passes(test, value) {
 }
 
 // Achievements now earned that the save doesn't have yet (earned: the
-// save's { achievementId: date }).
+// save's { achievementId: date }). Retired ones are never earned again.
 export function newAchievements(statValues, earned = {}, achievements = ACHIEVEMENTS) {
-  return achievements.filter((a) => !earned[a.id] && passes(a.test, statValues[a.test.stat]));
+  return achievements.filter((a) => !a.retired && !earned[a.id] && passes(a.test, statValues[a.test.stat]));
+}
+
+// How far along an achievement is: { value, goal } for an atLeast test
+// (value capped at the goal), or { value: best so far, goal } for atMost.
+export function progress(test, statValues) {
+  const value = statValues[test.stat];
+  if ('atLeast' in test) return { value: Math.min(Number(value) || 0, test.atLeast), goal: test.atLeast };
+  return { value: value === undefined ? null : value, goal: test.atMost };
 }
 
 // Streak rewards for the lengths a streak passed going from `before` to

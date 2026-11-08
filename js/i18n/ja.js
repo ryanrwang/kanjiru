@@ -8,10 +8,11 @@ export default {
   },
 
   header: {
-    points: '所持ポイント',
     schemeDark: 'ダークモードにする',
     schemeLight: 'ライトモードにする',
-    schemeFixed: 'このきせかえは配色が1つだけです'
+    schemeFixed: 'このきせかえは配色が1つだけです',
+    shop: 'ショップ',
+    wallet: '所持ポイント {amount}。ショップを開く'
   },
 
   currency: {
@@ -108,11 +109,14 @@ export default {
     },
     powers: {
       title: 'ヒント',
+      titleHeld: 'ヒント（所持 {n}）',
+      buy: '1つ買う・{cost}pt',
+      bought: '買いました。所持数 {n}。',
       use: '使う',
       cancel: 'キャンセル',
       used: '{name}を使いました。',
       why: {
-        none: 'まだ持っていません。クリアするとボーナスでもらえることがあります（ショップは準備中）。',
+        none: '持っていません。ここで買うか、クリアするとボーナスでもらえることがあります。',
         before: '最初の回答の前だけ使えます。',
         during: '最初の回答のあとだけ使えます。',
         useless: '新しくわかることがありません。',
@@ -167,6 +171,8 @@ export default {
     points: 'ポイント',
     pointsEarned: '+{n}pt',
     pointsWhy: 'パーツ {parts} + クリア {solve}、×{mult}',
+    rewards: 'ごほうび',
+    balance: '所持 {icon} {n}pt',
     streak: 'デイリー連続記録',
     streakDays: '{n}日連続',
     share: 'シェア',
@@ -187,7 +193,7 @@ export default {
     note: '色・タイル・演出を組み合わせよう',
     lockPoints: '🔒 {cost}pt',
     lockAchievement: '🔒 {name}',
-    buyHint: '{cost}ポイントで購入（ショップは準備中）',
+    buyHint: 'ショップで{cost}ptで購入',
     achievementHint: '解除条件：{desc}'
   },
 
@@ -201,6 +207,56 @@ export default {
     whenDuring: 'ゲーム中に使える',
     minLength: '{n}字以上の答え',
     have: '所持数 {n}'
+  },
+
+  shop: {
+    open: 'ショップ',
+    title: 'ショップ',
+    close: '閉じる',
+    intro: 'ポイントは遊ぶと貯まります。見つけたパーツ、クリア、連続記録、実績で。ここで使えます。',
+    hints: 'ヒント',
+    looks: '見た目',
+    buy: '買う',
+    confirm: '{name}に{cost}ptを使いますか？　所持{have}pt、残りは{left}ptになります。',
+    confirmYes: '{cost}ptで買う',
+    cancel: 'キャンセル',
+    have: '所持 {n}／{hold}',
+    full: '持てるのは{hold}つまでです',
+    short: 'あと{n}pt必要',
+    soon: '近日公開',
+    owned: '入手済み',
+    ownedSoon: '入手済み・近日公開',
+    inUse: '使用中',
+    use: '使う',
+    using: '{name}にしました。',
+    byAchievement: '実績',
+    earn: '「{name}」：{desc}',
+    bought: '{name}を買いました（所持 {n}）。残り{left}pt。',
+    boughtSkin: '{name}を手に入れました。残り{left}pt。'
+  },
+
+  reward: {
+    points: '+{n}pt',
+    spent: '−{n}pt',
+    hint: '{icon} {name}',
+    hints: '{icon} {name} ×{n}',
+    sep: '・',
+    streak: '{n}日連続！',
+    drop: 'ボーナスヒント',
+    achievement: '実績：{name}',
+    unlocks: '{name}を解放'
+  },
+
+  achievements: {
+    title: '実績',
+    note: '{total}個中{n}個獲得',
+    earned: '{date}に獲得',
+    progress: '{n}／{goal}',
+    best: 'これまでの最高：{n}'
+  },
+
+  toast: {
+    dismiss: '閉じる'
   },
 
   settings: {
@@ -245,7 +301,7 @@ export default {
     ask: {
       title: 'この端末にも進行状況があります。どうしますか？',
       merge: '両方をまとめる',
-      mergeDesc: '両方の端末のプレイ記録を残し、連続記録を数え直します。ポイントとアイテムは多いほうになります。',
+      mergeDesc: '両方の端末のプレイ記録を残し、連続記録を数え直します。ポイントとアイテムは両方の分を合わせます。',
       replace: 'この端末を上書き',
       replaceDesc: 'この端末の進行状況は消えます。',
       cancel: 'キャンセル'
@@ -370,6 +426,7 @@ export default {
     'streak-30': { name: '一か月', desc: 'デイリーを30日連続で解く。' },
     'sharp-eye': { name: '慧眼', desc: '2回以内で解く。' },
     unaided: { name: '独力', desc: 'ヒントなしでクリアする。' },
+    'hard-win': { name: '難関突破', desc: 'ハードをオンにしてパズルを解く。' },
     'collector-50': { name: 'コレクター', desc: '50種類の漢字を解く。' },
     'full-set': { name: '全制覇', desc: '1日ですべての長さのデイリーを解く。' }
   }

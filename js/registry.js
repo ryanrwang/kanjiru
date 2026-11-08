@@ -45,7 +45,7 @@ export const KNOWN_EFFECTS = [
   'revealParts', 'eliminateParts', 'addGuesses', 'revealKanji'
 ];
 export const KNOWN_STATS = [
-  'wins', 'bestStreak', 'fastestWin', 'cleanWins', 'collected', 'fullSetDays'
+  'wins', 'bestStreak', 'fastestWin', 'cleanWins', 'collected', 'hardWins', 'fullSetDays'
 ];
 // Marks a part can get that pay points (js/engine/score.js).
 export const MARK_POINTS = ['hit', 'near', 'other'];
@@ -124,8 +124,11 @@ export function validate() {
     const u = item.unlock || {};
     if (!UNLOCK_TYPES.includes(u.type)) say(`${slot} skin "${item.id}" has an unknown unlock type`);
     if (u.type === 'points' && !(u.cost > 0)) say(`${slot} skin "${item.id}" needs a cost`);
+    if ('soon' in item && typeof item.soon !== 'boolean') say(`${slot} skin "${item.id}" needs soon: true or false`);
     if (u.type === 'achievement' && !ACHIEVEMENT[u.id]) {
       say(`${slot} skin "${item.id}" unlocks with unknown achievement "${u.id}"`);
+    } else if (u.type === 'achievement' && ACHIEVEMENT[u.id].retired) {
+      say(`${slot} skin "${item.id}" unlocks with retired achievement "${u.id}", which can't be earned`);
     }
   }));
   Object.entries(DEFAULT_LOOK).forEach(([slot, id]) => {
@@ -162,6 +165,12 @@ export function validate() {
     if (a.reward && a.reward.power && !POWER[a.reward.power]) {
       say(`achievement "${a.id}" rewards unknown power "${a.reward.power}"`);
     }
+    if (a.reward && a.reward.points !== undefined && !(a.reward.points > 0)) say(`achievement "${a.id}" needs reward points above 0`);
+    if ('retired' in a && typeof a.retired !== 'boolean') say(`achievement "${a.id}" needs retired: true or false`);
+  });
+  if (!(ECONOMY.startingPoints >= 0)) say('economy.startingPoints needs a number');
+  ['chanceOnWin', 'chanceOnPerfect', 'perfectShare'].forEach((k) => {
+    if (!(ECONOMY.drops[k] >= 0 && ECONOMY.drops[k] <= 1)) say(`economy.drops.${k} needs a number from 0 to 1`);
   });
   ECONOMY.streakRewards.forEach((r) => {
     if (r.power && !POWER[r.power]) say(`streak reward at ${r.days} days gives unknown power "${r.power}"`);
