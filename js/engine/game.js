@@ -90,7 +90,7 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
     if (!level) throw new Error(`unknown level "${start.level}"`);
     const size = Math.round(mode.palette * (level.paletteScale || 1));
     const chars = [...String(start.answer || '')];
-    if (chars.length !== mode.length) throw new Error(`answer "${start.answer}" isn't ${mode.length} kanji`);
+    if (!chars.length || (mode.length && chars.length !== mode.length)) throw new Error(`answer "${start.answer}" isn't ${mode.length} kanji`);
     chars.forEach((ch) => { if (!data.kanji[ch]) throw new Error(`answer kanji "${ch}" has no data`); });
     const seed = String(start.seed);
     return {
@@ -127,7 +127,7 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
     const mode = modeOf(state);
     if (typeof word !== 'string') return 'level';
     const chars = [...word];
-    if (chars.length !== mode.length) return 'length';
+    if (chars.length !== [...state.answer].length) return 'length';
     if (!chars.every((ch) => data.kanji[ch])) return 'not-kanji';
     if (rules.guessFromPalette && !chars.every((ch) => buildable(data, ch, state.palette))) return 'not-in-palette';
     if (state.guesses.some((g) => g.word === word)) return 'repeat';
@@ -367,7 +367,7 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
     const power = POWER[powerId];
     if (!power || !EFFECTS[power.effect]) return 'unknown';
     if (state.status !== 'playing') return 'over';
-    if (modeOf(state).length < (power.minLength || 1)) return 'mode';
+    if ([...state.answer].length < (power.minLength || 1)) return 'mode';
     const phase = state.guesses.length === 0 ? 'before' : 'during';
     if (!power.when.includes(phase)) return 'when';
     if (!EFFECTS[power.effect].useful(state, power.params || {})) return 'useless';

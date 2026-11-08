@@ -48,5 +48,5 @@ test('a parts game shares its squares and its level', () => {
   const lines = shareText({ state: game, mode: MODE.k1, t, share: RULES.share }).split('\n');
   assert.equal(lines[0], 'share.daily|一|7|level.normal.name|2/6|');
   const { hit, near, miss } = RULES.share.marks;
-  assert.deepEqual(lines.slice(1), [miss + near, hit + hit]);
+  assert.deepEqual(lines.slice(1), [miss + hit, hit + hit], 'normal: 日 is green anywhere in its kanji');
 });

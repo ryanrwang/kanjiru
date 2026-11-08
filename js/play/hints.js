@@ -51,7 +51,7 @@ function clue(effect, label, body, tag) {
 // The clues known so far, or null when there are none.
 export function renderClues({ engine, state, mode, glyph }) {
   const c = engine.clues(state);
-  const many = mode.length > 1;
+  const many = [...state.answer].length > 1;
   const perSlot = (values, show) => values.map((v, i) => (many ? `${i + 1}: ${show(v)}` : show(v)));
   const rows = [];
 
@@ -82,9 +82,9 @@ export function renderClues({ engine, state, mode, glyph }) {
   return rows.length ? el('div', { class: 'clues', 'aria-live': 'polite' }, rows) : null;
 }
 
-// The powers this mode offers, as buttons with the count held.
-export function renderPowerBar({ engine, state, mode, inventory, onPick }) {
-  const offered = POWERS.filter((p) => (p.minLength || 1) <= mode.length);
+// The powers this answer's length allows, as buttons with the count held.
+export function renderPowerBar({ engine, state, inventory, onPick }) {
+  const offered = POWERS.filter((p) => (p.minLength || 1) <= [...state.answer].length);
   if (!offered.length || state.status !== 'playing') return null;
   return el('div', { class: 'power-bar' },
     el('span', { class: 'power-bar-title' }, t('game.powers.title')),

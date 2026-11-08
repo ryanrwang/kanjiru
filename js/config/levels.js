@@ -32,7 +32,7 @@
 export const LEVELS = [
   { id: 'easy', guess: 'kanji', places: false, realKanji: true, countLeft: false, paletteScale: 1,
     meanings: true, freeMeaning: true, points: 0.5 },
-  { id: 'normal', guess: 'parts', places: true, realKanji: false, countLeft: true, paletteScale: 0.7,
+  { id: 'normal', guess: 'parts', places: false, realKanji: false, countLeft: true, paletteScale: 0.7,
     meanings: false, freeMeaning: false, points: 1 },
   { id: 'hard', guess: 'parts', places: true, realKanji: true, countLeft: false, paletteScale: 1,
     meanings: false, freeMeaning: false, points: 1.5 }

@@ -24,7 +24,7 @@
  *   cost       price in points; null = can't be bought, only earned
  *   hold       most you can carry at once
  *   drop       weight in the random bonus drop after a win (0 = never drops)
- *   minLength  only offered in modes with at least this many kanji
+ *   minLength  only offered when the answer has at least this many kanji
  */
 export const POWERS = [
   { id: 'strokes', icon: '🔢', effect: 'revealStrokes', params: {},

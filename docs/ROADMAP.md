@@ -2,7 +2,7 @@
 
 The big steps from here to launch, in order, each with a prompt to start its own thread in `D:\Dropbox\Clearful\apps\kanjiru`. Tick a step off here when it merges.
 
-Last updated: 2026-11-07.
+Last updated: 2026-11-08.
 
 ## Done
 
@@ -11,12 +11,13 @@ Last updated: 2026-11-07.
 - [x] **Parts & palette:** 251-tile palette in `data/parts.json`, fixed part breakdowns with positions, hand fixes in `data/parts-overrides.json`, and the parts check page (step 1)
 - [x] **Device transfer:** one-time codes from `api/transfer.php`, the Settings panel (gear in the header), Merge both or Replace this device, and copy/paste save text (step 7, PR #3)
 - [x] **Engine:** scoring, game state and every power, the per-puzzle palette, dailies, stats and achievements in `js/engine/`; `tools/compile_game.py` writes `data/game/`; 71 engine tests and 12 compile tests (step 2)
-- [x] **Game screen:** the one-kanji daily and practice in `js/play/`: board with flip reveal, parts palette, saved games, powers, points paid, result card with share text and countdown. Three levels (`js/config/levels.js`): Easy guesses kanji from a strip with a free meaning; Normal (the default) and Hard guess parts only, one per cell, with each cell a place in the kanji so parts go green or yellow. Normal has fewer tiles and counts the kanji that still fit; Hard's parts must make a real kanji (step 3)
+- [x] **Game screen:** the one-kanji daily and practice in `js/play/`: board with flip reveal, parts palette, saved games, powers, points paid, result card with share text and countdown. Three levels (`js/config/levels.js`): Easy guesses kanji from a strip with a free meaning; Normal (the default) and Hard guess parts only, one per cell, with each cell a place in the kanji so parts go green or yellow. Normal has fewer tiles and counts the kanji that still fit; Hard's parts must make a real kanji (step 3, PR #5)
+- [x] **One daily of 4–6 parts:** one `main` mode whose answers are 1–4 kanji with 4–6 parts in all; k1–k4 retired. Normal's spot is the kanji (yellow = in another kanji), Hard's is the place. A Wordle-style screen: big cells grouped by kanji, a frame over each kanji, the parts as a keyboard pinned to the bottom with Delete and Guess, hints behind a button. Keep playing after the daily, for full points. Claude's first word review: 603 Keep words (step 4)
 
 ## Order
 
 ```
-1 Parts & palette ✓ ──► 2 Engine ✓ ──► 3 Game screen ✓ ──► 4 Longer words
+1 Parts & palette ✓ ──► 2 Engine ✓ ──► 3 Game screen ✓ ──► 4 One daily ✓
                                           ├──► 5 Points, shop & achievements
                                           └──► 6 Skin effects
 7 Device transfer  ✓ done
@@ -24,8 +25,8 @@ Last updated: 2026-11-07.
 You: review words  (any time; the game only uses words marked Keep)
 ```
 
-- **Start now:** steps 4, 5 and 6 can run side by side.
-- **Review words first if you can:** the game shows "soon" until there are Keep words, then `tools/compile_game.py`.
+- **Start now:** steps 5 and 6 can run side by side. Tune the numbers (rows, parts per puzzle, hint prices, points) after real play, not before.
+- **Words:** 603 Keep words are enough for launch (1.7 years of dailies). More can be added any time on the review page, then `tools/compile_game.py`.
 
 **Running threads at the same time:** every thread shares this one folder, and Git can only have one branch checked out in it. Two threads in the same folder will switch each other's branches. So either run one thread at a time, or start each one in its own worktree (the app's worktree option when you start a session).
 
@@ -91,23 +92,15 @@ Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first. Work on a new branch.
 Done when a full daily and a practice game play well on phone and PC (check both on the local server's LAN link) and nothing is hard-coded.
 ```
 
-## 4. Longer words (2–4 kanji)
+## 4. One daily of 4–6 parts
 
-**Needs:** step 3.
+**Done** (step 4). It replaced the first plan, "Longer words (2–4 kanji)": after playing, one kanji had too few parts to feel like Wordle, so the user chose one daily whose answer has 4–6 parts in 1–4 kanji (docs/DESIGN.md, "The puzzle").
 
-```
-Kanjiru step 4: turn on the 2, 3 and 4 kanji modes.
-
-Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first. Steps 1–3 are merged. Work on a new branch.
-
-1. Settle with me whether a guess must be a real word, and propose the input for each level (js/config/levels.js; docs/DESIGN.md, "Levels"): Easy fills slots with kanji from the strip, Normal and Hard fill each kanji's cells with parts. The engine already scores parts guesses per kanji.
-2. Board and scoring per slot, including the "in another kanji" marker from the engine, at every level.
-3. The meaning (and maybe the reading) as the main clue, as decided in docs/DESIGN.md, plus the Reveal a kanji power.
-4. More rows for longer words (js/config/modes.js already sets 6/6/7/8).
-5. A daily for each mode, plus the "Full set" achievement when all are solved in a day.
-
-Done when all four modes play on phone and PC, and adding a 5-kanji mode would only need a catalogue entry and data.
-```
+Still open from it, for later:
+- **Real words at Hard:** whether a Hard guess must also be a real word, not just real kanji.
+- **Kanji on the rows at Hard:** the board has no room to show the kanji a row makes.
+- **The Reveal a kanji power** on the new screen, and the meaning or reading as the main clue.
+- **More words:** 2,389 common two-kanji words with 4–6 parts aren't on a JLPT list; many are worth keeping.
 
 ## 5. Points, shop & achievements
 
@@ -122,7 +115,7 @@ Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first. Work on a new branch.
 2. Random bonus hint drops after a win (engine.rollDrop() picks one, weighted by each power's drop value, respecting hold limits).
 3. A shop: buy powers and locked skins with points, with confirm steps and clear prices in both languages.
 4. Powers already work in game from the power bar (js/play/hints.js), spending the inventory; make them easy to find before the first guess.
-5. Achievements checked after each game (stats() and newAchievements() in js/engine/stats.js), with a toast, their rewards, and the skins they unlock.
+5. Achievements checked after each game (stats() and newAchievements() in js/engine/stats.js), with a toast, their rewards, and the skins they unlock. With one daily mode, "Full set" (every daily mode won in a day) now just means winning the daily: replace or retire it.
 6. Show balance changes clearly (a small +points animation that respects reduced motion).
 
 Done when a new player can earn, buy and use a hint and unlock a skin end to end, and every number still comes from js/config/.
@@ -198,6 +191,8 @@ Open http://localhost:8095/apps/kanjiru/review/ with the local server running:
 php -S 0.0.0.0:8095 -t D:/Dropbox/Clearful
 ```
 
+- **Done so far:** Claude's first pass, at your request: 603 Keep and 15 Cut, all with 4–6 parts (docs/DESIGN.md, "The puzzle"). Change any of them here.
+- **Next:** the common words with 4–6 parts that aren't on a JLPT list. Only words with 4–6 parts can be dailies.
 - **Start easy:** filter by length and "N5"/"N4"/"N3" to begin with the easiest words.
 - **Bulk keep:** "Keep all pending on this page" speeds it up.
 - **Flag parts:** use ⚐ on any kanji whose parts look wrong. The parts check page (`review/parts.html`) shows every kanji's parts and the palette. The build lists flagged kanji, and fixes go in `data/parts-overrides.json`.

@@ -291,22 +291,29 @@ test('levels: the palette is the mode\'s size times the level\'s paletteScale', 
   assert.equal(engine.newGame(normal('明')).palette.length, Math.round(20 * scale));
 });
 
-test('normal: one part per cell; each cell is a place, so parts go green or yellow', () => {
+test('normal: one part per cell; the kanji is the spot, so order inside it doesn\'t matter', () => {
   const engine = setup();
-  let game = engine.newGame(normal('明'));   // cells: left, right
+  let game = engine.newGame(normal('明'));
   assert.equal(engine.guess(game, '明').error, 'level', 'no kanji guesses');
   assert.equal(engine.guess(game, [['日']]).error, 'slots');
   assert.equal(engine.guess(game, [['日', '月', '口']]).error, 'slots');
   assert.equal(engine.guess(game, [['日', '龍']]).error, 'not-in-palette');
-  const r = engine.guess(game, [['月', '日']]);
-  assert.deepEqual(markList(r), ['near', 'near'], 'right parts, swapped places');
+  const r = engine.guess(game, [['口', '日']]);
+  assert.deepEqual(markList(r), ['miss', 'hit']);
   assert.equal(r.state.guesses[0].word, null, 'normal never names the kanji the parts make');
   game = r.state;
-  assert.equal(engine.guess(game, [['月', '日']]).error, 'repeat');
-  game = play(engine, game, ['日', '月']);
-  assert.equal(game.status, 'won');
+  assert.equal(engine.guess(game, [['日', '口']]).error, 'repeat', 'the same parts in another order');
+  game = play(engine, game, ['月', '日']);
+  assert.equal(game.status, 'won', 'the right parts in any order');
   assert.equal(game.guesses[1].word, '明');
-  assert.deepEqual(game.log, [{ guess: [['月', '日']] }, { guess: [['日', '月']] }]);
+  assert.deepEqual(game.log, [{ guess: [['口', '日']] }, { guess: [['月', '日']] }]);
+});
+
+test('normal: a part in another kanji of the word is marked other (shown yellow)', () => {
+  const engine = setup();
+  const game = engine.newGame(start('k2', '日本', { level: 'normal' }));   // 日 | 木 一
+  const r = engine.guess(game, [['木'], ['日', '一']]);
+  assert.deepEqual(r.scored.map((slot) => slot.tiles.map((t) => t.mark)), [['other'], ['other', 'hit']]);
 });
 
 test('normal: any parts go, even ones that make no kanji', () => {
@@ -314,21 +321,22 @@ test('normal: any parts go, even ones that make no kanji', () => {
   assert.equal(engine.guess(engine.newGame(normal('明')), [['口', '月']]).error, undefined);
 });
 
-test('normal: the Layout hint shows nothing new when cells show places', () => {
+test('hard: the Layout hint shows nothing new when cells show places', () => {
   const engine = setup();
-  assert.equal(engine.canUse(engine.newGame(normal('明')), 'layout'), 'useless');
-  assert.equal(engine.canUse(engine.newGame(start('k1', '明')), 'layout'), null);
+  assert.equal(engine.canUse(engine.newGame(hard('明')), 'layout'), 'useless');
+  assert.equal(engine.canUse(engine.newGame(normal('明')), 'layout'), null, 'normal cells don\'t show places');
 });
 
 test('normal: the kanji that still fit, after every guess', () => {
   const engine = setup();
   let game = engine.newGame(normal('明'));
-  // Every fixture kanji of two parts, left and right.
-  assert.deepEqual(new Set(engine.fits(game)[0]), new Set(['明', '林', '休', '好', '唄', '村']));
+  // Every fixture kanji of two parts, in any places (cells don't show them).
+  const all = engine.fits(game)[0];
+  ['明', '林', '休', '好', '唄', '村', '本', '間'].forEach((ch) => assert.ok(all.includes(ch), ch));
   game = play(engine, game, ['女', '子']);
-  assert.deepEqual(game.guesses[0].left, [5], '好 is out');
+  assert.deepEqual(game.guesses[0].left, [all.length - 3], '好, 安 and 字 are out');
   assert.ok(!engine.fits(game)[0].includes('好'));
-  game = play(engine, game, ['木', '月']);   // 木 grey, 月 green on the right
+  game = play(engine, game, ['木', '月']);   // 木 grey, 月 green
   assert.deepEqual(engine.fits(game)[0], ['明']);
   assert.deepEqual(game.guesses[1].left, [1]);
 });
@@ -399,4 +407,17 @@ test('levels: a parts game records its picks and level, and replays from either'
   assert.deepEqual(engine.replay(normal('明'), game.log), game);
   const again = entry.guesses.reduce((s, g) => engine.guess(s, g).state, engine.newGame(normal('明')));
   assert.equal(again.status, 'won');
+});
+
+test('main mode: each game takes its answer\'s length, at every level', () => {
+  const engine = setup();
+  const one = engine.newGame(start('main', '明'));
+  const two = engine.newGame(start('main', '日本'));
+  assert.equal(engine.guess(two, '明').error, 'length', 'easy: a guess as long as this answer');
+  assert.equal(play(engine, two, '日本').status, 'won');
+  assert.equal(play(engine, one, '明').status, 'won');
+  const parts = engine.newGame(start('main', '日本', { level: 'normal' }));
+  assert.equal(engine.guess(parts, [['日', '木']]).error, 'slots', 'one group of cells per kanji');
+  assert.equal(play(engine, parts, [['日'], ['一', '木']]).status, 'won');
+  assert.throws(() => engine.newGame(start('main', '')));
 });

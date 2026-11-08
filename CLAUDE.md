@@ -1,6 +1,6 @@
 # Kanjiru
 
-A daily kanji puzzle in the spirit of Wordle: guess the kanji (or a 2–4 kanji word) from its parts. Each guess colours its parts: right part in the right spot, right part in the wrong spot, or not in the answer.
+A daily kanji puzzle in the spirit of Wordle: guess the word (1–4 kanji, 4–6 parts in all) from its parts. Each guess colours its parts: right part in the right spot, right part in the wrong spot, or not in the answer.
 
 ## Start here
 - **`docs/DESIGN.md`**: every game decision so far, marked Decided, Proposed or Open, with the reasons. Confirm anything Proposed with the user before building on it.
@@ -31,7 +31,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `tokens.js` | Design tokens, skins' colours (`THEMES`) and `TOKENS.applyLook()` |
 | `styles.css` | All styles, using token variables only |
 | `app.js` | Start screen built from the catalogues, data loading, and the routes (`#k1` daily, `#k1/practice`) |
-| `js/config/modes.js` | Game modes: one per answer length |
+| `js/config/modes.js` | Game modes: the main daily (4–6 parts, 1–4 kanji); k1–k4 retired |
 | `js/config/levels.js` | Difficulty levels: Easy (kanji guesses), Normal and Hard (parts guesses) |
 | `js/config/skins.js` | Skin catalogue: colours, tile reveal, win effect |
 | `js/config/powers.js` | Hints and powers: effect, cost, when usable, drop weight |
@@ -64,7 +64,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `data/candidates.json` | Every candidate answer, with kanji info and part breakdowns |
 | `tools/compile_game.py` | Writes `data/game/`: the slim kanji file and the daily schedule from the Keep words (see `tools/README.md`) |
 | `data/game/kanji.json` | Every guessable kanji: strokes, JLPT, frequency, meanings, readings, parts |
-| `data/game/answers.json` | The daily schedule: the epoch and the answers per length, Keep words only |
+| `data/game/answers.json` | The daily schedule: the epoch and each mode's answer list (`LISTS` in `tools/compile_game.py`), Keep words only |
 | `data/ATTRIBUTION.md` | Exact source versions and licences; the app's About screen must credit them |
 | `review/` | Dev-only word review page: Keep / Maybe / Cut per word, flag a kanji's parts. Saves to `data/review.json` through `review.php`, which only runs under `php -S` |
 | `data/review.json` | The user's review decisions. Never overwrite it from a script |

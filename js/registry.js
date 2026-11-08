@@ -71,11 +71,13 @@ export function validate() {
 
   // Modes
   checkIds(MODES, 'mode');
-  const lengths = new Set();
+  const lists = new Set();
   MODES.forEach((m) => {
-    if (!Number.isInteger(m.length) || m.length < 1) say(`mode "${m.id}" has a bad length`);
-    if (lengths.has(m.length)) say(`two modes have length ${m.length}`);
-    lengths.add(m.length);
+    if (m.length !== null && !(Number.isInteger(m.length) && m.length >= 1)) say(`mode "${m.id}" needs a length, or null`);
+    if (typeof m.answers !== 'string' || !m.answers) say(`mode "${m.id}" needs answers: a list in data/game/answers.json`);
+    if (lists.has(m.answers)) say(`two modes play the answer list "${m.answers}"`);
+    lists.add(m.answers);
+    if (typeof m.listed !== 'boolean') say(`mode "${m.id}" needs listed: true or false`);
     if (!Number.isInteger(m.guesses) || m.guesses < 1) say(`mode "${m.id}" has a bad guess count`);
     if (!Number.isInteger(m.palette) || m.palette < 1) say(`mode "${m.id}" needs a palette size`);
     if (m.freeMeaning !== null && !(Number.isInteger(m.freeMeaning) && m.freeMeaning >= 0)) {

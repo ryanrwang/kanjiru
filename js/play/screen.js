@@ -12,15 +12,19 @@
  *          built from them, easiest first (narrow() in js/engine/palette.js).
  *          Tapping a kanji puts it in the next row with its meaning; tapping
  *          it again, or Guess, makes the guess. A typed kanji works too.
- *   parts  the board shows every row, like Wordle, with one cell per part of
- *          the answer. One cell of the next row is selected: a tapped part
- *          fills it and the next empty cell is selected; tapping a cell
- *          selects it. Guess scores the parts. No strip, no meanings.
- *          With places (levels.js), a line above the board names each
- *          cell's place, and the palette shows one place's parts at a time,
- *          the selected cell's (tilesForPlace in js/engine/palette.js). A
- *          frame above the board builds the kanji from the parts found
- *          green. With countLeft, each row says how many kanji fit.
+ *          With a longer answer, each tapped kanji fills the next slot.
+ *   parts  like Wordle: every row shows from the start, one cell per part,
+ *          grouped by kanji, and the parts sit below as a keyboard with
+ *          Delete and Guess keys. One cell of the next row is selected: a
+ *          tapped part fills it and the next empty cell is selected; tapping
+ *          a cell selects it. No strip, no meanings. Above each kanji's
+ *          cells, a frame builds it from the parts found green; with
+ *          countLeft, the number of kanji that still fit sits under it.
+ *          With places (levels.js; Hard), a line above the board names each
+ *          cell's place, and the keyboard shows the selected cell's place's
+ *          parts (tilesForPlace in js/engine/palette.js).
+ * Hints (the power bar) open from a button in the head; clues already
+ * found stay on show under the board.
  *
  * The board keeps the rows already drawn, so a new row's reveal plays once
  * and redrawing the picker never replays it.
@@ -37,6 +41,8 @@ import * as session from './session.js';
 import { renderClues, renderPowerBar, whyNot, openPowerSheet, closePowerSheet } from './hints.js';
 import { renderResult } from './result.js';
 
+const BULB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>';
+const DELETE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H9l-7 7 7 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M17 9l-6 6M11 9l6 6"/></svg>';
 const BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
 
 const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -61,9 +67,9 @@ export function openGame(root, ctx) {
   // Parts that stay put between redraws.
   let input;
   let guessButton;
-  let clearButton;
-  // The board: the rows in a column, and at parts levels the kanji frame,
-  // beside the rows or above them (fitBoard).
+  let deleteButton;
+  // The board: the rows in a column, and at parts levels the kanji frames
+  // above them (sized by fitBoard).
   const board = el('div', { class: 'board' });
   const grid = el('div', { class: 'board-grid' });
   const frames = el('div', { class: 'board-frames' });
@@ -71,7 +77,7 @@ export function openGame(root, ctx) {
   const boardDone = el('div', { class: 'board-rows', role: 'list' });
   const boardNext = el('div', { class: 'board-rows' });
   const head = el('div');
-  const hints = el('div', { class: 'game-hints' });
+  const hints = el('div', { class: 'game-hints', id: 'game-hints' });
   const picker = el('div', { class: 'picker' });
   const message = el('p', { class: 'status-line', role: 'status' });
   const choices = el('div', { class: 'picker-choices' });
@@ -87,6 +93,7 @@ export function openGame(root, ctx) {
       cells: game ? emptyCells() : [],   // parts levels: a tile id or null per cell
       active: 0,       // parts levels: the selected cell, which a tapped part fills
       frameFrom: null, // parts levels: the state the frame shows while a row reveals
+      hintsOpen: false, // the power bar is open
       message: null,   // { kind: 'error' | 'info', text }
       newRow: -1,      // the row to reveal
       points: game && game.done ? engine.points(game.state) : null
@@ -117,9 +124,6 @@ export function openGame(root, ctx) {
     return perSlot.map((nodes, s) => el('span', { class: 'row-slot' },
       nodes.map((node, i) => [pl && i && pl[s][i] !== pl[s][i - 1] ? el('span', { class: 'cell-gap' }) : null, node])));
   };
-  // One kanji: each row has a column on the right (its kanji or the count).
-  // Longer words show the count under each kanji's frame instead.
-  const oneKanji = () => cellCounts().length === 1;
   // How many kanji still fit (engine.fits), for the next row; one state at a time.
   let fitsFor = null;
   let fitsCount = null;
@@ -138,17 +142,6 @@ export function openGame(root, ctx) {
     const pl = places();
     return cellCounts().flatMap((n, slot) => Array.from({ length: n }, (_, i) => ({ slot, pos: pl ? pl[slot][i] : null })));
   };
-  // The cells grouped by place, in order: the palette shows one group's parts.
-  const placeGroups = () => {
-    const out = [];
-    cellPlaces().forEach(({ slot, pos }, i) => {
-      let g = out.find((x) => x.slot === slot && x.pos === pos);
-      if (!g) { g = { slot, pos, cells: [] }; out.push(g); }
-      g.cells.push(i);
-    });
-    return out;
-  };
-  const activeGroup = (groups) => groups.find((g) => g.cells.includes(ui.active)) || groups[0];
   const placeName = ({ slot, pos }, i) => {
     const name = pos ? t(`pos.${pos}`) : String(i + 1);
     return cellCounts().length > 1 ? t('game.placeOfSlot', { n: slot + 1, place: name }) : name;
@@ -172,7 +165,20 @@ export function openGame(root, ctx) {
         }))),
       // Parts levels show every row instead.
       partsMode() ? null : el('span', { class: 'pill game-count', title: t('game.countTitle') },
-        t('game.count', { n: s.guesses.length, rows: s.rows }))));
+        t('game.count', { n: s.guesses.length, rows: s.rows })),
+      playing() ? hintsButton() : null));
+  }
+
+  // Opens and closes the power bar (renderHints).
+  function hintsButton() {
+    const node = el('button', {
+      class: `icon-btn hints-btn${ui.hintsOpen ? ' is-open' : ''}`, type: 'button',
+      title: t('game.powers.title'), 'aria-label': t('game.powers.title'),
+      'aria-expanded': String(ui.hintsOpen), 'aria-controls': 'game-hints',
+      onclick: () => { ui.hintsOpen = !ui.hintsOpen; renderHead(); renderHints(); }
+    });
+    node.innerHTML = BULB;
+    return node;
   }
 
   // ── Board ──────────────────────────────────────────────────────────
@@ -190,22 +196,12 @@ export function openGame(root, ctx) {
     return g.left ? t('game.rowLabelFit', { label, fit: fitText(g.left) }) : label;
   }
 
-  // Parts levels: the column on the right of a row's cells. The kanji the
-  // row makes (Hard, or a solved row), else how many kanji fit (countLeft).
-  // speak: read the count out (the next row; scored rows have it in their label).
-  function rowSide(word, counts, speak = false) {
-    if (word) return el('span', { class: 'row-side row-kanji kanji', lang: 'ja', 'aria-hidden': 'true' }, word);
-    return el('span', { class: 'row-side row-count', title: counts ? fitText(counts) : null, 'aria-hidden': speak ? null : 'true' },
-      counts ? [el('span', { 'aria-hidden': 'true' }, countText(counts)), speak ? el('span', { class: 'visually-hidden' }, fitText(counts)) : null] : null);
-  }
-
   function guessRow(g, i, reveal) {
     let n = 0;
     const perSlot = g.slots.map((slot) => slot.tiles.map((tile) => tileNode(tile, n++)));
     const row = g.parts
       ? el('div', { class: `board-row${reveal ? ' is-new' : ''}`, role: 'listitem', 'aria-label': rowLabel(g, i) },
-        el('span', { class: 'row-tiles', 'aria-hidden': 'true' }, laidOut(perSlot)),
-        oneKanji() ? rowSide(g.word, g.left) : null)
+        el('span', { class: 'row-tiles', 'aria-hidden': 'true' }, laidOut(perSlot)))
       : el('div', { class: `board-row${reveal ? ' is-new' : ''}`, role: 'listitem', 'aria-label': rowLabel(g, i) },
         el('span', { class: 'row-kanji kanji', lang: 'ja', 'aria-hidden': 'true' }, g.word || ''),
         el('span', { class: 'row-tiles', 'aria-hidden': 'true' }, perSlot.map((nodes, s) => [s ? el('span', { class: 'row-gap' }) : null, nodes])),
@@ -226,7 +222,8 @@ export function openGame(root, ctx) {
     return el('div', { class: 'board-row is-next', 'aria-hidden': 'true' },
       el('span', { class: `row-kanji kanji${word ? '' : ' is-empty'}`, lang: 'ja' }, word),
       el('span', { class: 'row-tiles' }, tiles),
-      el('span', { class: 'row-meaning' }, word ? meaningOf(word) : t('game.nextHint')));
+      el('span', { class: 'row-meaning' }, word ? meaningOf(word)
+        : [...state().answer].length > 1 ? t('game.nextHintWord', { n: [...state().answer].length }) : t('game.nextHint')));
   }
 
   // Parts levels: the next row's cells. Each is a button that selects it;
@@ -247,21 +244,15 @@ export function openGame(root, ctx) {
         onclick: () => selectCell(i)
       }, id ? glyph(id) : null);
     }));
-    // The count once before the first guess, then only when a power changed
-    // it since the last row (which shows its own).
-    const last = state().guesses[state().guesses.length - 1];
-    const count = level().countLeft && (!last || !last.left || last.left.join() !== fitsNow().join());
     return el('div', { class: 'board-row is-next', role: 'group', 'aria-label': t('game.cells', { n: filled, cells: ui.cells.length }) },
-      el('span', { class: 'row-tiles' }, laidOut(perSlot)),
-      oneKanji() ? rowSide(null, count ? fitsNow() : null, true) : null);
+      el('span', { class: 'row-tiles' }, laidOut(perSlot)));
   }
 
   // Parts levels: a row not reached yet.
   function blankRow() {
     const perSlot = cellCounts().map((count) => Array.from({ length: count }, () => el('span', { class: 'tile is-cell is-blank' })));
     return el('div', { class: 'board-row is-blank', 'aria-hidden': 'true' },
-      el('span', { class: 'row-tiles' }, laidOut(perSlot)),
-      oneKanji() ? el('span', { class: 'row-side' }) : null);
+      el('span', { class: 'row-tiles' }, laidOut(perSlot)));
   }
 
   // A place's name over its run of n cells (styles.css .shape-place); the
@@ -289,39 +280,34 @@ export function openGame(root, ctx) {
       });
       return out;
     });
-    const head = level().countLeft;
     shape.replaceChildren(
       el('span', { class: 'visually-hidden' }, t('game.shape', {
         places: pl.map((slot) => slot.map((pos) => t(`pos.${pos}`)).join(t('game.listSep'))).join(' / ')
       })),
       el('div', { class: 'board-row', 'aria-hidden': 'true' },
         el('span', { class: 'row-tiles' }, groups.map((slot) => el('span', { class: 'row-slot' },
-          slot.map((g, i) => [i ? el('span', { class: 'cell-gap' }) : null, placeLabel(g)])))),
-        oneKanji()
-          ? el('span', { class: 'row-side row-count', title: head ? t('game.fitTitle') : null }, head ? t('game.fitHead') : null)
-          : null));
+          slot.map((g, i) => [i ? el('span', { class: 'cell-gap' }) : null, placeLabel(g)]))))));
   }
 
   // ── Board size (parts levels) ──────────────────────────────────────
 
   // Largest first: the board takes the biggest cells and frame that fit.
-  const CELL_SIZES = [['lg', 'cellLg'], ['md', 'cellMd'], ['base', 'cell'], ['sm', 'cellSm'], ['xs', 'cellXs']];
-  const FRAME_SIZES = [['lg', 'frameLg'], ['md', 'frameMd'], ['base', 'frame'], ['sm', 'frameSm']];
-  // The rows may take this share of the screen's height, so the parts and
-  // Guess stay close below them.
-  const ROWS_HEIGHT = 0.42;
+  const CELL_SIZES = [['xl', 'cellXl'], ['lg', 'cellLg'], ['md', 'cellMd'], ['base', 'cell'], ['sm', 'cellSm'], ['xs', 'cellXs']];
+  const FRAME_SIZES = [['base', 'frame'], ['sm', 'frameSm']];
+  // When the keyboard isn't up (the game is over), the rows may take this
+  // share of the screen's height.
+  const ROWS_HEIGHT = 0.5;
 
   // Parts levels: sizes the board to the space and the answer, so it works
   // for any number of kanji and parts. Cells are the largest size whose rows
-  // fit the width on one line (and their share of the height). One kanji
-  // with room to spare gets its frame beside the rows, as big as fits;
-  // otherwise each kanji's frame sits above its cells. If even the smallest
-  // cells are too wide, rows wrap between kanji (data-wrap).
+  // fit the width on one line and, with the head, frames, place names and
+  // keyboard, the screen's height, as in Wordle. Each kanji's frame sits
+  // above its cells, no wider than them. If even the smallest cells are too
+  // wide, rows wrap between kanji (data-wrap).
   // Sizes are layout tokens; styles.css keys on data-cell and data-frame.
   function fitBoard() {
     if (!partsMode()) {
-      ['cell', 'frame', 'layout', 'wrap'].forEach((k) => board.removeAttribute(`data-${k}`));
-      if (frames.parentNode !== grid) grid.prepend(frames);
+      ['cell', 'frame', 'wrap'].forEach((k) => board.removeAttribute(`data-${k}`));
       return;
     }
     const tk = window.TOKENS.active();
@@ -335,30 +321,35 @@ export function openGame(root, ctx) {
     const turns = counts.map((n, s) => (pl ? pl[s].filter((pos, i) => i && pos !== pl[s][i - 1]).length : 0));
     const slotWidth = (c, s) => counts[s] * c + (counts[s] - 1) * xs + turns[s] * sm;
     const slotWidths = (c) => counts.map((n, s) => slotWidth(c, s));
-    // The side column, a cell wide, comes with one kanji only.
-    const side = (c) => (oneKanji() ? sm + c : 0);
-    const rowWidth = (c) => slotWidths(c).reduce((a, b) => a + b, 0) + (counts.length - 1) * md + side(c);
+    const rowWidth = (c) => slotWidths(c).reduce((a, b) => a + b, 0) + (counts.length - 1) * md;
     const width = board.clientWidth;
     const rows = state().rows;
     const cells = CELL_SIZES.map(([id, key]) => ({ id, px: px(tk.layout[key]) }));
     const frameSizes = FRAME_SIZES.map(([id, key]) => ({ id, px: px(tk.layout[key]) }));
-    const fitsHeight = (c) => rows * (c + xs) <= window.innerHeight * ROWS_HEIGHT;
-    // Above the rows: each frame no wider than its kanji's cells, and no
-    // bigger than the base size, to save height.
-    const frameAbove = (c) => {
+    // Each frame no wider than its kanji's cells (the smallest if none fits).
+    const frameOfSize = (c) => {
       const narrowest = Math.min(...slotWidths(c));
-      const base = frameSizes.findIndex((x) => x.id === 'base');
-      return (frameSizes.slice(base).find((x) => x.px <= narrowest) || frameSizes[frameSizes.length - 1]).id;
+      return frameSizes.find((x) => x.px <= narrowest) || frameSizes[frameSizes.length - 1];
     };
+    const frameFor = (c) => frameOfSize(c).id;
+    // Height: everything else on the screen while the keyboard is up (its
+    // hints and message come and go, so they don't count), plus the frames
+    // (with their count) and place names; else a share of the screen.
+    const keyboard = picker.isConnected && picker.classList.contains('is-keyboard');
+    const others = keyboard
+      ? head.offsetHeight + picker.offsetHeight - hints.offsetHeight - message.offsetHeight + 2 * md
+        + (pl ? px(tk.spacing.lg) + xs : 0)
+      : 0;
+    const framesHeight = (c) => frameOfSize(c).px + xs + (level().countLeft ? md + xs : 0);
+    const rowsHeight = (c, lines) => rows * lines * c + (rows * lines - 1) * xs;
+    const fitsHeight = (c, lines = 1) => (keyboard
+      ? others + framesHeight(c) + rowsHeight(c, lines) <= window.innerHeight
+      : rowsHeight(c, lines) <= window.innerHeight * ROWS_HEIGHT);
 
     let pick = null;
     const tall = cells.filter((c) => fitsHeight(c.px));
     for (const c of (tall.length ? tall : cells.slice(-1))) {
-      if (oneKanji()) {
-        const f = frameSizes.find((x) => rowWidth(c.px) + md + x.px <= width);
-        if (f) { pick = { cell: c.id, frame: f.id, layout: 'beside' }; break; }
-      }
-      if (rowWidth(c.px) <= width) { pick = { cell: c.id, frame: frameAbove(c.px), layout: 'above' }; break; }
+      if (rowWidth(c.px) <= width) { pick = { cell: c.id, frame: frameFor(c.px) }; break; }
     }
     if (!pick) {
       // Wrap between kanji: the largest cells whose kanji fit the width
@@ -371,17 +362,14 @@ export function openGame(root, ctx) {
         });
         return n;
       };
-      const fits = (x) => Math.max(...slotWidths(x.px)) + side(x.px) <= width;
-      const c = cells.find((x) => fits(x) && rows * lines(x.px) * (x.px + xs) <= window.innerHeight * ROWS_HEIGHT)
+      const fits = (x) => Math.max(...slotWidths(x.px)) <= width;
+      const c = cells.find((x) => fits(x) && fitsHeight(x.px, lines(x.px)))
         || [...cells].reverse().find(fits) || cells[cells.length - 1];
-      pick = { cell: c.id, frame: frameAbove(c.px), layout: 'above', wrap: true };
+      pick = { cell: c.id, frame: frameFor(c.px), wrap: true };
     }
     board.dataset.cell = pick.cell;
     board.dataset.frame = pick.frame;
-    board.dataset.layout = pick.layout;
     board.toggleAttribute('data-wrap', !!pick.wrap);
-    if (pick.layout === 'beside' && frames.parentNode !== board) board.prepend(frames);
-    if (pick.layout === 'above' && frames.parentNode !== grid) grid.prepend(frames);
   }
 
   // ── Kanji frame (parts levels) ─────────────────────────────────────
@@ -418,8 +406,8 @@ export function openGame(root, ctx) {
     const solved = new Set(engine.clues(s).solved);
     const seen = new Set();
     const isNew = (k) => { seen.add(k); return frameShown !== null && !frameShown.has(k); };
-    // Longer words: how many kanji fit each slot, under its frame.
-    const fit = !oneKanji() && level().countLeft ? (s === state() ? fitsNow() : engine.fits(s).map((list) => list.length)) : null;
+    // How many kanji still fit each slot (countLeft), under its frame.
+    const fit = level().countLeft ? (s === state() ? fitsNow() : engine.fits(s).map((list) => list.length)) : null;
     const slots = [...s.answer].map((ch, slot) => {
       const node = el('span', { class: 'frame-slot' },
         frameOf(s, ch, slot, solved.has(slot), isNew),
@@ -428,7 +416,7 @@ export function openGame(root, ctx) {
       node.style.setProperty('--g', pl ? pl[slot].filter((pos, i) => i && pos !== pl[slot][i - 1]).length : 0);
       return node;
     });
-    frames.replaceChildren(...[el('span', { class: 'row-tiles' }, slots), oneKanji() ? el('span', { class: 'row-side' }) : null].filter(Boolean));
+    frames.replaceChildren(el('span', { class: 'row-tiles' }, slots));
     frameShown = seen;
   }
 
@@ -498,11 +486,13 @@ export function openGame(root, ctx) {
 
   // ── Hints ──────────────────────────────────────────────────────────
 
+  // Clues already found always show; the power bar only while it's open
+  // (the Hints button in the head).
   function renderHints() {
     if (!playing()) { hints.replaceChildren(); return; }
     hints.replaceChildren(...[
       renderClues({ engine, state: state(), mode, glyph }),
-      renderPowerBar({ engine, state: state(), mode, inventory: store.get().inventory, onPick: pickPower })
+      ui.hintsOpen ? renderPowerBar({ engine, state: state(), inventory: store.get().inventory, onPick: pickPower }) : null
     ].filter(Boolean));
   }
 
@@ -540,7 +530,7 @@ export function openGame(root, ctx) {
     return out;
   }
 
-  // Parts levels with places: the marks for one place's palette. A part
+  // Parts levels with places: the marks for one place's parts. A part
   // tried in this place shows the mark it got here, so green means "right
   // here". Otherwise a part in the answer shows yellow (it's somewhere) and
   // one ruled out shows grey.
@@ -586,10 +576,11 @@ export function openGame(root, ctx) {
       submit();
     });
     guessButton = el('button', { class: 'btn btn-primary', type: 'button', onclick: submit }, t('game.guess'));
-    clearButton = el('button', {
-      class: 'btn btn-secondary', type: 'button',
-      onclick: () => { ui.cells = emptyCells(); ui.active = 0; say(null, ''); renderBoard(); renderChoices(); }
-    }, t('game.clear'));
+    deleteButton = el('button', {
+      class: 'btn btn-secondary key-delete', type: 'button', title: t('game.delete'), 'aria-label': t('game.delete'),
+      onclick: () => (partsMode() ? deletePart() : deleteKanji())
+    });
+    deleteButton.innerHTML = DELETE;
   }
 
   // Parts levels: a tapped part fills the selected cell, then the next
@@ -612,10 +603,25 @@ export function openGame(root, ctx) {
     renderChoices();
   }
 
-  // A place picked above the palette: its first empty cell, or its first.
-  function selectGroup(g) {
-    const empty = g.cells.find((i) => !ui.cells[i]);
-    selectCell(empty === undefined ? g.cells[0] : empty);
+  // Parts levels: Delete empties the selected cell, or when it's already
+  // empty, the one before it, which it selects (like a backspace).
+  function deletePart() {
+    let i = ui.active;
+    if (!ui.cells[i] && i > 0) i -= 1;
+    ui.cells[i] = null;
+    ui.active = i;
+    say(null, '');
+    renderBoard();
+    renderChoices();
+  }
+
+  // Kanji levels: Delete takes the last kanji off the guess.
+  function deleteKanji() {
+    ui.entry = [...ui.entry].slice(0, -1).join('');
+    input.value = ui.entry;
+    say(null, '');
+    renderBoard();
+    renderChoices();
   }
 
   function togglePick(id) {
@@ -623,18 +629,30 @@ export function openGame(root, ctx) {
     renderChoices();
   }
 
+  // Kanji levels: a tapped kanji fills the guess's next slot (or swaps the
+  // last one once all are full), then the picked parts reset for the next
+  // kanji. Tapping the last one again makes the guess.
   function choose(ch) {
-    if (ui.entry === ch) { submit(); return; }
-    ui.entry = ch;
-    input.value = ch;
-    say('info', t('game.chosen', { kanji: ch, meaning: meaningOf(ch) }));
+    const n = [...state().answer].length;
+    const chars = [...ui.entry];
+    if (chars.length === n && chars[n - 1] === ch) { submit(); return; }
+    if (chars.length >= n) chars.length = n - 1;
+    chars.push(ch);
+    ui.entry = chars.join('');
+    input.value = ui.entry;
+    if (chars.length < n) ui.picked = [];
+    say('info', chars.length < n ? t('game.chosenNext', { n: chars.length + 1 })
+      : n === 1 ? t('game.chosen', { kanji: ch, meaning: meaningOf(ch) })
+        : t('game.chosenWord', { word: ui.entry, kanji: ch }));
     renderBoard();
     renderChoices();
   }
 
   function strip(kanji) {
     if (!ui.picked.length) return el('p', { class: 'strip-hint' }, t('game.stripHint'));
-    const guessed = new Set(state().guesses.map((g) => g.word));
+    // One kanji: a kanji already guessed can't be picked again.
+    const guessed = new Set([...state().answer].length === 1 ? state().guesses.map((g) => g.word) : []);
+    const chosen = new Set([...ui.entry]);
     return el('div', { class: 'strip' },
       el('div', { class: 'strip-head' },
         el('span', { class: 'strip-picked', lang: 'ja' }, ui.picked.map((id) => el('span', { class: 'strip-part' }, glyph(id)))),
@@ -644,10 +662,10 @@ export function openGame(root, ctx) {
           onclick: () => { ui.picked = []; renderChoices(); }
         }, t('game.clear'))),
       el('div', { class: 'strip-kanji' }, kanji.map((ch) => el('button', {
-        class: `strip-btn kanji${ch === ui.entry ? ' is-chosen' : ''}`,
+        class: `strip-btn kanji${chosen.has(ch) ? ' is-chosen' : ''}`,
         type: 'button', lang: 'ja',
         disabled: guessed.has(ch),
-        'aria-pressed': String(ch === ui.entry),
+        'aria-pressed': String(chosen.has(ch)),
         title: meaningOf(ch),
         onclick: () => choose(ch)
       }, ch))));
@@ -660,7 +678,8 @@ export function openGame(root, ctx) {
   //   combine  the tiles that still combine with the picks (the rest grey
   //            out), or null for none greyed (parts levels)
   //   onTap    id → what a tap does
-  function palette({ ids, marks, pressed, combine = null, onTap, label }) {
+  //   strokes  label each stroke count (off for the parts keyboard)
+  function palette({ ids, marks, pressed, combine = null, onTap, label, strokes = true }) {
     const tileOf = new Map(data.tiles.map((tile) => [tile.id, tile]));
     const groups = [];
     ids.forEach((id) => {
@@ -688,30 +707,26 @@ export function openGame(root, ctx) {
     };
     return el('div', { class: 'palette', role: 'group', 'aria-label': label },
       groups.map((g) => el('div', { class: 'palette-group' },
-        el('span', { class: 'palette-strokes', title: t('game.strokes', { n: g.n }) }, String(g.n)),
+        strokes ? el('span', { class: 'palette-strokes', title: t('game.strokes', { n: g.n }) }, String(g.n)) : null,
         g.ids.map(tileButton))));
   }
 
-  // Parts levels: one button per place (when there's more than one), then
-  // the selected cell's place's parts.
+  // Parts levels: the keyboard. With places (Hard), only the selected
+  // cell's place's parts, named above them; tapping a cell switches place.
   function partsChoices() {
-    const groups = placeGroups();
-    const g = activeGroup(groups);
-    const where = cellPlaces();
-    const name = (x) => placeName(x, x.cells[0]);
-    const tabs = groups.length > 1
-      ? el('div', { class: 'chip-row place-tabs', role: 'group', 'aria-label': t('game.placeTabs') },
-        groups.map((x) => el('button', {
-          class: 'chip place-tab', type: 'button', 'aria-pressed': String(x === g), onclick: () => selectGroup(x)
-        }, name(x))))
-      : null;
-    return [tabs, palette({
-      ids: g.pos ? tilesForPlace(data, state().palette, g.pos) : state().palette,
-      marks: placeMarks(g),
-      pressed: (id) => ui.cells[ui.active] === id,
-      onTap: addPart,
-      label: t('game.palettePlace', { place: placeName(where[ui.active], ui.active) })
-    })];
+    const where = cellPlaces()[ui.active] || { slot: 0, pos: null };
+    const place = where.pos ? placeName(where, ui.active) : null;
+    return [
+      place ? el('p', { class: 'keyboard-place' }, t('game.palettePlace', { place })) : null,
+      palette({
+        ids: where.pos ? tilesForPlace(data, state().palette, where.pos) : state().palette,
+        marks: placeMarks(where),
+        pressed: (id) => ui.cells[ui.active] === id,
+        onTap: addPart,
+        label: place ? t('game.palettePlace', { place }) : t('game.palette'),
+        strokes: false
+      })
+    ];
   }
 
   function renderChoices() {
@@ -728,12 +743,16 @@ export function openGame(root, ctx) {
     }));
   }
 
-  // Parts levels: the parts, then Clear and Guess below them.
+  // Parts levels: a keyboard at the bottom, as in Wordle: the clues and
+  // hints (so they show above it), any message, the parts, then Delete and
+  // Guess. Kanji levels: the entry first, with the hints above the picker.
   function renderPicker() {
+    const parts = partsMode();
+    picker.classList.toggle('is-keyboard', parts && playing());
     if (!playing()) { picker.replaceChildren(); return; }
-    picker.replaceChildren(...(partsMode()
-      ? [choices, message, el('div', { class: 'entry is-parts' }, clearButton, guessButton)]
-      : [el('div', { class: 'entry' }, input, guessButton), message, choices]));
+    picker.replaceChildren(...(parts
+      ? [hints, message, choices, el('div', { class: 'keyboard-keys' }, deleteButton, guessButton)]
+      : [el('div', { class: 'entry' }, input, deleteButton, guessButton), message, choices]));
     renderChoices();
   }
 
@@ -747,7 +766,7 @@ export function openGame(root, ctx) {
       return;
     }
     const r = engine.guess(state(), parts ? picksBySlot() : word);
-    if (r.error) { say('error', t(`game.errors.${r.error}`, { n: mode.length, cells: ui.cells.length })); return; }
+    if (r.error) { say('error', t(`game.errors.${r.error}`, { n: [...state().answer].length, cells: ui.cells.length })); return; }
     const before = state();
     game = { ...game, state: r.state };
     const row = r.state.guesses.length - 1;
@@ -848,8 +867,9 @@ export function openGame(root, ctx) {
     renderHints();
     renderPicker();
     renderResultCard();
+    // Parts levels keep the hints inside the keyboard (renderPicker).
     root.replaceChildren(el('section', { class: 'game', 'aria-labelledby': 'game-title' },
-      head, board, hints, picker, result, live));
+      head, board, partsMode() ? null : hints, picker, result, live));
     renderBoard();   // again, sized now that the board has a width (fitBoard)
   }
 
