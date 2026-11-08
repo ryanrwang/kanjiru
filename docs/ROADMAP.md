@@ -17,15 +17,15 @@ Last updated: 2026-11-08.
 ## Order
 
 ```
-1 Parts & palette ✓ ──► 2 Engine ✓ ──► 3 Game screen ✓ ──► 4 One daily ✓
+1 Parts & palette ✓ ──► 2 Engine ✓ ──► 3 Game screen ✓ ──► 4 One daily ✓ ──► 4b Loose strokes & hints
                                           ├──► 5 Points, shop & achievements
-                                          └──► 6 Skin effects
+                                          ├──► 8 Launch
+                                          └──► 6 Skin effects (after launch)
 7 Device transfer  ✓ done
-8 Launch           (last)
 You: review words  (any time; the game only uses words marked Keep)
 ```
 
-- **Start now:** steps 5 and 6 can run side by side. Tune the numbers (rows, parts per puzzle, hint prices, points) after real play, not before.
+- **Next:** step 4b (small), then 5, then 8. Step 6 can wait until after launch. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
 - **Words:** 603 Keep words are enough for launch (1.7 years of dailies). More can be added any time on the review page, then `tools/compile_game.py`.
 
 **Running threads at the same time:** every thread shares this one folder, and Git can only have one branch checked out in it. Two threads in the same folder will switch each other's branches. So either run one thread at a time, or start each one in its own worktree (the app's worktree option when you start a session).
@@ -96,10 +96,26 @@ Done when a full daily and a practice game play well on phone and PC (check both
 
 **Done** (step 4). It replaced the first plan, "Longer words (2–4 kanji)": after playing, one kanji had too few parts to feel like Wordle, so the user chose one daily whose answer has 4–6 parts in 1–4 kanji (docs/DESIGN.md, "The puzzle").
 
-Still open from it, for later:
-- **Real words at Hard:** whether a Hard guess must also be a real word, not just real kanji.
-- **The Reveal a kanji power** on the new screen, and the meaning or reading as the main clue.
+Settled after it: no real-word check at Hard, and the meaning stays a hint (docs/DESIGN.md, "Levels"). Still open, for later:
 - **More words:** 2,389 common two-kanji words with 4–6 parts aren't on a JLPT list; many are worth keeping.
+- **Tuning:** rows, keys, the Hard and Guided points, after a few days of play.
+
+## 4b. Loose strokes and hints
+
+**Needs:** step 4. Small; do it before step 5.
+
+```
+Kanjiru step 4b: loose strokes out of the daily, and hints that fit the new rules.
+
+Read CLAUDE.md, docs/DESIGN.md ("The puzzle", "Levels") and docs/ROADMAP.md first. Steps 1–4 are merged. Work in a new worktree on a new branch.
+
+1. Loose strokes: in tools/compile_game.py, let a LISTS rule leave out answers with a part in a set of tiles, and leave 丨 丶 丿 乙 亅 out of "main" (not 一). The summary says how many were left out. Words stay Keep. Add compile tests. Recompile and commit data/game/.
+2. Then list the left-out words whose breakdowns are worth fixing first (most common), and propose fixes for data/parts-overrides.json. Confirm them with me before changing data.
+3. Reveal a part and Head start: show each revealed part in its cell, green, on the board (the next row starts with it filled in, like a green you found), not just as a name in the clues. Check Hard's "use what you found" still makes sense with it.
+4. Check every power against the new rules (docs/DESIGN.md, "Hints under the new rules") and say which, if any, should change.
+
+Done when the daily has no loose-stroke answers, revealed parts sit in their cells, and node --test and the tools tests pass.
+```
 
 ## 5. Points, shop & achievements
 

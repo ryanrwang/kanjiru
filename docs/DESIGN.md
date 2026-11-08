@@ -32,6 +32,8 @@ After playing step 3, the user found one kanji too short: 79% of one-kanji answe
 - **Decided — Yellow is one colour:** the engine's `near` (another cell) shows yellow, and so does the older `other` mark (`--color-feedback-other`, its own token so a colour-blind mode can split it). 🟨 in the share text.
 - **Decided — First Keep list:** the user asked Claude to review the words. The first pass keeps every candidate with 4–6 parts that's on Waller's N5–N3 vocab lists, marked common in JMdict, written in kanji (not usually kana), with no rare, archaic, slang or sensitive tags. It cuts 15 by hand: 自殺 and 人種 (sensitive), 家内 and 字引 (dated), 一体, 具体, 前者, 後者 and 気味 (odd as answers), and the short weekday names (日曜 to 土曜; the 曜日 forms stay). That's 603 Keep words, about 1.7 years of dailies, in `data/review.json`, which the review page can still change.
 - **Open — More words:** 2,389 common two-kanji words with 4–6 parts aren't on a JLPT list. Many are everyday words worth keeping; review them later.
+- **Decided — Loose strokes leave the daily for now (step 4b):** 177 of the 603 Keep answers have a stray single stroke as a part (丨 丶 丿 乙 亅; e.g. 今日, 電気, 仕事). With every part a cell, those cells are close to guesswork. They stay Keep, but the daily list leaves them out (426 answers, over a year) until their breakdowns are fixed in `data/parts-overrides.json`; fixed ones come back on the next compile. 一 is a real part and stays.
+- **Decided — Live before launch:** since PR #6 the live URL plays the daily (epoch 2026-11-01). It isn't linked anywhere; step 8 sets the real epoch, so puzzle 1 is launch day.
 
 ## Scoring (Decided, step 2)
 
@@ -147,8 +149,10 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 - **Proposed — One daily for every level:** one daily, whatever the level, so puzzle numbers and streaks are shared. A game keeps the level it started at (in its start, `save.playing`), and its history entry records it. A game with no moves yet moves to a level picked since.
 - **Proposed — Sharing:** the share text names the level (`Kanjiru 漢 #7 Normal 3/6`), with one square per cell. The squares are split by kanji only where the board showed the split (Guided).
 - **Proposed — Start screen:** the example rows show 時間's five cells: 口 日 寸 木 月 (日 yellow, 寸 green), then 日 土 寸 日 門, then 時間 solved.
-- **Open — Tuning:** 28 keys, 6 rows, the Hard and Guided points. All catalogue edits; decide after playing.
-- **Open — Real words at Hard:** the parts must make real kanji; whether the whole guess must be a real word is still open.
+- **Open — Tuning:** 28 keys, 6 rows, the Hard and Guided points, what each part pays. All catalogue edits; decide after a few days of play.
+- **Decided — No real-word check at Hard:** the parts must make real kanji, any split; the guess doesn't have to be a real word.
+- **Decided — Hints under the new rules (step 4b):** Reveal a part (and Head start) show the part in its cell, green, on the board, not just its name. Stroke count, Layout and Reveal a kanji give away where kanji split; they stay as paid hints, since that's what they're for.
+- **Decided — Meaning stays a hint:** no free meaning at any level for now (`freeMeaning: false`). If dailies feel too hard, showing it after guess 4 is a one-line change.
 
 ## The game screen (steps 3 and 4)
 
