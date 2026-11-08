@@ -8,45 +8,54 @@ export default {
   },
 
   header: {
-    schemeDark: 'ダークモードにする',
-    schemeLight: 'ライトモードにする',
-    schemeFixed: 'このきせかえは配色が1つだけです',
-    shop: 'ショップ',
-    wallet: '所持ポイント {amount}。ショップを開く'
+    home: 'プレイ',
+    points: 'ポイント',
+    wallet: '所持ポイント {amount}。ポイントを開く'
   },
 
   currency: {
     name: '小判',
-    amount: '{n}pt'
+    amount: '{n}pt',
+    unit: 'pt'
   },
 
-  hero: {
-    title: 'パーツからことばを当てよう。',
+  // 遊び方（プレイページの最初）：例で説明
+  howto: {
+    title: '遊び方',
+    lead: 'パーツからことばを当てよう。',
+    body: 'ことばのパーツを書き順にマスへ入れます。どこで漢字が切れるかも考えます。そのマスなら緑、ことばの別の場所にあれば黄、ことばになければ灰色になります。',
     hit: '正しいパーツ・正しい位置',
     near: '正しいパーツ・ちがう位置',
-    miss: '答えにないパーツ',
-    // パーツを書き順に（今はすべてのレベル）
-    partsBody: 'ことばのパーツを書き順にマスへ入れます。どこで漢字が切れるかも考えます。そのマスなら緑、ことばの別の場所にあれば黄、ことばになければ灰色になります。'
+    miss: '答えにないパーツ'
   },
 
+  // プレイカード：今日のデイリー、むずかしい・ガイドのスイッチ、もう一度遊ぶ
   play: {
-    title: 'プレイ',
-    note: '毎日新しい一問、そのあとは好きなだけ',
-    meta: '{guesses}回まで・ポイント×{mult}',
     soon: '近日公開',
     loading: '読み込み中…',
     loadFailed: 'ゲームを読み込めませんでした。通信状況を確認して、再読み込みしてください。',
-    practiceOnly: 'デイリーはまだありません。もっと遊べます',
-    dailyNew: 'デイリー #{n}',
-    dailyStarted: 'デイリー #{n}・{level}・{guesses}回回答済み',
-    dailyWon: 'デイリー #{n}・{level}・{guesses}回でクリア ✓',
-    dailyLost: 'デイリー #{n}・{level}・クリアならず',
-    levelNow: '{level}で遊んでいます。むずかしいとガイドは設定にあります。',
-    levelChange: '設定',
-    daily: 'プレイ',
+    practiceOnly: 'デイリーはまだありません。もっと遊んでポイントを貯めよう。',
+    daily: 'デイリー #{n}',
+    ready: '今日のことばをパーツから当てよう。チャンスは{rows}回。',
+    going: '{rows}回中{n}回回答・{level}',
+    won: '{n}回でクリア ✓・{level}',
+    lost: '今日はクリアならず・{level}',
+    level: 'レベル',
+    levelNext: '次の問題のレベル',
+    mult: 'ポイント×{mult}',
+    hard: {
+      name: 'むずかしい',
+      body: '実在する漢字だけ。見つけたパーツはそのまま使う。'
+    },
+    guided: {
+      name: 'ガイド',
+      body: '漢字の切れ目と、どこに何が入るかを表示。'
+    },
+    start: 'プレイ',
     continue: '続ける',
-    result: '結果',
-    practice: 'もっと遊ぶ'
+    result: '結果を見る',
+    more: 'もう一度遊ぶ',
+    nextDaily: '次のデイリーまで'
   },
 
   game: {
@@ -81,6 +90,7 @@ export default {
     guess: '回答',
     delete: '消す',
     palette: 'パーツ',
+    debugCells: '答えの{cells}マス目',
     soon: 'このモードは近日公開です（単語の確認待ち）。',
     on: '音',
     kun: '訓',
@@ -173,13 +183,14 @@ export default {
     pointsWhy: 'パーツ {parts} + クリア {solve}、×{mult}',
     rewards: 'ごほうび',
     balance: '所持 {icon} {n}pt',
+    spend: 'ポイントを使う',
     streak: 'デイリー連続記録',
     streakDays: '{n}日連続',
     share: 'シェア',
     copied: 'コピーしました。好きな場所に貼り付けてください。',
     copyManually: '上のテキストを選択して、コピーしてください。',
     nextDaily: '次のデイリーまで',
-    practice: 'もっと遊ぶ',
+    practice: 'もう一度遊ぶ',
     again: '次の問題'
   },
 
@@ -188,19 +199,28 @@ export default {
     practice: '漢じる {numeral} {level} {score}{hints}'
   },
 
+  // ポイントページ：上に所持ポイント
+  points: {
+    title: 'ポイント',
+    wallet: '所持ポイント',
+    how: '見つけたパーツは1つ最大{part}pt、クリアで{win}pt以上。連続記録と実績でさらにもらえます。',
+    hints: '所持ヒント',
+    streak: 'デイリー連続',
+    achievements: '実績',
+    of: '{total}個中{n}個'
+  },
+
   looks: {
     title: 'きせかえ',
     note: '色・タイル・演出を組み合わせよう',
     lockPoints: '🔒 {cost}pt',
     lockAchievement: '🔒 {name}',
-    buyHint: 'ショップで{cost}ptで購入',
-    achievementHint: '解除条件：{desc}'
+    inUse: '✓ 使用中'
   },
 
   powers: {
     title: 'ヒントとアイテム',
-    note: '遊んで獲得、またはポイントで購入',
-    cost: '{cost}pt',
+    note: 'ゲームの中で使えます',
     earnedOnly: '獲得のみ',
     whenBoth: 'ゲーム前・ゲーム中に使える',
     whenBefore: '最初の回答の前に使える',
@@ -209,30 +229,23 @@ export default {
     have: '所持数 {n}'
   },
 
+  // 購入（ポイントページと、ゲーム中のヒントシート）
   shop: {
-    open: 'ショップ',
-    title: 'ショップ',
-    close: '閉じる',
-    intro: 'ポイントは遊ぶと貯まります。見つけたパーツ、クリア、連続記録、実績で。ここで使えます。',
-    hints: 'ヒント',
-    looks: '見た目',
-    buy: '買う',
+    buyFor: '買う・{cost}pt',
     confirm: '{name}に{cost}ptを使いますか？　所持{have}pt、残りは{left}ptになります。',
+    confirmTitle: '{name}を買いますか？',
     confirmYes: '{cost}ptで買う',
     cancel: 'キャンセル',
-    have: '所持 {n}／{hold}',
+    have: '所持 {n}/{hold}',
     full: '持てるのは{hold}つまでです',
     short: 'あと{n}pt必要',
     soon: '近日公開',
     owned: '入手済み',
     ownedSoon: '入手済み・近日公開',
-    inUse: '使用中',
-    use: '使う',
-    using: '{name}にしました。',
     byAchievement: '実績',
     earn: '「{name}」：{desc}',
     bought: '{name}を買いました（所持 {n}）。残り{left}pt。',
-    boughtSkin: '{name}を手に入れました。残り{left}pt。'
+    boughtSkin: '{name}を手に入れて、使用中にしました。残り{left}pt。'
   },
 
   reward: {
@@ -260,24 +273,28 @@ export default {
   },
 
   settings: {
-    game: {
-      title: 'ゲーム',
-      body: '次の問題と、まだ始めていない問題に使われます。'
-    },
-    hard: {
-      name: 'むずかしい',
-      body: '毎回実在する漢字を作り、見つけたヒントを使います。緑はそのまま、見つけたパーツはまた使います。ポイント×{mult}。'
-    },
-    guided: {
-      name: 'ガイド',
-      body: '漢字の切れ目と位置、漢字ごとの枠を表示し、そのマスに入らないパーツを薄くします。ポイント×{mult}。'
-    },
     open: '設定',
     title: '設定',
-    close: '閉じる'
+    close: '閉じる',
+    language: '言語',
+    scheme: {
+      title: '外観',
+      auto: '自動',
+      light: 'ライト',
+      dark: 'ダーク',
+      fixed: '{name}は配色が1つだけです。'
+    },
+    debug: {
+      title: 'デバッグ',
+      name: 'デバッグモード',
+      body: 'テスト用：ゲームのキーに番号付きの点で答えを書き順に表示し、ポイントを追加できます。',
+      add: '{n}ptを追加',
+      added: '{n}ptを追加しました。所持{total}pt。'
+    }
   },
 
   transfer: {
+    title: '進行状況を移す',
     intro: '進行状況はこのブラウザに保存されています。別の端末で遊ぶときは、データを引き継げます。',
     notSaving: 'このブラウザは進行状況を保存していません（プライベートブラウズ？）。受け取ったデータは、ページを閉じるまでしか残りません。',
     send: {

@@ -2,8 +2,9 @@
  * The result card at the end of a game: the answer with its meanings,
  * readings and parts, the points it paid and the points you have now, its
  * rewards (streak, bonus hint, achievements: js/play/rewards.js describe()),
- * the streak, the share text, a countdown to the next daily, and what to
- * play next. Just finished (fresh), the points rise in.
+ * the streak, the share text (while rules.js share.show is on), a countdown
+ * to the next daily, and what to play next. Just finished (fresh), the
+ * points rise in.
  *
  *   const card = renderResult({ ... });   // card.node, card.tick()
  */
@@ -111,16 +112,17 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
           r.body ? el('span', { class: 'result-reward-body' }, r.body) : null)))) : null,
 
     balance !== null ? el('p', { class: 'result-balance' },
-      el('span', { class: 'result-balance-amount' }, t('result.balance', { icon: ECONOMY.currency.icon, n: balance }))) : null,
+      el('span', { class: 'result-balance-amount' }, t('result.balance', { icon: ECONOMY.currency.icon, n: balance })),
+      el('a', { class: 'result-balance-link', href: '#points' }, t('result.spend'))) : null,
 
-    el('div', { class: 'share' },
+    RULES.share.show ? el('div', { class: 'share' },
       preview,
-      el('div', { class: 'btn-row' }, shareButton),
-      status),
+      el('div', { class: 'btn-row result-actions' }, shareButton),
+      status) : null,
 
     el('p', { class: 'countdown' }, t('result.nextDaily'), ' ', countdown),
 
-    el('div', { class: 'btn-row' },
+    el('div', { class: 'btn-row result-actions' },
       el('button', { class: 'btn btn-secondary', type: 'button', onclick: onPractice },
         state.daily ? t('result.practice') : t('result.again')),
       el('button', { class: 'btn btn-ghost', type: 'button', onclick: onHome }, t('game.home')))

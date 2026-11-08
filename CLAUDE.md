@@ -37,9 +37,9 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `.htaccess` | Gzips the JSON data and has it rechecked every visit (the site's root `.htaccess` does pages, CSS and JS) |
 | `tokens.js` | Design tokens, skins' colours (`THEMES`) and `TOKENS.applyLook()` |
 | `styles.css` | All styles, using token variables only |
-| `app.js` | Start screen built from the catalogues, data loading, and the routes (`#main` daily, `#main/practice` keep playing) |
+| `app.js` | The header (a breadcrumb on the Points page), the play page (How to play, then the play card with the level switches), data loading, and the routes (`''` play page, `#points`, `#main` daily, `#main/practice` keep playing) |
 | `js/config/modes.js` | Game modes: the main daily (4–6 parts, 1–4 kanji); k1–k4 retired |
-| `js/config/levels.js` | Levels: Normal, plus the Hard and Guided switches in Settings (`settingsLevel()`); Easy retired |
+| `js/config/levels.js` | Levels: Normal, plus the Hard and Guided switches on the play card (`settingsLevel()`); Easy retired |
 | `js/config/skins.js` | Skin catalogue: colours, tile reveal, win effect |
 | `js/config/powers.js` | Hints and powers: effect, cost, when usable, drop weight |
 | `js/config/economy.js` | Every points number: per part, per win, streaks, drops |
@@ -48,11 +48,12 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/registry.js` | One import for all catalogues, plus a start-up check that their ids agree |
 | `js/store.js` | The save in localStorage: versioned (v2), with migrations, plus export, import and the merge rules (`MERGE`). Games on the go are in `playing`; points and hints held are the `ledger` (`points()`, `held()`, `enter()`) |
 | `js/ledger.js` | The ledger: every gain and spend of points or hints as an entry with its own id, the balance, the v1 migration and the merge that joins entries |
-| `js/shop.js` | The shop sheet (opened by the points in the header): hints and locked looks, two-tap buying, `powerOffer()` / `buyPower()` for the game screen |
+| `js/points.js` | The Points page (`#points`, opened by the points in the header, which then reads 漢 › Points): the wallet, Looks with an example of every look, Hints & powers and Achievements, with Buy confirmed in a modal. `openPoints(root, ctx)` |
+| `js/shop.js` | The buying rules: `isUnlocked()`, `powerOffer()`, `skinOffer()`, `buyPower()`, `buySkin()` |
 | `js/toast.js` | Toasts over everything (`toast()`) and the "+N pts" tag on a balance that changed (`bump()`) |
-| `js/settings.js` | Settings panel (gear in the header): the Hard and Guided switches; send, receive and the save text, with Merge / Replace |
+| `js/settings.js` | Settings panel (gear in the header): language, appearance, moving devices (send, receive and the save text, with Merge / Replace) and debug mode (answer dots on the keys, add points) |
 | `js/transfer.js` | Calls `api/transfer.php` |
-| `js/dom.js` | `el()`, the small DOM helper |
+| `js/dom.js` | `el()`, the small DOM helper, plus `switchRow()` (a toggle switch) and `segmented()` (one of a few) |
 | `js/engine/score.js` | Scoring: a guess against the answer, part by part (rules in `docs/DESIGN.md`, "Scoring") |
 | `js/engine/game.js` | `createEngine(data)`: game state, guesses, every power effect, points, replay, history entries, bonus drops |
 | `js/engine/palette.js` | The puzzle's palette (a seeded subset of tiles), `buildable()`, `narrow()` for the picker, and `tilesForPlace()` for a cell's parts |
@@ -60,11 +61,11 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/engine/stats.js` | Stats and streaks from history, achievement checks, streak rewards |
 | `js/engine/data.js` | Loads `data/game/*.json` and `data/parts.json` into the engine's shape |
 | `js/engine/random.js` | Seeded randomness, so dailies and powers come out the same for everyone |
-| `js/play/screen.js` | The game screen: board (one row of cells, or Guided's split, places and frames), keyboard, hints, result. Parts a power showed start each row in their cells. `openGame(root, ctx)` |
+| `js/play/screen.js` | The game screen: board (one row of cells, or Guided's split, places and frames), keyboard, hints, result. Parts a power showed start each row in their cells; in debug mode the keys show the answer as numbered dots. `openGame(root, ctx)` |
 | `js/play/session.js` | Games in the save: start or resume (`save.playing`), record to history, pay points, spend powers |
 | `js/play/rewards.js` | What a finished game pays as ledger entries: its points, streak rewards, a bonus hint, achievements (`payGame()`, `earnAchievements()`), and `describe()` for the toasts and result card |
-| `js/play/hints.js` | Clues, the power bar (floats above the keyboard) and the sheet that uses a power, or buys one |
-| `js/play/result.js` | The result card: answer, points, rewards, balance, streak, share, countdown |
+| `js/play/hints.js` | Clues, the power bar (floats above the keyboard) and the sheet that uses a power, or buys one when you hold none |
+| `js/play/result.js` | The result card: answer, points, rewards, balance (with a link to the Points page), streak, share (hidden while `rules.js` `share.show` is false), countdown |
 | `js/play/share.js` | The share text and emoji grid (squares in `rules.js` `share`) |
 | `js/play/glyph.js` | Part glyphs as text, or KanjiVG strokes where fonts may lack them |
 | `tests/` | `node --test` tests for the engine, on fixtures (never the real word list) |
@@ -104,7 +105,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 - **Check the console.** `validate()` logs `[kanjiru config]` warnings at start-up when catalogues disagree. Fix them before committing.
 - **Answers are N3 or easier.** Guesses may use any jōyō kanji built from the puzzle's palette.
 - **Game data is compiled.** After a rebuild or a review session, run `python -I -X utf8 tools/compile_game.py` and commit `data/game/`. It never invents answers: with no Keep words the answer lists are empty.
-- **Which modes play:** a mode needs `playable: true` in `js/config/modes.js` (the game screen supports it) and answers. Until both, the start screen shows "soon".
+- **Which modes play:** a mode needs `playable: true` in `js/config/modes.js` (the game screen supports it) and answers. Until both, its play card shows "soon".
 - **Levels:** a game's level lives in its start (`start.level`) and decides what a guess is (`levels.js` `guess`). Code checks the level's fields, never its id.
 - **Dev-only files don't deploy.** `tools/`, `review/`, `tests/`, `package.json`, `data/candidates.json` and `data/review.json` are excluded in `deploy.yml`. The review page writes files, so it must never reach the server.
 - **Server data stays put.** `api/transfer.php` writes codes to `api/codes/`, which is gitignored, blocked by `.htaccess` and excluded in `deploy.yml`.

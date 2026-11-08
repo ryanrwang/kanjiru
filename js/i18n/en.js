@@ -11,45 +11,54 @@ export default {
   },
 
   header: {
-    schemeDark: 'Switch to dark mode',
-    schemeLight: 'Switch to light mode',
-    schemeFixed: 'This skin has one colour scheme only',
-    shop: 'Shop',
-    wallet: 'Your points: {amount}. Open the shop'
+    home: 'Play',
+    points: 'Points',
+    wallet: 'Your points: {amount}. Open Points'
   },
 
   currency: {
     name: 'Koban',
-    amount: '{n} pts'
+    amount: '{n} pts',
+    unit: 'pts'
   },
 
-  hero: {
-    title: 'Guess the word from its parts.',
+  // How to play, the play page's intro: a worked example.
+  howto: {
+    title: 'How to play',
+    lead: 'Guess the word from its parts.',
+    body: 'Fill the cells with the word’s parts in writing order, like Wordle’s letters. Where one kanji ends is for you to work out. A part turns green in its cell, yellow if it’s elsewhere in the word, grey if the word hasn’t got it.',
     hit: 'Right part, right spot',
     near: 'Right part, wrong spot',
-    miss: 'Not in the answer',
-    // Parts in writing order (every level now)
-    partsBody: 'Fill the cells with the word’s parts in writing order, like Wordle’s letters. Where one kanji ends is for you to work out. A part turns green in its cell, yellow if it’s elsewhere in the word, grey if the word hasn’t got it.'
+    miss: 'Not in the answer'
   },
 
+  // The play card: today's daily, the Hard and Guided switches, then play again.
   play: {
-    title: 'Play',
-    note: 'A new puzzle every day, then as many more as you like',
-    meta: '{guesses} guesses · ×{mult} pts',
     soon: 'Coming soon',
     loading: 'Loading…',
     loadFailed: 'The game didn’t load. Check your connection and reload.',
-    practiceOnly: 'No daily yet: keep playing',
-    dailyNew: 'Daily #{n}',
-    dailyStarted: 'Daily #{n} · {level} · {guesses} guessed',
-    dailyWon: 'Daily #{n} · {level} · solved in {guesses} ✓',
-    dailyLost: 'Daily #{n} · {level} · not solved',
-    levelNow: 'Playing at {level}. Hard and Guided are in Settings.',
-    levelChange: 'Settings',
-    daily: 'Play',
+    practiceOnly: 'No daily yet. Keep playing for points.',
+    daily: 'Daily #{n}',
+    ready: 'Guess today’s word from its parts in {rows} tries.',
+    going: '{n} of {rows} guesses used · {level}',
+    won: 'Solved in {n} ✓ · {level}',
+    lost: 'Not solved today · {level}',
+    level: 'Level',
+    levelNext: 'Level for your next puzzle',
+    mult: '×{mult} pts',
+    hard: {
+      name: 'Hard',
+      body: 'Guesses must make real kanji and keep what you’ve found.'
+    },
+    guided: {
+      name: 'Guided',
+      body: 'Shows where each kanji starts and what goes where.'
+    },
+    start: 'Play',
     continue: 'Continue',
-    result: 'Result',
-    practice: 'Keep playing'
+    result: 'See result',
+    more: 'Play again',
+    nextDaily: 'Next daily in'
   },
 
   game: {
@@ -83,6 +92,7 @@ export default {
     guess: 'Guess',
     delete: 'Delete',
     palette: 'Parts',
+    debugCells: 'answer cell {cells}',
     soon: 'This mode is coming soon: its words need reviewing first.',
     on: 'On',
     kun: 'Kun',
@@ -175,13 +185,14 @@ export default {
     pointsWhy: 'parts {parts} + solve {solve}, ×{mult}',
     rewards: 'Rewards',
     balance: 'You have {icon} {n} pts',
+    spend: 'Spend them',
     streak: 'Daily streak',
     streakDays: '{n} in a row',
     share: 'Share',
     copied: 'Copied. Paste it anywhere.',
     copyManually: 'Select the text above and copy it.',
     nextDaily: 'Next daily in',
-    practice: 'Keep playing',
+    practice: 'Play again',
     again: 'Next puzzle'
   },
 
@@ -190,19 +201,28 @@ export default {
     practice: 'Kanjiru {numeral} {level} {score}{hints}'
   },
 
+  // The Points page: the wallet at the top.
+  points: {
+    title: 'Points',
+    wallet: 'Your points',
+    how: 'Each part you find pays up to {part}, a win {win} or more, and streaks and achievements pay extra.',
+    hints: 'Hints held',
+    streak: 'Daily streak',
+    achievements: 'Achievements',
+    of: '{n} of {total}'
+  },
+
   looks: {
     title: 'Looks',
     note: 'Mix colours, tiles and effects',
     lockPoints: '🔒 {cost} pts',
     lockAchievement: '🔒 {name}',
-    buyHint: 'Buy for {cost} pts in the shop',
-    achievementHint: 'Unlock: {desc}'
+    inUse: '✓ In use'
   },
 
   powers: {
     title: 'Hints & powers',
-    note: 'Earn or buy with points',
-    cost: '{cost} pts',
+    note: 'Use them in a game',
     earnedOnly: 'Earned only',
     whenBoth: 'Before or during a game',
     whenBefore: 'Before your first guess',
@@ -211,30 +231,23 @@ export default {
     have: 'You have {n}'
   },
 
+  // Buying, on the Points page and in a game's hint sheet.
   shop: {
-    open: 'Shop',
-    title: 'Shop',
-    close: 'Close',
-    intro: 'Earn points by playing: every part you find, every win, streaks and achievements. Spend them here.',
-    hints: 'Hints',
-    looks: 'Looks',
-    buy: 'Buy',
+    buyFor: 'Buy · {cost} pts',
     confirm: 'Spend {cost} of your {have} pts on {name}? You’ll have {left} left.',
+    confirmTitle: 'Buy {name}?',
     confirmYes: 'Buy for {cost} pts',
     cancel: 'Cancel',
-    have: 'You have {n} of {hold}',
+    have: 'Held {n}/{hold}',
     full: 'The most you can hold is {hold}',
     short: '{n} more pts needed',
     soon: 'Coming soon',
     owned: 'Yours',
     ownedSoon: 'Yours · coming soon',
-    inUse: 'In use',
-    use: 'Use',
-    using: '{name} is on.',
     byAchievement: 'Achievement',
     earn: '“{name}”: {desc}',
     bought: '{name} bought: you have {n}. {left} pts left.',
-    boughtSkin: '{name} is yours. {left} pts left.'
+    boughtSkin: '{name} is yours and on. {left} pts left.'
   },
 
   reward: {
@@ -265,21 +278,25 @@ export default {
     open: 'Settings',
     title: 'Settings',
     close: 'Close',
-    game: {
-      title: 'Game',
-      body: 'For your next puzzle, and one you haven’t started.'
+    language: 'Language',
+    scheme: {
+      title: 'Appearance',
+      auto: 'Auto',
+      light: 'Light',
+      dark: 'Dark',
+      fixed: '{name} has one colour scheme only.'
     },
-    hard: {
-      name: 'Hard',
-      body: 'Every guess must make real kanji and use what you’ve found: greens stay put, and parts found are used again. Points ×{mult}.'
-    },
-    guided: {
-      name: 'Guided',
-      body: 'Shows where each kanji starts, its places and a frame for each, and dims the parts that can’t go in the cell. Points ×{mult}.'
+    debug: {
+      title: 'Debug',
+      name: 'Debug mode',
+      body: 'For testing: numbered dots on the game’s keys show the answer in writing order, and you can add points.',
+      add: 'Add {n} pts',
+      added: 'Added {n} pts. You have {total} pts.'
     }
   },
 
   transfer: {
+    title: 'Move your progress',
     intro: 'Your progress is saved in this browser. To play on another device, move it there.',
     notSaving: 'This browser isn’t saving progress (private browsing?), so anything you receive lasts only until you close the page.',
     send: {

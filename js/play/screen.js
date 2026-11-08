@@ -15,7 +15,7 @@
  * Head start, Reveal a kanji) starts each new row in its cell, green; at
  * Hard it must stay there (engine.shownCells).
  *
- * The level (js/config/levels.js; the Settings switches) changes the board:
+ * The level (js/config/levels.js; the play card's switches) changes the board:
  *   Normal      one row of cells: where one kanji ends is for the player to
  *               work out. A kanji shows above its cells once it's solved.
  *   Guided      (showSplit) each kanji's cells apart, their places named, a
@@ -29,6 +29,8 @@
  * find, and close with a guess. Clues already found stay on show above the
  * keyboard. A hint you hold none of can be bought from its sheet (js/shop.js).
  * When the game ends, its rewards show as toasts and on the result card.
+ * In debug mode (Settings), each key whose part is in the answer shows the
+ * answer's cells it fills as numbered dots, so the dots spell the answer.
  *
  * The board keeps the rows already drawn, so a new row's reveal plays once
  * and redrawing the keyboard never replays it.
@@ -710,7 +712,8 @@ export function openGame(root, ctx) {
   //            spot), or null for all
   //   onTap    id → what a tap does
   //   after    nodes that close the last row (Delete and Guess)
-  function palette({ ids, marks, pressed, usable = null, onTap, label, after = [] }) {
+  //   answer   debug mode: id → the cells (from 1) it fills in the answer
+  function palette({ ids, marks, pressed, usable = null, onTap, label, after = [], answer = null }) {
     const tileOf = new Map(data.tiles.map((tile) => [tile.id, tile]));
     const key = (id) => {
       const tile = tileOf.get(id);
@@ -718,16 +721,19 @@ export function openGame(root, ctx) {
       const mark = marks.get(id);
       // The most used other form (氵 for 水) shows small in the corner.
       const variants = tile.forms.filter((f) => f.glyph !== id).sort((a, b) => b.uses - a.uses).slice(0, 1);
+      const cells = answer && answer.get(id);
       return el('button', {
         class: `tile is-cell palette-tile${mark ? ` is-${mark}` : ''}${on ? '' : ' is-out'}`,
         type: 'button', lang: 'ja',
         'aria-pressed': String(pressed(id)),
         disabled: !on,
-        'aria-label': mark ? `${id} ${markText(mark)}` : id,
+        'aria-label': [mark ? `${id} ${markText(mark)}` : id, cells ? t('game.debugCells', { cells: cells.join(t('game.listSep')) }) : null].filter(Boolean).join(t('game.listSep')),
         onclick: () => onTap(id)
       },
         glyph(id),
-        variants.length ? el('span', { class: 'palette-variant', 'aria-hidden': 'true' }, variants.map((f) => glyph(f.glyph))) : null);
+        variants.length ? el('span', { class: 'palette-variant', 'aria-hidden': 'true' }, variants.map((f) => glyph(f.glyph))) : null,
+        cells ? el('span', { class: 'key-dots', 'aria-hidden': 'true' },
+          cells.map((n) => el('span', { class: 'key-dot' }, String(n)))) : null);
     };
     return el('div', { class: 'palette', role: 'group', 'aria-label': label }, ids.map(key), after);
   }
@@ -747,8 +753,19 @@ export function openGame(root, ctx) {
       usable: guided ? new Set(tilesForPlace(data, state().palette, where.pos)) : null,
       onTap: addPart,
       label: place ? t('game.palettePlace', { place }) : t('game.palette'),
-      after: [deleteButton, guessButton]
+      after: [deleteButton, guessButton],
+      answer: store.get().settings.debug ? answerCells() : null
     });
+  }
+
+  // Debug mode (Settings): each part of the answer → the cells it fills,
+  // numbered from 1 in writing order, so its keys show the whole order.
+  function answerCells() {
+    const out = new Map();
+    [...state().answer].flatMap((ch) => data.kanji[ch].parts.map((p) => p.el)).forEach((id, i) => {
+      out.set(id, [...(out.get(id) || []), i + 1]);
+    });
+    return out;
   }
 
   function renderChoices() {

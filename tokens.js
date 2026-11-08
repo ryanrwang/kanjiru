@@ -217,6 +217,11 @@
         bg:     c.gray[0],
         border: c.gray[300],
         text:   c.gray[900]
+      },
+      // The win effects' examples on the Points page: petals and sparks.
+      effect: {
+        petal: c.sakura[300],
+        spark: c.kin[300]
       }
     },
 
@@ -289,7 +294,11 @@
       // The keyboard's keys: their height, and their least width. The game
       // screen drops to the small height only to keep cells at 32 px or more.
       keySm:     s[32],
-      key:       s[40]
+      key:       s[40],
+      // The play card's hanko seal, and a switch's track (its knob is
+      // spacing.md, inset by spacing.xs).
+      seal:      s[56],
+      switch:    s[40]
     },
 
     radius: {

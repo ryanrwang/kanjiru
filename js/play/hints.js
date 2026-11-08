@@ -134,8 +134,8 @@ export function whyNot(engine, state, power, held) {
 }
 
 // The sheet for one power: what it does, how many you hold, and Use. When
-// you hold none and could use one now, it sells one first, in two taps
-// (Buy, then the confirm that names the price).
+// you hold none and could use one now, Buy takes Use's place, in two taps
+// (Buy, then the confirm that names the price), and Use comes back after.
 //   read()   the latest { held, points, why, offer }; offer is js/shop.js
 //            powerOffer(), or null when it can't be bought here
 //   onBuy()  buys one; true when it did
@@ -153,6 +153,7 @@ export function openPowerSheet({ power, read, onBuy, onUse }) {
   const draw = (spent = 0) => {
     const { held, points, why, offer } = read();
     const selling = !!offer && offer.why !== 'not-for-sale' && (!held || bought);
+    const buyFirst = selling && !bought && !held;
     const pointsNode = el('span', { class: 'power-sheet-points' }, `${ECONOMY.currency.icon} ${pts(points)}`);
     const use = el('button', {
       class: 'btn btn-primary', type: 'button', disabled: !!why,
@@ -167,6 +168,10 @@ export function openPowerSheet({ power, read, onBuy, onUse }) {
         draw(power.cost);
       }
     }, t('shop.confirmYes', { cost: power.cost }));
+    const buy = el('button', {
+      class: 'btn btn-primary', type: 'button', disabled: !!(offer && offer.why),
+      onclick: () => { confirming = true; draw(); }
+    }, t('game.powers.buy', { cost: power.cost }));
 
     let buyRow = null;
     if (selling && bought) {
@@ -179,14 +184,9 @@ export function openPowerSheet({ power, read, onBuy, onUse }) {
             class: 'btn btn-ghost btn-small', type: 'button',
             onclick: () => { confirming = false; draw(); }
           }, t('shop.cancel'))));
-    } else if (selling) {
-      buyRow = el('div', { class: 'power-sheet-buy' },
-        el('button', {
-          class: 'btn btn-secondary', type: 'button', disabled: !!offer.why,
-          onclick: () => { confirming = true; draw(); }
-        }, t('game.powers.buy', { cost: power.cost })),
-        offer.why ? el('span', { class: 'sheet-note' },
-          offer.why === 'short' ? t('shop.short', { n: offer.need }) : t('shop.full', { hold: power.hold })) : null);
+    } else if (buyFirst && offer.why) {
+      buyRow = el('p', { class: 'status-line is-error' },
+        offer.why === 'short' ? t('shop.short', { n: offer.need }) : t('shop.full', { hold: power.hold }));
     }
 
     sheet.replaceChildren(el('div', { class: 'sheet-body' },
@@ -195,20 +195,22 @@ export function openPowerSheet({ power, read, onBuy, onUse }) {
         el('h2', { class: 'sheet-title', id: 'power-sheet-title' }, name)),
       el('p', {}, t(`power.${power.id}.desc`)),
       el('p', { class: 'sheet-note' }, t('powers.have', { n: held }), t('reward.sep'), pointsNode),
-      why && !confirming ? el('p', { class: 'status-line is-error' }, why) : null,
+      // Holding none needs no warning when Buy is right there.
+      why && !confirming && !buyFirst ? el('p', { class: 'status-line is-error' }, why) : null,
       buyRow,
       // While the confirm shows, its own buttons are the only ones.
       confirming ? null : el('div', { class: 'btn-row' },
-        use,
+        buyFirst ? buy : use,
         el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => sheet.close() }, t('game.powers.cancel')))
     ));
     if (spent) bump(pointsNode, -spent);
-    return { use, yes, why };
+    return { use, buy, buyFirst, why };
   };
 
   const first = draw();
   sheet.showModal();
-  if (!first.why) first.use.focus();
+  if (first.buyFirst) { if (!first.buy.disabled) first.buy.focus(); }
+  else if (!first.why) first.use.focus();
   // Focus follows the step: the confirm, then Use once it's bought.
   sheet.onclick = (event) => {
     if (event.target === sheet) return;
