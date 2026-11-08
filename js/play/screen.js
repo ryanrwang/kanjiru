@@ -268,13 +268,15 @@ export function openGame(root, ctx) {
   }
 
   // A place's name over its run of n cells (styles.css .shape-place); the
-  // short name when the run is narrower than a base cell.
-  function placeLabel({ pos, n }) {
+  // short name when the run is narrower than a base cell. The run holding
+  // the selected cell lights up: the keys that stay bright are for it.
+  function placeLabel({ pos, n, from }) {
     const tk = window.TOKENS.active();
     const size = CELL_SIZES.find(([id]) => id === board.dataset.cell);
     const cell = parseFloat(tk.layout[size ? size[1] : 'cell']);
     const wide = n * cell + (n - 1) * parseFloat(tk.spacing.xs) >= parseFloat(tk.layout.cell);
-    const node = el('span', { class: 'shape-place', title: t(`pos.${pos}`) }, t(`${wide ? 'pos' : 'posShort'}.${pos}`));
+    const on = playing() && ui.active >= from && ui.active < from + n;
+    const node = el('span', { class: `shape-place${on ? ' is-active' : ''}`, title: t(`pos.${pos}`) }, t(`${wide ? 'pos' : 'posShort'}.${pos}`));
     node.style.setProperty('--n', n);
     return node;
   }
@@ -284,12 +286,14 @@ export function openGame(root, ctx) {
     const pl = places();
     board.classList.toggle('has-shape', !!pl);
     if (!pl) { shape.replaceChildren(); return; }
+    let first = 0;   // the slot's first cell
     const groups = pl.map((slot) => {
       const out = [];
       slot.forEach((pos, i) => {
         if (i && slot[i - 1] === pos) { out[out.length - 1].n += 1; return; }
-        out.push({ pos, n: 1 });
+        out.push({ pos, n: 1, from: first + i });
       });
+      first += slot.length;
       return out;
     });
     shape.replaceChildren(
@@ -303,24 +307,51 @@ export function openGame(root, ctx) {
 
   // ── Board size ─────────────────────────────────────────────────────
 
-  // Largest first: the board takes the biggest cells and frame that fit.
+  // Largest first: the board takes the biggest cells, then frames and keys,
+  // that fit.
   const CELL_SIZES = [['xl', 'cellXl'], ['lg', 'cellLg'], ['md', 'cellMd'], ['base', 'cell'], ['sm', 'cellSm'], ['xs', 'cellXs']];
   const FRAME_SIZES = [['base', 'frame'], ['sm', 'frameSm']];
+  const KEY_SIZES = [['base', 'key'], ['sm', 'keySm']];
   // When the keyboard isn't up (the game is over), the rows may take this
   // share of the screen's height.
   const ROWS_HEIGHT = 0.5;
 
+  // The keyboard's columns: the fewest rows of keys at least keySm wide,
+  // with room left at the end of the last row for Delete (one key wide) and
+  // Guess (the rest, two keys or more), as in Wordle. Returns the rows.
+  function fitKeys(tk, px) {
+    const n = state().palette.length;
+    const width = picker.clientWidth;
+    const gap = px(tk.spacing.xs);
+    const least = px(tk.layout.keySm);
+    let cols = 1;
+    for (let rows = 1; rows <= n + 3; rows += 1) {
+      cols = Math.ceil((n + 3) / rows);
+      if (cols * least + (cols - 1) * gap <= width) break;
+    }
+    const rows = Math.ceil((n + 3) / cols);
+    picker.style.setProperty('--key-cols', cols);
+    deleteButton.style.gridColumn = 'span 1';
+    guessButton.style.gridColumn = `span ${Math.min(rows * cols - n - 1, cols)}`;
+    return rows;
+  }
+
   // Sizes the board to the space and the answer, so it works for any number
   // of kanji and parts. Cells are the largest size whose rows fit the width
-  // on one line and, with the head, frames, place names and keyboard, the
-  // screen's height, as in Wordle. With the split shown, each kanji's frame
-  // sits above its cells, no wider than them, and if even the smallest
-  // cells are too wide, rows wrap between kanji (data-wrap). Without it, a
-  // solved kanji takes a line of cell height above its cells.
-  // Sizes are layout tokens; styles.css keys on data-cell and data-frame.
+  // on one line and, with the head, frames, place names, clues found and
+  // keyboard, the screen's height, as in Wordle. For those cells, frames
+  // take the largest size that fits, then keys; keys drop to keySm only
+  // when cells are at the base size or smaller. With the split shown, each
+  // kanji's frame sits above its cells, no wider than them, and if even the
+  // smallest cells are too wide, rows wrap between kanji (data-wrap).
+  // Without it, a solved kanji takes a line of cell height above its cells.
+  // Sizes are layout tokens; styles.css keys on the board's data-cell and
+  // data-frame, and the keyboard's data-keys.
   function fitBoard() {
+    const keyboard = picker.isConnected && picker.classList.contains('is-keyboard');
     if (!partsMode()) {
       ['cell', 'frame', 'wrap'].forEach((k) => board.removeAttribute(`data-${k}`));
+      picker.removeAttribute('data-keys');
       return;
     }
     const tk = window.TOKENS.active();
@@ -329,49 +360,70 @@ export function openGame(root, ctx) {
     const sm = px(tk.spacing.sm);
     const md = px(tk.spacing.md);
     const counts = groupCounts();
-    const pl = splitShown() ? places() : null;
+    const split = splitShown();
+    const pl = split ? places() : null;
     // Per group: its place changes, each a wider gap (laidOut).
     const turns = counts.map((n, s) => (pl ? pl[s].filter((pos, i) => i && pos !== pl[s][i - 1]).length : 0));
     const slotWidth = (c, s) => counts[s] * c + (counts[s] - 1) * xs + turns[s] * sm;
     const slotWidths = (c) => counts.map((n, s) => slotWidth(c, s));
-    // Hard's word hangs off the right; the same room on the left keeps the cells centred.
-    const made = madeShown() ? 2 * (sm + px(tk.spacing['2xl'])) : 0;
+    // Hard's word hangs off the right of the rows (styles.css .row-made).
+    const made = madeShown() ? sm + px(tk.spacing['2xl']) : 0;
     const rowWidth = (c) => slotWidths(c).reduce((a, b) => a + b, 0) + (counts.length - 1) * md + made;
     const width = board.clientWidth;
     const rows = state().rows;
-    const cells = CELL_SIZES.map(([id, key]) => ({ id, px: px(tk.layout[key]) }));
-    const frameSizes = FRAME_SIZES.map(([id, key]) => ({ id, px: px(tk.layout[key]) }));
-    // Each frame no wider than its kanji's cells (the smallest if none fits).
-    const frameOfSize = (c) => {
+    const sizes = (list) => list.map(([id, key]) => ({ id, px: px(tk.layout[key]) }));
+    const cells = sizes(CELL_SIZES);
+    const frameSizes = sizes(FRAME_SIZES);
+    const keySizes = sizes(KEY_SIZES);
+    // Each frame no wider than its kanji's cells (the smallest if none is).
+    const framesFor = (c) => {
+      if (!split) return frameSizes.slice(0, 1);
       const narrowest = Math.min(...slotWidths(c));
-      return frameSizes.find((x) => x.px <= narrowest) || frameSizes[frameSizes.length - 1];
+      const narrow = frameSizes.filter((x) => x.px <= narrowest);
+      return narrow.length ? narrow : frameSizes.slice(-1);
     };
-    const frameFor = (c) => frameOfSize(c).id;
-    // Height: everything else on the screen while the keyboard is up, plus
-    // the frames (with their count) and place names; else a share of the
-    // screen. The clues count, since they stay once found; the power bar
-    // comes and goes, so it doesn't. The message floats over the board,
-    // so it takes no room.
-    const keyboard = picker.isConnected && picker.classList.contains('is-keyboard');
-    const clueRows = hints.querySelector('.clues');
-    const others = keyboard
-      ? head.offsetHeight + picker.offsetHeight - hints.offsetHeight + 2 * md
-        + (clueRows ? clueRows.offsetHeight : 0) + (pl ? px(tk.spacing.lg) + xs : 0)
-      : 0;
+    const keysFor = (c) => (keyboard && c <= px(tk.layout.cell) ? keySizes : keySizes.slice(0, 1));
+    // Height: everything else on the screen while the keyboard is up (the
+    // keys at a given height), plus the frames (with their count) and place
+    // names; else a share of the screen. The clues count, since they stay
+    // once found; the power bar comes and goes, so it doesn't. The message
+    // floats over the board, so it takes no room.
+    let others = () => 0;
+    if (keyboard) {
+      const keyRows = fitKeys(tk, px);
+      const keyNow = px(tk.layout[(KEY_SIZES.find(([id]) => id === picker.dataset.keys) || KEY_SIZES[0])[1]]);
+      const clueRows = hints.querySelector('.clues');
+      const hintsRoom = hints.offsetHeight ? hints.offsetHeight + sm : 0;
+      const cluesRoom = clueRows ? clueRows.offsetHeight + sm : 0;
+      const above = Math.max(0, head.getBoundingClientRect().top + window.scrollY);
+      const fixed = above + head.offsetHeight + 2 * md + picker.offsetHeight - hintsRoom + cluesRoom
+        + (pl ? px(tk.spacing.lg) + xs : 0) - keyRows * keyNow;
+      others = (k) => fixed + keyRows * k;
+    }
     const solvedAny = engine.clues(state()).solved.length > 0;
-    const framesHeight = (c) => (splitShown()
-      ? frameOfSize(c).px + xs + (level().countLeft ? md + xs : 0)
+    const framesHeight = (c, f) => (split
+      ? f + xs + (level().countLeft ? md + xs : 0)
       : (solvedAny ? c + xs : 0));
     const rowsHeight = (c, lines) => rows * lines * c + (rows * lines - 1) * xs;
-    const fitsHeight = (c, lines = 1) => (keyboard
-      ? others + framesHeight(c) + rowsHeight(c, lines) <= window.innerHeight
+    const fits = (c, f, k, lines) => (keyboard
+      ? others(k) + framesHeight(c, f) + rowsHeight(c, lines) <= window.innerHeight
       : rowsHeight(c, lines) <= window.innerHeight * ROWS_HEIGHT);
+    // The largest frame, then keys, that fit with cells c; else null.
+    const choose = (c, lines = 1) => {
+      for (const k of keysFor(c.px)) {
+        for (const f of framesFor(c.px)) {
+          if (fits(c.px, f.px, k.px, lines)) return { cell: c.id, frame: f.id, keys: k.id };
+        }
+      }
+      return null;
+    };
+    // Nothing fits the height: the smallest of everything.
+    const least = (c) => ({ cell: c.id, frame: framesFor(c.px).slice(-1)[0].id, keys: keysFor(c.px).slice(-1)[0].id });
 
+    const wide = cells.filter((c) => rowWidth(c.px) <= width);
     let pick = null;
-    const tall = cells.filter((c) => fitsHeight(c.px));
-    for (const c of (tall.length ? tall : cells.slice(-1))) {
-      if (rowWidth(c.px) <= width) { pick = { cell: c.id, frame: frameFor(c.px) }; break; }
-    }
+    for (const c of wide) { pick = choose(c); if (pick) break; }
+    if (!pick && wide.length) pick = least(wide[wide.length - 1]);
     if (!pick) {
       // Wrap between kanji: the largest cells whose kanji fit the width
       // and whose wrapped rows (lines × rows) fit the height.
@@ -383,14 +435,16 @@ export function openGame(root, ctx) {
         });
         return n;
       };
-      const fits = (x) => Math.max(...slotWidths(x.px)) + made <= width;
-      const c = cells.find((x) => fits(x) && fitsHeight(x.px, lines(x.px)))
-        || [...cells].reverse().find(fits) || cells[cells.length - 1];
-      pick = { cell: c.id, frame: frameFor(c.px), wrap: true };
+      const narrow = cells.filter((x) => Math.max(...slotWidths(x.px)) + made <= width);
+      for (const c of narrow) { pick = choose(c, lines(c.px)); if (pick) break; }
+      if (!pick) pick = least(narrow.length ? narrow[narrow.length - 1] : cells[cells.length - 1]);
+      pick.wrap = true;
     }
     board.dataset.cell = pick.cell;
     board.dataset.frame = pick.frame;
     board.toggleAttribute('data-wrap', !!pick.wrap);
+    if (keyboard) picker.dataset.keys = pick.keys;
+    else picker.removeAttribute('data-keys');
   }
 
   // ── Kanji frames ───────────────────────────────────────────────────
@@ -614,7 +668,8 @@ export function openGame(root, ctx) {
   //   usable   the tiles that can be tapped (the rest dim, keeping their
   //            spot), or null for all
   //   onTap    id → what a tap does
-  function palette({ ids, marks, pressed, usable = null, onTap, label }) {
+  //   after    nodes that close the last row (Delete and Guess)
+  function palette({ ids, marks, pressed, usable = null, onTap, label, after = [] }) {
     const tileOf = new Map(data.tiles.map((tile) => [tile.id, tile]));
     const key = (id) => {
       const tile = tileOf.get(id);
@@ -633,41 +688,40 @@ export function openGame(root, ctx) {
         glyph(id),
         variants.length ? el('span', { class: 'palette-variant', 'aria-hidden': 'true' }, variants.map((f) => glyph(f.glyph))) : null);
     };
-    return el('div', { class: 'palette', role: 'group', 'aria-label': label }, ids.map(key));
+    return el('div', { class: 'palette', role: 'group', 'aria-label': label }, ids.map(key), after);
   }
 
   // The keyboard: every key of the puzzle's palette, always in the same
-  // spot. Guided dims the keys no kanji has in the selected cell's place,
-  // and names the place above them; tapping a cell switches place.
+  // spot, with Delete and Guess at the end of the last row (fitKeys).
+  // Guided dims the keys no kanji has in the selected cell's place, which
+  // lights up above the board (placeLabel); tapping a cell switches place.
   function partsChoices() {
     const where = cellPlaces()[ui.active] || { slot: 0, pos: null };
     const guided = splitShown() && where.pos;
     const place = guided ? placeName(where) : null;
-    return [
-      place ? el('p', { class: 'keyboard-place' }, t('game.palettePlace', { place })) : null,
-      palette({
-        ids: state().palette,
-        marks: knownMarks(),
-        pressed: (id) => ui.cells[ui.active] === id,
-        usable: guided ? new Set(tilesForPlace(data, state().palette, where.pos)) : null,
-        onTap: addPart,
-        label: place ? t('game.palettePlace', { place }) : t('game.palette')
-      })
-    ];
+    return palette({
+      ids: state().palette,
+      marks: knownMarks(),
+      pressed: (id) => ui.cells[ui.active] === id,
+      usable: guided ? new Set(tilesForPlace(data, state().palette, where.pos)) : null,
+      onTap: addPart,
+      label: place ? t('game.palettePlace', { place }) : t('game.palette'),
+      after: [deleteButton, guessButton]
+    });
   }
 
   function renderChoices() {
     if (!playing() || !partsMode()) { choices.replaceChildren(); return; }
-    choices.replaceChildren(...partsChoices().filter(Boolean));
+    choices.replaceChildren(partsChoices());
   }
 
   // A keyboard at the bottom, as in Wordle: the clues and hints (so they
-  // show above it), any message, the parts, then Delete and Guess.
+  // show above it), any message, then the parts with Delete and Guess.
   function renderPicker() {
     const on = playing() && partsMode();
     picker.classList.toggle('is-keyboard', on);
     if (!on) { picker.replaceChildren(); return; }
-    picker.replaceChildren(hints, message, choices, el('div', { class: 'keyboard-keys' }, deleteButton, guessButton));
+    picker.replaceChildren(hints, message, choices);
     renderChoices();
   }
 

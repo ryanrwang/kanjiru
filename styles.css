@@ -771,8 +771,10 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 /* ── Shared bits ───────────────────────────────────────────────────── */
 
-/* Read by screen readers, not shown. */
-.visually-hidden {
+/* Read by screen readers, not shown. (Clue names above the keyboard too:
+   their icons stand in for them, see "Hints".) */
+.visually-hidden,
+.picker.is-keyboard .clue-label {
   position: absolute;
   width: var(--stroke-thin);
   height: var(--stroke-thin);
@@ -880,14 +882,14 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   --board-font: var(--font-size-lg);
   --board-kanji: var(--font-size-2xl);
   --board-frame: var(--layout-frame);
-  --frame-1: var(--font-size-xl);
-  --frame-2: var(--font-size-lg);
-  --frame-3: var(--font-size-md);
+  --frame-1: var(--font-size-lg);
+  --frame-2: var(--font-size-md);
+  --frame-3: var(--font-size-xs);
   --frame-4: var(--font-size-xs);
-  --frame-cover: var(--font-size-display);
-  --frame-inner: var(--font-size-lg);
+  --frame-cover: var(--font-size-3xl);
+  --frame-inner: var(--font-size-xs);
   --frame-inset: var(--spacing-md);
-  --frame-solved: var(--font-size-3xl);
+  --frame-solved: var(--font-size-2xl);
 }
 
 .board[data-cell="xs"] {
@@ -920,11 +922,10 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .board[data-frame="sm"] {
   --board-frame: var(--layout-frameSm);
-  --frame-1: var(--font-size-lg);
-  --frame-2: var(--font-size-md);
-  --frame-3: var(--font-size-xs);
-  --frame-cover: var(--font-size-3xl);
-  --frame-inner: var(--font-size-xs);
+  --frame-1: var(--font-size-md);
+  --frame-2: var(--font-size-xs);
+  --frame-cover: var(--font-size-2xl);
+  --frame-inset: var(--spacing-sm);
 }
 
 
@@ -980,6 +981,12 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   color: var(--color-text-muted);
   text-align: center;
   white-space: nowrap;
+}
+
+/* The place of the selected cell: the keys that stay bright are for it. */
+.shape-place.is-active {
+  color: var(--color-text-accent);
+  font-weight: var(--font-weight-bold);
 }
 
 /* Parts levels: the rows, centred, like Wordle's grid. Every row is as
@@ -1052,8 +1059,10 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   background: transparent;
   border-color: var(--color-border-subtle);
 }
-/* Hard: the kanji a row's parts make, hanging off its right edge so the
-   cells stay centred (fitBoard leaves room for it on both sides). */
+/* Hard: the kanji a row's parts make, hanging off its right edge. The
+   board centres the rows with that room beside them, so they sit a little
+   left of centre and the cells can be bigger (fitBoard). */
+.board.has-made .board-grid { padding-right: calc(var(--spacing-sm) + var(--spacing-2xl)); }
 .board.has-made .board-row { position: relative; }
 
 .row-made {
@@ -1073,12 +1082,10 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
    parts found green. Top and bottom span it; left, inner and right share
    the middle; an outer part covers it all, with the inner inset.
    Otherwise (.is-flat): only a solved kanji, as wide as its cells. */
-.board-frames:empty { display: none; }
+.board-frames:empty,
+.board.is-parts .board-frames:empty { display: none; }
 
-.board.is-parts .board-frames {
-  display: flex;
-  padding-bottom: var(--spacing-xs);
-}
+.board.is-parts .board-frames { display: flex; }
 
 .frame-slot {
   flex: 0 0 auto;
@@ -1090,8 +1097,10 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   width: calc(var(--board-cell) * var(--n, 1) + var(--spacing-xs) * (var(--n, 1) - 1) + var(--spacing-sm) * var(--g, 0));
 }
 
-/* How many kanji still fit, under each kanji's frame. */
+/* How many kanji still fit, under each kanji's frame: one line, the height
+   fitBoard() counts. */
 .frame-count {
+  height: var(--spacing-md);
   font-size: var(--font-size-xs);
   line-height: var(--font-lineHeight-snug);
   color: var(--color-text-muted);
@@ -1180,8 +1189,11 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 }
 
 /* Parts levels: the parts as a keyboard pinned to the bottom, as in
-   Wordle. Keys stretch to fill each row; Delete and Guess close it. */
+   Wordle. Keys stretch to fill each row; Delete and Guess close the last
+   one. fitBoard() in js/play/screen.js sets the columns (--key-cols, and
+   the span of Guess) and the keys' height (data-keys). */
 .picker.is-keyboard {
+  --key-height: var(--layout-key);
   position: sticky;
   bottom: 0;
   z-index: 2;
@@ -1214,26 +1226,28 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   color: var(--color-text-primary);
 }
 
+.picker.is-keyboard[data-keys="sm"] { --key-height: var(--layout-keySm); }
+
 .picker.is-keyboard .palette {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--layout-cell), 1fr));
+  grid-template-columns: repeat(var(--key-cols, auto-fill), minmax(var(--layout-keySm), 1fr));
   gap: var(--spacing-xs);
 }
 
-.picker.is-keyboard .palette-tile { width: auto; }
-
-.keyboard-place {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  text-align: center;
+.picker.is-keyboard .palette-tile {
+  width: auto;
+  height: var(--key-height);
 }
 
-.keyboard-keys {
-  display: flex;
-  gap: var(--spacing-sm);
-}
+.picker.is-keyboard[data-keys="sm"] .palette-tile { font-size: var(--font-size-md); }
 
-.keyboard-keys .btn-primary { flex: 1; }
+/* Delete and Guess, keys like the rest. */
+.picker.is-keyboard .palette .btn {
+  min-height: 0;
+  height: var(--key-height);
+  padding: 0 var(--spacing-sm);
+  border-radius: var(--radius-md);
+}
 
 .key-delete svg {
   width: var(--spacing-lg);
@@ -1249,6 +1263,19 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 body.is-game .app-header { display: none; }
 body.is-game:has(.picker.is-keyboard) .app-footer { display: none; }
 body.is-game:has(.picker.is-keyboard) .app-main { padding-bottom: 0; }
+
+/* With the keyboard up the game fills the screen, so the keyboard sits at
+   the bottom even when the cells are as big as the width allows, and the
+   board takes the middle of what's left. */
+body.is-game:has(.picker.is-keyboard) .game {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+body.is-game:has(.picker.is-keyboard) .board.is-parts {
+  flex: 1 0 auto;
+  align-items: center;
+}
 
 /* Tile reveal (settings.tiles). Flip is the default; a tile style from
    js/config/skins.js gets its own block keyed by [data-tiles] (step 6).
@@ -1345,6 +1372,26 @@ body.is-game:has(.picker.is-keyboard) .app-main { padding-bottom: 0; }
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
+
+/* Above the keyboard, the clues found share lines, each named by its
+   power's icon (the name stays for screen readers), since fitBoard() in
+   js/play/screen.js makes room for them: every line costs the cells. */
+.picker.is-keyboard .clues {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs) var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  line-height: var(--font-lineHeight-snug);
+}
+
+.picker.is-keyboard .clue {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.picker.is-keyboard .reading-group:last-child { margin-right: 0; }
 
 .part-chips {
   display: inline-flex;
