@@ -18,6 +18,18 @@ function kun(reading) {
   return el('span', { class: 'reading' }, stem, tail ? el('span', { class: 'okurigana' }, tail) : null);
 }
 
+// KANJIDIC can list a reading with and without its okurigana (か.つ and
+// かつ for 勝), which read the same on screen. Keep one, in the first one's
+// place: the one that marks the okurigana.
+export function uniqueKun(readings) {
+  const best = new Map();
+  readings.forEach((r) => {
+    const key = r.replace('.', '');
+    if (!best.has(key) || (r.includes('.') && !best.get(key).includes('.'))) best.set(key, r);
+  });
+  return [...best.values()];
+}
+
 export function readingNodes(reading) {
   if (typeof reading === 'string') return [el('span', { lang: 'ja' }, reading)];
   const out = [];
@@ -29,7 +41,7 @@ export function readingNodes(reading) {
   if (reading.kun.length) {
     out.push(el('span', { class: 'reading-group' },
       el('span', { class: 'reading-label' }, t('game.kun')),
-      el('span', { lang: 'ja' }, reading.kun.map((r, i) => [i ? '、' : '', kun(r)]))));
+      el('span', { lang: 'ja' }, uniqueKun(reading.kun).map((r, i) => [i ? '、' : '', kun(r)]))));
   }
   return out;
 }

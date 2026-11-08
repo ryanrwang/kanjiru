@@ -130,7 +130,7 @@ Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first. Work on a new branch.
 1. Earning: a game's points (engine.points()) are already paid into the wallet when it ends (js/play/session.js finish()). Add streak rewards (streakRewards() in js/engine/stats.js), all from js/config/economy.js.
 2. Random bonus hint drops after a win (engine.rollDrop() picks one, weighted by each power's drop value, respecting hold limits).
 3. A shop: buy powers and locked skins with points, with confirm steps and clear prices in both languages.
-4. Powers already work in game from the power bar (js/play/hints.js), spending the inventory; make them easy to find before the first guess.
+4. Powers already work in game from the power bar (js/play/hints.js), spending the inventory; make them easy to find before the first guess. The open power bar pushes the page into a scroll (70 px at 402 × 780, 29 px at 375 × 667), since fitBoard() doesn't count it: make it float like the game message, or count it.
 5. Achievements checked after each game (stats() and newAchievements() in js/engine/stats.js), with a toast, their rewards, and the skins they unlock. With one daily mode, "Full set" (every daily mode won in a day) now just means winning the daily: replace or retire it.
 6. Show balance changes clearly (a small +points animation that respects reduced motion).
 
@@ -192,7 +192,7 @@ Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first. Work on a new branch.
 4. Accessibility: keyboard play, screen reader labels, and contrast in every skin and both schemes.
 5. Performance: first load on a phone, data file sizes (data/game/kanji.json is about 82 KB gzipped), font loading.
 6. Add Kanjiru to the Apps page: apps/index.html in the Clearful repo, which is a separate repo; read D:\Dropbox\Clearful\.claude\github-deploy.md first.
-7. Set EPOCH in tools/compile_game.py to launch day, recompile, and commit data/game/ (puzzle 1 = launch day).
+7. Set EPOCH in tools/compile_game.py to launch day, recompile, and commit data/game/ (puzzle 1 = launch day). Dailies are saved under their puzzle number only, so testers' pre-launch games would mark launch-day puzzles as played: bump VERSION in js/store.js with a migration that moves pre-launch history (main dailies and the retired k1–k4 games) aside.
 
 Done when it installs to a phone's home screen, passes the accessibility checks, and is listed on /apps/.
 ```

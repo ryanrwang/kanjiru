@@ -21,7 +21,9 @@
  *   palette      parts shown per puzzle: the answer's parts, the tiles in
  *                rules.js palette.always, and random decoys up to this many
  *   freeMeaning  the meaning shows for free once this many guesses are used
- *                (0 = from the start, null = never)
+ *                (0 = from the start, null = never), but only at a level
+ *                with freeMeaning: true. No level offered now has it, so
+ *                only the Meaning hint shows the meaning (levels.js)
  *   playable     the game screen can play it. It also needs answers (Keep
  *                words); until both, the start screen shows "soon"
  *   listed       shown on the start screen

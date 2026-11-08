@@ -350,11 +350,12 @@ export function openGame(root, ctx) {
     // Height: everything else on the screen while the keyboard is up, plus
     // the frames (with their count) and place names; else a share of the
     // screen. The clues count, since they stay once found; the power bar
-    // and the message come and go, so they don't.
+    // comes and goes, so it doesn't. The message floats over the board,
+    // so it takes no room.
     const keyboard = picker.isConnected && picker.classList.contains('is-keyboard');
     const clueRows = hints.querySelector('.clues');
     const others = keyboard
-      ? head.offsetHeight + picker.offsetHeight - hints.offsetHeight - message.offsetHeight + 2 * md
+      ? head.offsetHeight + picker.offsetHeight - hints.offsetHeight + 2 * md
         + (clueRows ? clueRows.offsetHeight : 0) + (pl ? px(tk.spacing.lg) + xs : 0)
       : 0;
     const solvedAny = engine.clues(state()).solved.length > 0;
@@ -554,10 +555,15 @@ export function openGame(root, ctx) {
     return out;
   }
 
+  // With the keyboard up, a message floats over the bottom of the board for
+  // a moment (styles.css), so it never moves the board or scrolls the page.
+  let messageTimer = 0;
   function say(kind, text) {
+    clearTimeout(messageTimer);
     ui.message = text ? { kind, text } : null;
     message.className = `status-line${ui.message && ui.message.kind === 'error' ? ' is-error' : ''}`;
     message.textContent = text || '';
+    if (text) messageTimer = setTimeout(() => say(null, ''), parseFloat(window.TOKENS.active().transition.message) || 0);
   }
 
   function makeKeys() {
