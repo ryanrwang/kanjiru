@@ -65,7 +65,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/play/session.js` | Games in the save: start or resume (`save.playing`), record to history, pay points, spend powers |
 | `js/play/rewards.js` | What a finished game pays as ledger entries: its points, streak rewards, a bonus hint, achievements (`payGame()`, `earnAchievements()`), and `describe()` for the toasts and result card |
 | `js/play/hints.js` | Clues, the power bar (floats above the keyboard) and the sheet that uses a power, or buys one when you hold none |
-| `js/play/result.js` | The result card: answer, points, rewards, balance (with a link to the Points page), streak, share, countdown |
+| `js/play/result.js` | The result card: answer, points, rewards, balance (with a link to the Points page), streak, share (hidden while `rules.js` `share.show` is false), countdown |
 | `js/play/share.js` | The share text and emoji grid (squares in `rules.js` `share`) |
 | `js/play/glyph.js` | Part glyphs as text, or KanjiVG strokes where fonts may lack them |
 | `tests/` | `node --test` tests for the engine, on fixtures (never the real word list) |

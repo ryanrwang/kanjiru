@@ -27,7 +27,9 @@ export const RULES = {
 
   // The share text after a game: one square per part, per guess, and a
   // mark when the game used a hint or power (the free meaning doesn't count).
+  // show: false hides it on the result card for now (2026-11-08).
   share: {
+    show: false,
     marks: { hit: '🟩', near: '🟨', other: '🟨', miss: '⬜' },
     hints: '💡'
   }

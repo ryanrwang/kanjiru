@@ -194,6 +194,7 @@ The user asked for a layout overhaul: the header holds only Points and Settings,
 - **Result card:** the answer with its meanings, readings and parts, points, streak, the balance with a link to the Points page ("Spend them"), share text and a countdown to the next daily, with Play again (after the daily) or Next puzzle (after another one). A game from another device (merged in) shows without points, since only its guesses are known.
 - **Readings:** kun readings show their okurigana muted (か + つ). KANJIDIC sometimes lists a reading both with and without it (か.つ and かつ for 勝; 47 kanji), so the one that marks the okurigana is kept (`uniqueKun()` in `js/play/hints.js`).
 - **Share text:** the mode's numeral, the daily number, the level, the score (X when lost) and one square per part per guess (`rules.js` `share`). 💡 marks a game that used a power.
+- **Decided — Sharing is hidden for now (2026-11-08):** the user asked to hide it. The result card leaves out the share text and its button while `rules.js` `share.show` is false; the text and its tests stay, so turning it back on is that one line.
 - **Modes:** `listed` in `js/config/modes.js` gives a mode a play card and `playable` says the screen supports it; a mode with no answers shows "soon". The card offers the daily first, then Keep playing once it's done.
 
 ## Hints, powers and points
