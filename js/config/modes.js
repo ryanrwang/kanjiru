@@ -17,10 +17,13 @@
  *                rules.js palette.always, and random decoys up to this many
  *   freeMeaning  the meaning shows for free once this many guesses are used
  *                (0 = from the start, null = never)
+ *   playable     the game screen can play it. It also needs answers (Keep
+ *                words); until both, the start screen shows "soon". Step 4
+ *                turns on 2+ kanji.
  */
 export const MODES = [
-  { id: 'k1', length: 1, numeral: '一', guesses: 6, daily: true, points: 1,   palette: 40, freeMeaning: 3 },
-  { id: 'k2', length: 2, numeral: '二', guesses: 6, daily: true, points: 1.5, palette: 50, freeMeaning: 3 },
-  { id: 'k3', length: 3, numeral: '三', guesses: 7, daily: true, points: 2,   palette: 56, freeMeaning: 3 },
-  { id: 'k4', length: 4, numeral: '四', guesses: 8, daily: true, points: 2.5, palette: 64, freeMeaning: 3 }
+  { id: 'k1', length: 1, numeral: '一', guesses: 6, daily: true, points: 1,   palette: 40, freeMeaning: 3, playable: true },
+  { id: 'k2', length: 2, numeral: '二', guesses: 6, daily: true, points: 1.5, palette: 50, freeMeaning: 3, playable: false },
+  { id: 'k3', length: 3, numeral: '三', guesses: 7, daily: true, points: 2,   palette: 56, freeMeaning: 3, playable: false },
+  { id: 'k4', length: 4, numeral: '四', guesses: 8, daily: true, points: 2.5, palette: 64, freeMeaning: 3, playable: false }
 ];

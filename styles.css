@@ -239,6 +239,13 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   text-align: center;
 }
 
+.demo-place {
+  width: var(--layout-tile);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
 .demo-legend {
   display: flex;
   flex-wrap: wrap;
@@ -306,7 +313,19 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   text-align: left;
 }
 
-.mode-card:disabled { opacity: var(--opacity-soft); }
+.mode-card.is-soon { opacity: var(--opacity-soft); }
+
+.mode-status {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.mode-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
 
 .mode-kanji {
   font-size: var(--font-size-2xl);
@@ -416,6 +435,25 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 }
 .chip.is-locked { color: var(--color-text-muted); }
 
+/* ── Level picker ──────────────────────────────────────────────────── */
+
+.level-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.level-desc {
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  color: var(--color-text-secondary);
+}
+
+.level-points {
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
 /* ── Hints and powers ──────────────────────────────────────────────── */
 
 .power-list {
@@ -481,6 +519,12 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 }
 
 .btn:disabled { opacity: var(--opacity-disabled); }
+
+.btn-small {
+  min-height: var(--spacing-xl);
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-xs);
+}
 
 .btn-primary {
   background: var(--color-action-primary-bg);
@@ -693,6 +737,965 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   color: var(--color-text-secondary);
 }
 
+/* ── Shared bits ───────────────────────────────────────────────────── */
+
+/* Read by screen readers, not shown. */
+.visually-hidden {
+  position: absolute;
+  width: var(--stroke-thin);
+  height: var(--stroke-thin);
+  margin: calc(var(--stroke-thin) * -1);
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A short message: the readable text colour, with a bar at the side that
+   says whether it went well. */
+.status-line {
+  padding-left: var(--spacing-sm);
+  border-left: var(--stroke-thick) solid var(--color-border-default);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.status-line:empty { display: none; }
+.status-line.is-ok { border-left-color: var(--color-status-success); }
+.status-line.is-error {
+  border-left-color: var(--color-status-danger);
+  color: var(--color-text-primary);
+}
+
+.loading { color: var(--color-text-muted); }
+
+/* KanjiVG strokes for glyphs the fonts may lack: 1em square, like text. */
+.glyph-svg {
+  width: 1em;
+  height: 1em;
+  overflow: visible;
+}
+
+.glyph-svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: calc(var(--stroke-thick) * 1.25);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ── Game screen ───────────────────────────────────────────────────── */
+
+.game {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.game-head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-left: calc(var(--spacing-sm) * -1);
+}
+
+.game-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-snug);
+}
+
+.game-kind {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.game-count { font-variant-numeric: tabular-nums; }
+
+.game-soon {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+}
+
+/* Game-screen tiles: smaller than the start screen's example. */
+.tile.is-cell {
+  width: var(--layout-cell);
+  height: var(--layout-cell);
+  font-size: var(--font-size-lg);
+}
+
+/* Each mark's colour as a variable too, for the reveal below. */
+.tile.is-hit  { --mark-bg: var(--color-feedback-hit); }
+.tile.is-near { --mark-bg: var(--color-feedback-near); }
+.tile.is-miss { --mark-bg: var(--color-feedback-miss); }
+
+/* ── Board ─────────────────────────────────────────────────────────── */
+
+/* At Normal and Hard, fitBoard() in js/play/screen.js sizes the board:
+   data-cell and data-frame pick layout tokens (largest that fit), and
+   data-layout puts the kanji frame beside the rows or above them. */
+.board {
+  --board-cell: var(--layout-cell);
+  --board-font: var(--font-size-lg);
+  --board-kanji: var(--font-size-2xl);
+  --board-frame: var(--layout-frame);
+  --frame-1: var(--font-size-xl);
+  --frame-2: var(--font-size-lg);
+  --frame-3: var(--font-size-md);
+  --frame-4: var(--font-size-xs);
+  --frame-cover: var(--font-size-display);
+  --frame-inner: var(--font-size-lg);
+  --frame-inset: var(--spacing-md);
+  --frame-solved: var(--font-size-3xl);
+}
+
+.board[data-cell="xs"] {
+  --board-cell: var(--layout-cellXs);
+  --board-font: var(--font-size-md);
+  --board-kanji: var(--font-size-lg);
+}
+
+.board[data-cell="sm"] {
+  --board-cell: var(--layout-cellSm);
+  --board-kanji: var(--font-size-xl);
+}
+
+.board[data-cell="md"] {
+  --board-cell: var(--layout-cellMd);
+  --board-font: var(--font-size-xl);
+}
+
+.board[data-cell="lg"] {
+  --board-cell: var(--layout-cellLg);
+  --board-font: var(--font-size-2xl);
+  --board-kanji: var(--font-size-3xl);
+}
+
+.board[data-frame="sm"] {
+  --board-frame: var(--layout-frameSm);
+  --frame-1: var(--font-size-lg);
+  --frame-2: var(--font-size-md);
+  --frame-3: var(--font-size-xs);
+  --frame-cover: var(--font-size-3xl);
+  --frame-inner: var(--font-size-xs);
+}
+
+.board[data-frame="md"] {
+  --board-frame: var(--layout-frameMd);
+  --frame-1: var(--font-size-2xl);
+  --frame-2: var(--font-size-xl);
+  --frame-3: var(--font-size-lg);
+  --frame-4: var(--font-size-md);
+  --frame-inner: var(--font-size-xl);
+  --frame-inset: var(--spacing-lg);
+  --frame-solved: var(--font-size-display);
+}
+
+.board[data-frame="lg"] {
+  --board-frame: var(--layout-frameLg);
+  --frame-1: var(--font-size-3xl);
+  --frame-2: var(--font-size-2xl);
+  --frame-3: var(--font-size-xl);
+  --frame-4: var(--font-size-lg);
+  --frame-cover: var(--font-size-hero);
+  --frame-inner: var(--font-size-2xl);
+  --frame-inset: var(--spacing-xl);
+  --frame-solved: var(--font-size-hero);
+}
+
+.board-grid,
+.board-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.board-rows:empty { display: none; }
+
+.board-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-height: var(--layout-cell);
+}
+
+.row-kanji {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--layout-cell);
+  height: var(--layout-cell);
+  font-size: var(--font-size-2xl);
+  line-height: var(--font-lineHeight-tight);
+}
+
+.row-kanji.is-empty {
+  border: var(--stroke-thick) dashed var(--color-border-default);
+  border-radius: var(--radius-md);
+}
+
+.board-row.is-next .row-kanji { color: var(--color-text-accent); }
+
+.row-tiles {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.row-gap { width: var(--spacing-sm); }
+
+/* Parts levels with places: a gap where the place changes, and the
+   places above the board, one label over each run of cells. */
+.cell-gap { width: var(--spacing-xs); }
+
+.board-shape:empty { display: none; }
+.board-shape .board-row { min-height: 0; }
+.board-shape .row-kanji { height: auto; }
+
+.shape-place {
+  width: calc(var(--board-cell) * var(--n, 1) + var(--spacing-xs) * (var(--n, 1) - 1));
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  color: var(--color-text-muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Parts levels: the rows, centred, each with a column on the right of its
+   cells: the kanji it makes, or how many kanji fit. Every row is as wide
+   as the others, so the cells line up under the places. */
+.board.is-parts {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+
+.board.is-parts .board-grid { align-items: flex-start; }
+.board.is-parts .board-row { min-height: var(--board-cell); }
+
+/* Each kanji's cells stay together; a wider gap between kanji. Rows too
+   wide for the screen wrap between kanji (data-wrap), all alike. */
+.board.is-parts .row-tiles {
+  flex-wrap: nowrap;
+  gap: var(--spacing-xs) var(--spacing-md);
+}
+
+.board[data-wrap] .row-tiles { flex-wrap: wrap; }
+.board[data-wrap] .board-rows { gap: var(--spacing-md); }
+.row-slot,
+.shape-place { flex: 0 0 auto; }
+
+.row-slot {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.board.is-parts .tile.is-cell {
+  width: var(--board-cell);
+  height: var(--board-cell);
+  font-size: var(--board-font);
+}
+
+.board.is-parts .board-shape .board-row {
+  min-height: 0;
+  height: var(--spacing-lg);
+  align-items: flex-end;
+}
+
+.row-side {
+  flex: 0 0 auto;
+  width: var(--board-cell);
+}
+
+.board.is-parts .row-kanji {
+  height: var(--board-cell);
+  font-size: var(--board-kanji);
+}
+
+.row-count {
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.row-meaning {
+  flex: 1 1 var(--spacing-3xl);
+  min-width: 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  color: var(--color-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* The next guess, not scored yet. A part missing from this puzzle's
+   palette gets a red edge: that kanji can't be guessed here. */
+.tile.is-pending { border-style: dashed; }
+
+/* Parts levels: the next row's cells are buttons; the selected one takes
+   the next part tapped. Rows not reached yet are faint. */
+.tile.is-filled {
+  border-style: solid;
+  border-color: var(--color-border-strong);
+}
+.board-row.is-next button.tile:hover { background: var(--color-interactive-selected); }
+.tile.is-active {
+  border-style: solid;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 var(--stroke-thick) var(--color-border-focus);
+}
+.tile.is-blank {
+  background: transparent;
+  border-color: var(--color-border-subtle);
+}
+.tile.is-absent {
+  border-color: var(--color-status-danger);
+  color: var(--color-text-muted);
+}
+
+.board-dots {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) 0 var(--spacing-xs) var(--spacing-md);
+}
+
+.board-dot {
+  width: var(--spacing-sm);
+  height: var(--spacing-sm);
+  border-radius: var(--radius-full);
+  background: var(--color-border-default);
+}
+
+/* The kanji frame (parts levels): the answer's shape, filled in with the
+   parts found green. Top and bottom span it; left, inner and right share
+   the middle; an outer part covers it all, with the inner inset.
+   Beside the rows, it lines up with the first row. Above them, it's laid
+   out like a row, each kanji's frame centred over its cells. */
+.board-frames:empty { display: none; }
+
+.board.is-parts .board-frames {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.board[data-layout="above"] .board-frames { padding-bottom: var(--spacing-xs); }
+
+.board[data-layout="above"] .frame-slot {
+  flex: 0 0 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  width: calc(var(--board-cell) * var(--n, 1) + var(--spacing-xs) * (var(--n, 1) - 1) + var(--spacing-sm) * var(--g, 0));
+}
+
+.board[data-layout="beside"] .board-frames .row-side { display: none; }
+
+/* Longer words: how many kanji still fit, under each kanji's frame. */
+.frame-count {
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.board[data-layout="beside"].has-shape .board-frames {
+  margin-top: calc(var(--spacing-lg) + var(--spacing-xs));
+}
+
+.kanji-frame {
+  display: grid;
+  gap: var(--spacing-xs);
+  width: var(--board-frame);
+  height: var(--board-frame);
+  padding: var(--spacing-xs);
+  border: var(--stroke-thick) solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.frame-zone {
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  border: var(--stroke-thin) dashed var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-kanji);
+  font-size: var(--frame-1);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-tight);
+  color: var(--color-feedback-hit);
+}
+
+.frame-zone.is-top,
+.frame-zone.is-bottom { flex-direction: row; }
+.frame-zone[data-n="2"] { font-size: var(--frame-2); }
+.frame-zone[data-n="3"] { font-size: var(--frame-3); }
+.frame-zone[data-n="4"] { font-size: var(--frame-4); }
+
+.frame-zone.is-cover {
+  z-index: 0;
+  grid-area: 1 / 1 / -1 / -1;
+  border: 0;
+  font-size: var(--frame-cover);
+}
+
+.kanji-frame.has-outer .frame-zone.is-inner {
+  margin: var(--frame-inset);
+  font-size: var(--frame-inner);
+}
+
+.frame-part { display: inline-flex; }
+
+.frame-part.is-hidden {
+  width: var(--spacing-sm);
+  height: var(--spacing-sm);
+  margin: var(--spacing-xs);
+  border-radius: var(--radius-full);
+  background: var(--color-border-default);
+}
+
+.kanji-frame.is-solved {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-color: transparent;
+  background: var(--color-feedback-hit);
+  color: var(--color-feedback-text);
+  font-size: var(--frame-solved);
+  line-height: var(--font-lineHeight-tight);
+}
+
+.frame-part.is-new,
+.kanji-frame.is-new {
+  animation: kanji-in var(--transition-base) var(--transition-bounce) both;
+}
+
+/* Parts levels: one place's parts at a time, picked here or by tapping a
+   cell. Longer words have more places, so the buttons stay on one line
+   each and share the rows they need. */
+.place-tabs { gap: var(--spacing-xs); }
+
+.place-tab {
+  flex: 1 1 auto;
+  justify-content: center;
+  padding: var(--spacing-sm);
+  white-space: nowrap;
+}
+
+/* Tile reveal (settings.tiles). Flip is the default; a tile style from
+   js/config/skins.js gets its own block keyed by [data-tiles] (step 6).
+   Each tile waits its turn (--i, set in js/play/screen.js). */
+.board-row.is-new .tile {
+  animation: tile-flip var(--transition-reveal) var(--transition-ease) both;
+  animation-delay: calc(var(--i, 0) * var(--transition-base));
+}
+
+.board-row.is-new .row-kanji {
+  animation: kanji-in var(--transition-base) var(--transition-bounce) both;
+}
+
+@keyframes tile-flip {
+  0% {
+    transform: rotateX(0deg);
+    background-color: var(--color-tile-bg);
+    border-color: var(--color-tile-border);
+    color: var(--color-tile-text);
+  }
+  50% {
+    transform: rotateX(90deg);
+    background-color: var(--color-tile-bg);
+    border-color: var(--color-tile-border);
+    color: var(--color-tile-text);
+  }
+  51% {
+    transform: rotateX(90deg);
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+  100% {
+    transform: rotateX(0deg);
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+}
+
+@keyframes kanji-in {
+  0% { transform: scale(0.8); opacity: var(--opacity-hidden); }
+  100% { transform: scale(1); opacity: var(--opacity-full); }
+}
+
+/* ── Hints ─────────────────────────────────────────────────────────── */
+
+.game-hints {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.game-hints:empty { display: none; }
+
+.clues {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-sunken);
+}
+
+.clue {
+  display: grid;
+  grid-template-columns: var(--spacing-lg) auto 1fr;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+}
+
+.clue-icon { text-align: center; }
+
+.clue-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.clue-tag {
+  margin-left: var(--spacing-xs);
+  padding: 0 var(--spacing-xs);
+  border-radius: var(--radius-full);
+  background: var(--color-interactive-selected);
+  color: var(--color-text-accent);
+  font-weight: var(--font-weight-regular);
+}
+
+.clue-body { min-width: 0; }
+
+.clue.is-soon {
+  grid-template-columns: var(--spacing-lg) 1fr;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.part-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.part-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.part-pos {
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-tight);
+  color: var(--color-text-muted);
+}
+
+.reading-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--spacing-xs);
+  margin-right: var(--spacing-md);
+}
+
+.reading-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+}
+
+.okurigana { color: var(--color-text-muted); }
+
+.power-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.power-bar-title {
+  flex: 0 0 auto;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+}
+
+.power-chips {
+  display: flex;
+  gap: var(--spacing-sm);
+  overflow-x: auto;
+  padding: var(--spacing-xs);
+  margin: calc(var(--spacing-xs) * -1);
+  scrollbar-width: none;
+}
+
+.power-chips::-webkit-scrollbar { display: none; }
+
+.power-chip {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--layout-cell);
+  height: var(--layout-cell);
+  border-radius: var(--radius-full);
+  border: var(--stroke-thin) solid var(--color-border-subtle);
+  background: var(--color-bg-surface);
+  font-size: var(--font-size-lg);
+  transition: border-color var(--transition-fast) var(--transition-ease);
+}
+
+.power-chip:hover { border-color: var(--color-border-strong); }
+.power-chip.is-off > :first-child { opacity: var(--opacity-disabled); filter: grayscale(1); }
+
+.power-chip-count {
+  position: absolute;
+  right: calc(var(--spacing-xs) * -1);
+  bottom: calc(var(--spacing-xs) * -1);
+  min-width: var(--spacing-md);
+  height: var(--spacing-md);
+  padding: 0 var(--spacing-xs);
+  border-radius: var(--radius-full);
+  background: var(--color-action-primary-bg);
+  color: var(--color-action-primary-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--spacing-md);
+  text-align: center;
+}
+
+.power-chip.is-off .power-chip-count {
+  background: var(--color-bg-sunken);
+  color: var(--color-text-muted);
+}
+
+.power-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* ── Picker ────────────────────────────────────────────────────────── */
+
+.picker,
+.picker-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.picker:empty { display: none; }
+
+.entry {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.entry.is-parts .btn-primary { flex: 1; }
+
+/* 20px text: phones don't zoom into it when it's tapped. */
+.entry-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: var(--stroke-thick) solid var(--color-border-default);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-kanji);
+  font-size: var(--font-size-lg);
+}
+
+.entry-input::placeholder {
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+}
+
+.entry-input:focus-visible {
+  outline: var(--stroke-thick) solid var(--color-border-focus);
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+.strip-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.strip-head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.strip-picked {
+  display: inline-flex;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-lg);
+  line-height: var(--font-lineHeight-tight);
+  color: var(--color-text-primary);
+}
+
+.strip-count { flex: 1; }
+
+/* Two rows, and a sliver of the third so it's clear the list scrolls. */
+.strip-kanji {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  max-height: calc(var(--layout-cell) * 2 + var(--spacing-md) + var(--spacing-xs));
+  overflow-y: auto;
+  padding: var(--spacing-xs);
+  margin: calc(var(--spacing-xs) * -1);
+}
+
+.strip-btn {
+  width: var(--layout-cell);
+  height: var(--layout-cell);
+  border-radius: var(--radius-md);
+  border: var(--stroke-thin) solid var(--color-border-subtle);
+  background: var(--color-bg-surface);
+  font-size: var(--font-size-xl);
+  line-height: var(--font-lineHeight-tight);
+  transition: border-color var(--transition-fast) var(--transition-ease);
+}
+
+.strip-btn:hover:not(:disabled) { border-color: var(--color-border-strong); }
+
+.strip-btn.is-chosen {
+  border-color: var(--color-border-focus);
+  background: var(--color-interactive-selected);
+  box-shadow: 0 0 0 var(--stroke-thin) var(--color-border-focus);
+}
+
+.strip-btn:disabled {
+  opacity: var(--opacity-disabled);
+  text-decoration: line-through;
+}
+
+/* The palette: tiles by stroke count, each group led by its number. */
+.palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.palette-group { display: contents; }
+
+.palette-strokes {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--spacing-md);
+  height: var(--layout-cell);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+}
+
+.palette-tile {
+  position: relative;
+  transition:
+    border-color var(--transition-fast) var(--transition-ease),
+    transform var(--transition-fast) var(--transition-ease),
+    opacity var(--transition-fast) var(--transition-ease);
+}
+
+.palette-tile:hover:not(:disabled) { border-color: var(--color-border-strong); }
+
+.palette-tile[aria-pressed="true"] {
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 var(--stroke-thick) var(--color-border-focus);
+  transform: translateY(calc(var(--stroke-thick) * -1));
+}
+
+.palette-tile.is-out { opacity: var(--opacity-faint); }
+
+.palette-variant {
+  position: absolute;
+  top: var(--stroke-thick);
+  right: var(--spacing-xs);
+  display: inline-flex;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--font-lineHeight-tight);
+  opacity: var(--opacity-strong);
+}
+
+/* ── Result ────────────────────────────────────────────────────────── */
+
+.game-result:empty { display: none; }
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+}
+
+.result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.result-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-snug);
+}
+
+.result-title.is-won { color: var(--color-text-accent); }
+
+.answer {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.answer-kanji {
+  flex: 0 0 auto;
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-black);
+  line-height: var(--font-lineHeight-tight);
+}
+
+.answer-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.answer-meanings { font-weight: var(--font-weight-bold); }
+
+.answer-readings {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: var(--spacing-xs);
+}
+
+.answer-parts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.answer-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+}
+
+.answer-kanji-parts {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+}
+
+.result-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--layout-cardMin), 1fr));
+  gap: var(--spacing-sm);
+  margin: 0;
+}
+
+.result-stat {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-sunken);
+}
+
+.result-stat dt {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+}
+
+.result-stat dd {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.result-stat small {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+}
+
+.share {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.share-preview {
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-sunken);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-md);
+  line-height: var(--font-lineHeight-snug);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.countdown {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.countdown-time {
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
 /* ── Back-to-apps mark ─────────────────────────────────────────────── */
 
 .rw-back-link {
@@ -731,4 +1734,9 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
     transition-duration: 0.01ms !important;
   }
   .rw-back-logo:hover { animation: none; }
+  .board-row.is-new .tile,
+  .board-row.is-new .row-kanji,
+  .frame-part.is-new,
+  .kanji-frame.is-new { animation: none; }
+  .palette-tile[aria-pressed="true"] { transform: none; }
 }

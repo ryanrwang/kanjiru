@@ -24,13 +24,169 @@ export default {
     body: '答えるたびに、パーツの色でヒントがわかります。',
     hit: '正しいパーツ・正しい位置',
     near: '正しいパーツ・ちがう位置',
-    miss: '答えにないパーツ'
+    miss: '答えにないパーツ',
+    // パーツで答えるレベル（ふつう・むずかしい）
+    partsBody: 'マスにパーツを入れます。マスは漢字の中の位置で、その位置なら緑、別の位置なら黄、漢字になければ灰色になります。'
   },
 
   play: {
     title: 'プレイ',
-    note: 'ゲーム画面は準備中',
-    meta: '{guesses}回まで・ポイント×{mult}'
+    note: '毎日のデイリーと練習',
+    meta: '{guesses}回まで・ポイント×{mult}',
+    soon: '近日公開',
+    loading: '読み込み中…',
+    loadFailed: 'ゲームを読み込めませんでした。通信状況を確認して、再読み込みしてください。',
+    practiceOnly: '練習のみ',
+    dailyNew: 'デイリー #{n}',
+    dailyStarted: 'デイリー #{n}・{level}・{guesses}回回答済み',
+    dailyWon: 'デイリー #{n}・{level}・{guesses}回でクリア ✓',
+    dailyLost: 'デイリー #{n}・{level}・クリアならず',
+    level: 'レベル',
+    levelPoints: 'ポイント×{mult}',
+    daily: 'プレイ',
+    continue: '続ける',
+    result: '結果',
+    practice: '練習'
+  },
+
+  game: {
+    home: 'スタートに戻る',
+    daily: 'デイリー #{n}',
+    practice: '練習',
+    kindLevel: '{kind}・{level}',
+    count: '{n}/{rows}',
+    countTitle: '回答した回数',
+    listSep: '、',
+    // 意味は辞書の英語なので、英語の区切り
+    meaningSep: ', ',
+    layoutSep: '・',
+    board: 'あなたの回答',
+    rowLabel: '{n}回目：{word}。{parts}',
+    rowLabelParts: '{n}回目：{parts}',
+    rowLabelFit: '{label}。{fit}',
+    nextHint: '下のパーツを選ぶか、漢字を入力',
+    cells: '次の回答：{cells}マス中{n}マス',
+    cellEmpty: '{place}のマス（空）',
+    cellFilled: '{place}のマス：{part}',
+    shape: 'マス：{places}',
+    fit: '当てはまる漢字：{n}',
+    fitHead: '候補',
+    fitTitle: '当てはまる漢字の数',
+    fitCount: '候補{n}',
+    placeTabs: 'パーツの場所',
+    placeOfSlot: '{n}字目の{place}',
+    palettePlace: '{place}のパーツ',
+    frameLabel: 'ここまでの漢字：{parts}',
+    framePart: '{place}に{part}',
+    frameEmpty: 'まだパーツなし',
+    frameSolved: '正解：{kanji}',
+    typeLabel: '回答',
+    typePlaceholder: '漢字を入力',
+    guess: '回答',
+    chosen: '{kanji}：{meaning}。もう一度タップで回答。',
+    stripHint: 'パーツをタップすると、作れる漢字が出ます。',
+    matches: '{n}字',
+    clear: 'クリア',
+    palette: 'パーツ',
+    strokes: '{n}画',
+    soon: 'このモードは近日公開です（単語の確認待ち）。',
+    on: '音',
+    kun: '訓',
+    mark: {
+      hit: '位置も正しい',
+      near: '位置がちがう',
+      other: '別の字にある',
+      miss: '答えにない'
+    },
+    markParts: {
+      hit: '答えにある',
+      other: '別の字にある',
+      miss: '答えにない'
+    },
+    clue: {
+      meaning: '意味',
+      free: '無料',
+      meaningSoon: '{n}回目の回答のあと、意味が無料で表示されます。',
+      reading: '読み',
+      strokes: '画数',
+      layout: '構成',
+      parts: 'パーツ',
+      kanji: '漢字',
+      eliminated: 'おそうじ',
+      eliminatedCount: '下のパーツを{n}個グレーにしました'
+    },
+    powers: {
+      title: 'ヒント',
+      use: '使う',
+      cancel: 'キャンセル',
+      used: '{name}を使いました。',
+      why: {
+        none: 'まだ持っていません。クリアするとボーナスでもらえることがあります（ショップは準備中）。',
+        before: '最初の回答の前だけ使えます。',
+        during: '最初の回答のあとだけ使えます。',
+        useless: '新しくわかることがありません。',
+        over: 'ゲームは終了しました。',
+        mode: 'このモードでは使えません。',
+        unknown: 'このモードでは使えません。'
+      }
+    },
+    errors: {
+      empty: '先に漢字を選んでください。',
+      slots: '{cells}マスすべてを埋めてください。',
+      'not-real': 'その位置にそのパーツを持つ漢字はありません。別の組み合わせを試してください。',
+      level: 'このレベルではその答え方はできません。',
+      over: 'ゲームは終了しました。',
+      length: '答えは{n}字です。',
+      'not-kanji': '常用漢字で回答してください。',
+      'not-in-palette': 'このパズルにないパーツを含む漢字です。',
+      repeat: 'その漢字はもう回答しました。',
+      'not-a-word': '単語ではありません。'
+    }
+  },
+
+  pos: {
+    left: '左',
+    right: '右',
+    top: '上',
+    bottom: '下',
+    outer: '外',
+    inner: '内',
+    whole: '全体',
+    none: '交差'
+  },
+
+  // 狭いマスの上の場所名（日本語は一字なので同じ）
+  posShort: {
+    left: '左',
+    right: '右',
+    top: '上',
+    bottom: '下',
+    outer: '外',
+    inner: '内',
+    whole: '全体',
+    none: '交差'
+  },
+
+  result: {
+    won: '{n}回でクリア！',
+    lost: '回答回数を使い切りました',
+    parts: 'パーツ',
+    points: 'ポイント',
+    pointsEarned: '+{n}pt',
+    pointsWhy: 'パーツ {parts} + クリア {solve}、×{mult}',
+    streak: 'デイリー連続記録',
+    streakDays: '{n}日連続',
+    share: 'シェア',
+    copied: 'コピーしました。好きな場所に貼り付けてください。',
+    copyManually: '上のテキストを選択して、コピーしてください。',
+    nextDaily: '次のデイリーまで',
+    practice: '練習する',
+    again: 'もう一度'
+  },
+
+  share: {
+    daily: '漢じる {numeral} #{puzzle} {level} {score}{hints}',
+    practice: '漢じる {numeral} 練習 {level} {score}{hints}'
   },
 
   looks: {
@@ -125,6 +281,12 @@ export default {
     k2: { name: '二字熟語' },
     k3: { name: '三字熟語' },
     k4: { name: '四字熟語' }
+  },
+
+  level: {
+    easy: { name: 'かんたん', desc: '漢字で答えます。選んだパーツで作れる漢字が意味つきで並び、何回か答えると意味も無料で出ます。' },
+    normal: { name: 'ふつう', desc: 'パーツで答えます。マスは漢字の中の位置で、正しい位置なら緑、別の位置なら黄。漢字の一覧も無料の意味もなく、パーツは少なめで、当てはまる漢字の数が出ます。' },
+    hard: { name: 'むずかしい', desc: 'ふつうと同じですが、毎回実在する漢字を作ります。パーツは全部出て、数は出ません。' }
   },
 
   slot: {

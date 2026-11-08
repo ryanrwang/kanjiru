@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { scoreGuess, allHit, layoutOf, MARKS } from '../js/engine/score.js';
+import { scoreGuess, scoreParts, allHit, layoutOf, MARKS } from '../js/engine/score.js';
 import { KANJI } from './fixture-kanji.js';
 import { slots, marks } from './helpers.js';
 
@@ -120,4 +120,43 @@ test('layout is the distinct positions in stroke order', () => {
   assert.deepEqual(layoutOf(KANJI['間'].parts), ['outer', 'inner']);
   assert.deepEqual(layoutOf(KANJI['品'].parts), ['top', 'bottom']);
   assert.deepEqual(layoutOf(KANJI['水'].parts), ['whole']);
+});
+
+// ── Parts guesses (levels.js guess: 'parts') ────────────────────────
+
+test('parts: green when the answer has the part, wherever it sits', () => {
+  const [slot] = scoreParts([['月', '日']], slots('明'));
+  assert.deepEqual(marks(slot), ['hit', 'hit']);
+  assert.deepEqual(slot.tiles.map((t) => t.pos), ['right', 'left'], 'a hit takes its answer part\'s place');
+  assert.equal(slot.solved, true);
+  assert.equal(slot.kanji, '明');
+});
+
+test('parts: repeated parts mark only as many copies as the answer has', () => {
+  const [slot] = scoreParts([['木', '木', '口']], slots('森'));
+  assert.deepEqual(marks(slot), ['hit', 'hit', 'miss']);
+  assert.equal(slot.solved, false);
+  assert.equal(slot.kanji, null);
+  const [more] = scoreParts([['木', '木']], slots('林'));
+  assert.equal(more.solved, true);
+});
+
+test('parts: longer words mark parts in another kanji as "other"', () => {
+  // 日本: 日 (one part), 本 (木, 一).
+  const [one, two] = scoreParts([['木'], ['日', '一']], slots('日本'));
+  assert.deepEqual(marks(one), ['other']);
+  assert.deepEqual(marks(two), ['other', 'hit']);
+});
+
+test('parts with places: green in the cell\'s place, yellow elsewhere in the kanji', () => {
+  assert.deepEqual(marks(scoreParts([['月', '日']], slots('明'), [['left', 'right']])[0]), ['near', 'near']);
+  const [won] = scoreParts([['日', '月']], slots('明'), [['left', 'right']]);
+  assert.deepEqual(marks(won), ['hit', 'hit']);
+  assert.equal(won.solved, true);
+  // 時: 日 left, 土 right, 寸 right.
+  assert.deepEqual(marks(scoreParts([['土', '日', '寸']], slots('時'), [['left', 'right', 'right']])[0]), ['near', 'near', 'hit']);
+  // Parts sharing a place can go in either of its cells.
+  assert.deepEqual(marks(scoreParts([['日', '寸', '土']], slots('時'), [['left', 'right', 'right']])[0]), ['hit', 'hit', 'hit']);
+  // 森: 木 top, 木 bottom ×2. Three 木 picked, all green; a 口 is grey.
+  assert.deepEqual(marks(scoreParts([['口', '木', '木']], slots('森'), [['top', 'bottom', 'bottom']])[0]), ['miss', 'hit', 'hit']);
 });

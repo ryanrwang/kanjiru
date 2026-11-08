@@ -1,7 +1,7 @@
 /*
  * One door to every catalogue, plus a check that they agree with each other.
  *
- * Everything the game can contain (modes, skins, powers, achievements,
+ * Everything the game can contain (modes, levels, skins, powers, achievements,
  * economy numbers) is data in js/config/. Code reads it from here and never
  * hard-codes a list, so growing the game means adding entries, not code.
  */
@@ -11,14 +11,16 @@ import { POWERS } from './config/powers.js';
 import { ECONOMY } from './config/economy.js';
 import { ACHIEVEMENTS } from './config/achievements.js';
 import { RULES } from './config/rules.js';
+import { LEVELS, DEFAULT_LEVEL } from './config/levels.js';
 import { has, missingStrings } from './i18n.js';
 import { missingMergeRules } from './store.js';
 
-export { MODES, SLOTS, SKINS, DEFAULT_LOOK, POWERS, ECONOMY, ACHIEVEMENTS, RULES };
+export { MODES, SLOTS, SKINS, DEFAULT_LOOK, POWERS, ECONOMY, ACHIEVEMENTS, RULES, LEVELS, DEFAULT_LEVEL };
 
 // Where each catalogue entry's text lives in js/i18n/*.js.
 export const TEXT_KEYS = {
   mode: (id) => [`mode.${id}.name`],
+  level: (id) => [`level.${id}.name`, `level.${id}.desc`],
   slot: (id) => [`slot.${id}`],
   skin: (slot, id) => [`skin.${slot}.${id}`],
   power: (id) => [`power.${id}.name`, `power.${id}.desc`],
@@ -28,6 +30,7 @@ export const TEXT_KEYS = {
 const byId = (list) => Object.fromEntries(list.map((item) => [item.id, item]));
 
 export const MODE = byId(MODES);
+export const LEVEL = byId(LEVELS);
 export const POWER = byId(POWERS);
 export const ACHIEVEMENT = byId(ACHIEVEMENTS);
 
@@ -46,6 +49,8 @@ export const KNOWN_STATS = [
 ];
 // Marks a part can get that pay points (js/engine/score.js).
 export const MARK_POINTS = ['hit', 'near', 'other'];
+// What a guess can be (js/config/levels.js guess).
+export const GUESS_KINDS = ['kanji', 'parts'];
 const UNLOCK_TYPES = ['free', 'points', 'achievement'];
 const WHEN = ['before', 'during'];
 
@@ -76,13 +81,29 @@ export function validate() {
     if (m.freeMeaning !== null && !(Number.isInteger(m.freeMeaning) && m.freeMeaning >= 0)) {
       say(`mode "${m.id}" needs freeMeaning: a guess count, or null for never`);
     }
+    if (typeof m.playable !== 'boolean') say(`mode "${m.id}" needs playable: true or false`);
   });
+
+  // Levels
+  checkIds(LEVELS, 'level');
+  LEVELS.forEach((l) => {
+    if (!GUESS_KINDS.includes(l.guess)) say(`level "${l.id}" needs guess: ${GUESS_KINDS.join(' or ')}`);
+    ['places', 'realKanji', 'countLeft', 'meanings', 'freeMeaning'].forEach((k) => {
+      if (typeof l[k] !== 'boolean') say(`level "${l.id}" needs ${k}: true or false`);
+    });
+    if (!(l.points > 0)) say(`level "${l.id}" needs a points multiplier`);
+    if (!(l.paletteScale > 0)) say(`level "${l.id}" needs a paletteScale above 0`);
+  });
+  if (!LEVEL[DEFAULT_LEVEL]) say(`the default level "${DEFAULT_LEVEL}" isn't in levels.js`);
 
   // Points for marks the engine gives (js/engine/score.js MARKS).
   MARK_POINTS.forEach((mark) => {
     if (!(ECONOMY.perPart[mark] >= 0)) say(`economy.perPart.${mark} needs a number`);
   });
   if (!Array.isArray(RULES.palette.always)) say('rules.palette.always needs a list of tiles');
+  ['miss', ...MARK_POINTS].forEach((mark) => {
+    if (!(RULES.share && RULES.share.marks && RULES.share.marks[mark])) say(`rules.share.marks.${mark} needs a square`);
+  });
 
   // Skins
   SLOTS.forEach((slot) => {
@@ -143,6 +164,7 @@ export function validate() {
   // language needs every English key.
   const needText = [
     ...MODES.flatMap((m) => TEXT_KEYS.mode(m.id)),
+    ...LEVELS.flatMap((l) => TEXT_KEYS.level(l.id)),
     ...SLOTS.flatMap((s) => TEXT_KEYS.slot(s.id)),
     ...Object.entries(SKINS).flatMap(([slot, list]) => list.flatMap((item) => TEXT_KEYS.skin(slot, item.id))),
     ...POWERS.flatMap((p) => TEXT_KEYS.power(p.id)),
