@@ -11,6 +11,7 @@ import { POWERS } from './config/powers.js';
 import { ECONOMY } from './config/economy.js';
 import { ACHIEVEMENTS } from './config/achievements.js';
 import { has, missingStrings } from './i18n.js';
+import { missingMergeRules } from './store.js';
 
 export { MODES, SLOTS, SKINS, DEFAULT_LOOK, POWERS, ECONOMY, ACHIEVEMENTS };
 
@@ -136,6 +137,9 @@ export function validate() {
   ];
   needText.forEach((key) => { if (!has('en', key)) say(`no English text for ${key} in js/i18n/en.js`); });
   missingStrings().forEach((gap) => say(`missing translation ${gap}`));
+
+  // The save: moving devices needs a merge rule for every key.
+  missingMergeRules().forEach((key) => say(`save key "${key}" has no merge rule in MERGE (js/store.js)`));
 
   problems.forEach((msg) => console.warn('[kanjiru config]', msg));
   return problems;

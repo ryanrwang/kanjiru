@@ -131,6 +131,14 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   transition: background-color var(--transition-fast) var(--transition-ease);
 }
 
+/* The smallest phones (320px) fit four header buttons only at this size. */
+@media (max-width: 359px) {
+  .icon-btn {
+    width: var(--spacing-xl);
+    height: var(--spacing-xl);
+  }
+}
+
 .icon-btn:hover { background: var(--color-interactive-hover); }
 .icon-btn:active { background: var(--color-interactive-active); }
 .icon-btn:disabled { opacity: var(--opacity-disabled); }
@@ -455,6 +463,234 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 .power-when {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  min-height: var(--spacing-2xl);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-snug);
+  transition: background-color var(--transition-fast) var(--transition-ease);
+}
+
+.btn:disabled { opacity: var(--opacity-disabled); }
+
+.btn-primary {
+  background: var(--color-action-primary-bg);
+  color: var(--color-action-primary-text);
+}
+.btn-primary:hover:not(:disabled) { background: var(--color-action-primary-hover); }
+
+.btn-secondary {
+  background: var(--color-action-secondary-bg);
+  color: var(--color-action-secondary-text);
+}
+.btn-secondary:hover:not(:disabled) { background: var(--color-action-secondary-hover); }
+
+.btn-ghost { color: var(--color-text-secondary); }
+.btn-ghost:hover:not(:disabled) { background: var(--color-interactive-hover); }
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+/* ── Settings panel ────────────────────────────────────────────────── */
+
+/* A native <dialog>: showModal() puts it in the top layer, so no z-index. */
+.sheet {
+  width: 100%;
+  max-width: min(var(--layout-container), calc(100% - var(--spacing-md) * 2));
+  max-height: calc(100% - var(--spacing-xl) * 2);
+  padding: 0;
+  border: var(--stroke-thin) solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-raised);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.sheet::backdrop { background: var(--color-bg-overlay); }
+
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin: calc(var(--spacing-sm) * -1) calc(var(--spacing-sm) * -1) calc(var(--spacing-md) * -1) 0;
+}
+
+.sheet-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-snug);
+}
+
+.sheet-intro { color: var(--color-text-secondary); }
+
+.sheet-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-lg);
+  border-top: var(--stroke-thin) solid var(--color-border-subtle);
+}
+
+.sheet-section-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.sheet-note {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+/* ── Device transfer ───────────────────────────────────────────────── */
+
+.transfer-code {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-sunken);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-tight);
+  letter-spacing: var(--font-tracking-caps);
+  font-variant-numeric: tabular-nums;
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.transfer-countdown {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.field-row {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.code-input,
+.save-text {
+  border: var(--stroke-thick) solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.code-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--font-tracking-caps);
+  text-transform: uppercase;
+}
+
+.code-input::placeholder,
+.save-text::placeholder {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+  letter-spacing: var(--font-tracking-none);
+  text-transform: none;
+}
+
+.save-text {
+  width: 100%;
+  padding: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  word-break: break-all;
+  resize: vertical;
+}
+
+.save-text[readonly] {
+  background: var(--color-bg-sunken);
+  color: var(--color-text-secondary);
+}
+
+.code-input:focus-visible,
+.save-text:focus-visible {
+  outline: var(--stroke-thick) solid var(--color-border-focus);
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+/* Messages keep the readable text colour; the bar at the side says
+   whether it went well. */
+.transfer-status {
+  padding-left: var(--spacing-sm);
+  border-left: var(--stroke-thick) solid var(--color-border-default);
+  font-size: var(--font-size-xs);
+}
+
+.transfer-status:empty { display: none; }
+.transfer-status.is-ok { border-left-color: var(--color-status-success); }
+.transfer-status.is-error { border-left-color: var(--color-status-danger); }
+
+/* Merge or replace: asked when this device has progress of its own. */
+.ask {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-sunken);
+}
+
+.ask-title { font-weight: var(--font-weight-bold); }
+
+.ask-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--layout-powerMin), 1fr));
+  gap: var(--spacing-sm);
+  width: 100%;
+}
+
+.ask-option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-lg);
+  border: var(--stroke-thick) solid var(--color-border-subtle);
+  background: var(--color-bg-surface);
+  text-align: left;
+  transition: border-color var(--transition-fast) var(--transition-ease);
+}
+
+.ask-option:hover { border-color: var(--color-border-default); }
+
+.ask-option-name { font-weight: var(--font-weight-bold); }
+.ask-option.is-replace .ask-option-name { color: var(--color-text-accent); }
+
+.ask-option-desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 
 /* ── Back-to-apps mark ─────────────────────────────────────────────── */

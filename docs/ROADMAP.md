@@ -9,6 +9,7 @@ Last updated: 2026-11-07.
 - [x] **Scaffold:** design tokens and skins, catalogues, versioned save, start screen, deploy. Live at https://www.ryanrwang.com/apps/kanjiru/
 - [x] **Word data:** 5,725 candidates at N3 or easier, the review page, and the EN/JP toggle (PR #1)
 - [x] **Parts & palette:** 251-tile palette in `data/parts.json`, fixed part breakdowns with positions, hand fixes in `data/parts-overrides.json`, and the parts check page (step 1)
+- [x] **Device transfer:** one-time codes from `api/transfer.php`, the Settings panel (gear in the header), Merge both or Replace this device, and copy/paste save text (step 7, PR #3)
 
 ## Order
 
@@ -16,12 +17,12 @@ Last updated: 2026-11-07.
 1 Parts & palette ──► 2 Engine ──► 3 Game screen ──► 4 Longer words
                                           ├──► 5 Points, shop & achievements
                                           └──► 6 Skin effects
-7 Device transfer  (any time)
+7 Device transfer  ✓ done
 8 Launch           (last)
 You: review words  (any time; the game only uses words marked Keep)
 ```
 
-- **Start now:** steps 2 and 7. They touch different files.
+- **Start now:** step 2.
 - **After step 3:** steps 4, 5 and 6 can run side by side.
 
 **Running threads at the same time:** every thread shares this one folder, and Git can only have one branch checked out in it. Two threads in the same folder will switch each other's branches. So either run one thread at a time, or start each one in its own worktree (the app's worktree option when you start a session).
@@ -145,7 +146,7 @@ Done when every skin in js/config/skins.js has its real look and effect and can 
 
 ## 7. Device transfer
 
-**Can start any time.** It touches `api/`, a settings panel and `js/store.js`.
+**Done** (PR #3). It touched `api/`, a settings panel and `js/store.js`.
 
 ```
 Kanjiru step 7: let players move their progress to a new device with a one-time code.

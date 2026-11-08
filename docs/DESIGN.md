@@ -61,13 +61,27 @@ Every guessed kanji is broken into parts, and each part gets a colour:
 ## Saving and devices
 
 - **Decided — Storage:** saves live in the browser (`localStorage` key `kanjiru`, versioned, migrations in `js/store.js`).
-- **Decided — Moving devices:** with a one-time code.
-- **Proposed — Transfer design:**
-  - A small PHP endpoint on the site stores an uploaded save under a short code (6 characters, no look-alikes such as 0/O or 1/I).
-  - The code expires in 15 minutes and is deleted on first use.
-  - A copy/paste save text works as a backup.
-- **Proposed — Merging:** history is the source of truth, so two devices merge by joining their histories and recounting streaks.
-- **Risk:** iOS Safari wipes a site's storage after 7 days without a visit. Installing to the home screen avoids it, and the transfer code doubles as a backup.
+- **Decided — Moving devices:** with a one-time code, from Settings (the gear in the header).
+  - `api/transfer.php` stores a sent save under a 6-character code with no look-alikes (no 0/O or 1/I/L).
+  - A code lasts 15 minutes and is deleted the first time it's read.
+  - Saves are capped at 1 MB. Each IP gets 10 sends and 20 tries per 15 minutes, so codes can't be guessed.
+  - Codes live in `api/codes/`: blocked from the web, ignored by Git and skipped by the deploy. File names are hashes of the codes.
+  - Copy/paste save text works as a backup, with no server.
+- **Decided — Receiving:** a device with no progress takes the received save as it is, looks included. A device with progress asks first: **Merge both** or **Replace this device**. It asks before the code is used, so cancelling doesn't waste it. "Progress" is anything but looks and language.
+- **Decided — Merge rules** (`MERGE` in `js/store.js`). Each is safe to repeat, so sending saves back and forth never creates points or games:
+
+| Part of the save | Merged as |
+|---|---|
+| Games (`history`) | Both kept. The same puzzle on both: the better result (a win, then fewer guesses, then fewer hints) |
+| Streaks and stats | Worked out again from the joined games |
+| Skins unlocked, achievements | Both kept; an achievement keeps the earlier date |
+| Points, hints held | The higher of the two, not the sum |
+| Looks and language | This device's stay |
+
+- **Rule:** a new top-level key in the save needs a merge rule; `validate()` warns when one is missing.
+- **Proposed — Exact points (step 5):** record the points each game paid and each purchase in the save, so a merge can add points exactly instead of taking the higher.
+- **Server:** the site runs PHP 8.2 (`ea-php82` in the site's root `.htaccess`). The endpoint is written for PHP 7.4 and up, with core functions only.
+- **Risk:** iOS Safari wipes a site's storage after 7 days without a visit. Installing to the home screen avoids it, and the save text is a backup.
 
 ## Word data
 

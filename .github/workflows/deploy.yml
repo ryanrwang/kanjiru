@@ -42,11 +42,13 @@ jobs:
           server-dir: ./apps/kanjiru/
           # Dev-only files never go to the server: the data build scripts,
           # the word review page (it writes files) and its working data.
+          # api/codes/ is the server's own transfer-code store: never touch it.
           exclude: |
             **/.git*
             **/.git*/**
             .claude/**
             cache/**
+            api/codes/**
             tools/**
             review/**
             data/candidates.json

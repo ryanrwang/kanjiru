@@ -2,6 +2,9 @@
 cache/
 error_log
 
+# Device-transfer codes, written by api/transfer.php (never commit or deploy)
+api/codes/
+
 # Source dictionaries downloaded by tools/build_data.py (large, re-downloadable)
 tools/sources/
 

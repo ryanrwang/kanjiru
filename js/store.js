@@ -14,7 +14,7 @@
  *   history       { [modeId]: { [puzzleNo]: { date, guesses, won, powers } } }
  *
  * History is the source of truth: streaks and stats are worked out from it,
- * which also makes merging two devices simple later.
+ * which also makes merging two devices simple (MERGE, below).
  *
  * Changing the shape: bump VERSION and add a step to MIGRATIONS that turns
  * the old shape into the new one. Adding a key needs no migration, because
@@ -117,16 +117,114 @@ function askForPersistentStorage() {
   } catch (e) { /* not supported */ }
 }
 
-// For moving to another device: the whole save as text, and back.
+// ── Moving devices ───────────────────────────────────────────────────
+//
+// A received save either replaces this device's save or merges with it.
+// A device with no progress just takes the received save as it is; one with
+// progress asks the player first (js/settings.js).
+
+// The whole save as text, for the transfer code or the copy/paste backup.
 export function exportSave() {
   return JSON.stringify(get());
 }
 
-export function importSave(text) {
-  const save = JSON.parse(text);
-  if (!isObject(save) || !save.v) throw new Error('That isn’t a Kanjiru save.');
-  if (save.v > VERSION) throw new Error('That save is from a newer version. Reload and try again.');
-  state = fillDefaults(migrate(save), fresh());
+// Problems are thrown as errors with a code, which the panel turns into
+// text: transfer.errors.<code> in js/i18n/*.js.
+function saveError(code) {
+  const error = new Error(code);
+  error.code = code;
+  return error;
+}
+
+// Text → a checked, migrated save, without touching this device's save.
+export function readSave(text) {
+  let save = null;
+  try { save = JSON.parse(String(text).trim()); } catch (e) { throw saveError('not-a-save'); }
+  if (!isObject(save) || !Number.isInteger(save.v) || save.v < 1) throw saveError('not-a-save');
+  if (save.v > VERSION) throw saveError('newer-version');
+  save = fillDefaults(migrate(save), fresh());
+  const base = fresh();
+  const broken = Object.keys(base).some((key) => isObject(base[key]) && !isObject(save[key]));
+  if (broken) throw saveError('not-a-save');
+  return save;
+}
+
+// True once anything but the looks and language differs from a new save:
+// games played, points earned or spent, hints, unlocks, achievements.
+export function hasProgress(save = get()) {
+  const base = fresh();
+  return Object.keys(save).some((key) =>
+    key !== 'v' && key !== 'settings' && JSON.stringify(save[key]) !== JSON.stringify(base[key]));
+}
+
+// how: 'replace' (this device's save is thrown away) or 'merge'.
+export function importSave(text, how = 'replace') {
+  const theirs = readSave(text);
+  state = how === 'merge' ? mergeSaves(get(), theirs) : theirs;
   persist();
   return state;
+}
+
+// ── Merging ──────────────────────────────────────────────────────────
+//
+// One rule per top-level key of the save. Every rule is safe to repeat:
+// merging the same save twice, or sending saves back and forth, never
+// creates points, hints or games. A new key in fresh() needs a rule here;
+// validate() in js/registry.js warns when one is missing.
+
+const count = (x) => {
+  if (Array.isArray(x)) return x.length;
+  if (isObject(x)) return Object.values(x).reduce((n, v) => n + (Number(v) || 0), 0);
+  return Number(x) || 0;
+};
+
+// The same puzzle played on both devices: keep the better result.
+function betterGame(a, b) {
+  if (!!a.won !== !!b.won) return a.won ? a : b;
+  if (count(a.guesses) !== count(b.guesses)) return count(a.guesses) < count(b.guesses) ? a : b;
+  return count(a.powers) <= count(b.powers) ? a : b;
+}
+
+// Applies pick(mine, theirs) to every key found in either object.
+function eachKey(pick) {
+  return (mine = {}, theirs = {}) => {
+    const out = {};
+    new Set([...Object.keys(mine), ...Object.keys(theirs)]).forEach((key) => {
+      if (!(key in theirs)) out[key] = mine[key];
+      else if (!(key in mine)) out[key] = theirs[key];
+      else out[key] = pick(mine[key], theirs[key]);
+    });
+    return out;
+  };
+}
+
+const higher = eachKey((a, b) => Math.max(Number(a) || 0, Number(b) || 0));
+const list = (x) => (Array.isArray(x) ? x : []);
+
+export const MERGE = {
+  // Looks and language belong to the device in your hand.
+  settings: (mine) => mine,
+  // The higher number, not the sum, so merging twice can't create points.
+  wallet: higher,
+  inventory: higher,
+  // Skins unlocked on either device, in the order they were unlocked here.
+  unlocked: eachKey((a, b) => [...new Set([...list(a), ...list(b)])]),
+  // Achievements from both, with the earlier date.
+  achievements: eachKey((a, b) => (String(b) < String(a) ? b : a)),
+  // Games from both; streaks and stats are worked out again from these.
+  history: eachKey((mineMode, theirMode) => eachKey(betterGame)(mineMode, theirMode))
+};
+
+export function mergeSaves(mine, theirs) {
+  const merged = JSON.parse(JSON.stringify(mine));
+  Object.entries(MERGE).forEach(([key, rule]) => {
+    merged[key] = JSON.parse(JSON.stringify(rule(mine[key], theirs[key])));
+  });
+  merged.v = VERSION;
+  return fillDefaults(merged, fresh());
+}
+
+// Keys of the save that MERGE has no rule for (validate() reports them).
+export function missingMergeRules() {
+  return Object.keys(fresh()).filter((key) => key !== 'v' && !(key in MERGE));
 }
