@@ -1,27 +1,30 @@
 /*
  * Settings panel, opened from the gear in the header.
  *
- *   Game       two switches, Hard and Guided, which pick the level of new
- *              games (js/config/levels.js settingsLevel)
+ *   Language    the interface language (follows the device until picked)
+ *   Appearance  light, dark, or the device's (a skin with one scheme fixes it)
+ *   Move your progress to another device:
+ *     Send       a one-time code from api/transfer.php, with a countdown
+ *     Receive    enter a code from the other device
+ *     Save text  the whole save as text to copy, or paste one in: a backup
+ *                that needs no server
+ *   Debug       for testing: the answer on the game's keys (js/play/screen.js)
+ *               and points to add, as their own ledger entries ('debug')
  *
- * And moving progress to another device:
- *
- *   Send       a one-time code from api/transfer.php, with a countdown
- *   Receive    enter a code from the other device
- *   Save text  the whole save as text to copy, or paste one in: a backup
- *              that needs no server
+ * The Hard and Guided switches are on the play card (app.js).
  *
  * A received save goes straight in on a device with no progress. On a device
  * with progress the player picks first: Merge both, or Replace this device
  * (rules in MERGE, js/store.js). The choice comes before the code is used,
  * so cancelling doesn't waste it.
  *
- * openSettings({ onChange }) calls onChange() after a save arrives or a
- * switch changes, so the page can redraw.
+ * openSettings({ onChange }) calls onChange() after anything changes the
+ * save (a save arrives, the language, the scheme, debug), so the page can
+ * redraw.
  */
-import { t, has } from './i18n.js';
-import { LEVEL, DEFAULT_LEVEL, settingsLevel } from './registry.js';
-import { el } from './dom.js';
+import { t, has, lang, LANGUAGES } from './i18n.js';
+import { ECONOMY } from './registry.js';
+import { el, switchRow, segmented } from './dom.js';
 import * as store from './store.js';
 import { sendSave, receiveSave, normalizeCode } from './transfer.js';
 
@@ -62,6 +65,7 @@ function render() {
   if (!dialog) return;
   const focused = document.activeElement && dialog.contains(document.activeElement)
     ? document.activeElement.dataset.id : null;
+  const scrolled = dialog.scrollTop;
 
   const close = el('button', {
     class: 'icon-btn', type: 'button', 'data-id': 'close',
@@ -75,15 +79,21 @@ function render() {
       el('h2', { class: 'sheet-title', id: 'settings-title' }, t('settings.title')),
       close
     ),
-    renderGame(),
-    el('p', { class: 'sheet-intro' }, t('transfer.intro')),
-    store.isPersistent() ? null : el('p', { class: 'transfer-status is-error' }, t('transfer.notSaving')),
-    renderSend(),
-    renderReceive(),
-    renderText()
+    renderLanguage(),
+    renderScheme(),
+    el('section', { class: 'sheet-section', 'aria-labelledby': 'transfer-title' },
+      el('h3', { class: 'sheet-section-title', id: 'transfer-title' }, t('transfer.title')),
+      el('p', { class: 'sheet-note' }, t('transfer.intro')),
+      store.isPersistent() ? null : el('p', { class: 'transfer-status is-error' }, t('transfer.notSaving')),
+      renderSend(),
+      renderReceive(),
+      renderText()),
+    renderDebug()
   ));
 
-  // Keep keyboard focus where it was; when the choice appears, move to it.
+  // Keep the scroll and keyboard focus where they were; when the choice
+  // appears, move to it.
+  dialog.scrollTop = scrolled;
   const target = ui.ask
     ? dialog.querySelector('.ask-option')
     : focused && dialog.querySelector(`[data-id="${focused}"]`);
@@ -91,43 +101,72 @@ function render() {
   startCountdown();
 }
 
-// ── Game: Hard and Guided ────────────────────────────────────────────
-
-function savedLevel() {
-  const level = LEVEL[store.get().settings.level];
-  return level && level.offered ? level : LEVEL[DEFAULT_LEVEL];
-}
-
-function renderGame() {
-  const level = savedLevel();
-  const toggle = (key, on, mult) => el('label', { class: 'switch-row' },
-    el('input', {
-      class: 'switch', type: 'checkbox', 'data-id': `level-${key}`, checked: on,
-      'aria-labelledby': `switch-${key}-name`, 'aria-describedby': `switch-${key}-note`,
-      onchange: (event) => setSwitch(key, event.target.checked)
-    }),
-    el('span', { class: 'switch-text' },
-      el('span', { class: 'switch-name', id: `switch-${key}-name` }, t(`settings.${key}.name`)),
-      el('span', { class: 'sheet-note', id: `switch-${key}-note` }, t(`settings.${key}.body`, { mult }))));
-  return el('section', { class: 'sheet-section', 'aria-labelledby': 'game-settings-title' },
-    el('h3', { class: 'sheet-section-title', id: 'game-settings-title' }, t('settings.game.title')),
-    el('p', { class: 'sheet-note' }, t('settings.game.body')),
-    toggle('hard', level.hard, LEVEL[settingsLevel(true, false)].points),
-    toggle('guided', level.guided, LEVEL[settingsLevel(false, true)].points));
-}
-
-function setSwitch(key, on) {
-  const level = savedLevel();
-  const hard = key === 'hard' ? on : level.hard;
-  const guided = key === 'guided' ? on : level.guided;
-  store.update((s) => { s.settings.level = settingsLevel(hard, guided); });
+// A change to the save: the page redraws, then the panel, in the language
+// now set.
+function changed() {
   onChange();
   render();
 }
 
+// ── Language and appearance ──────────────────────────────────────────
+
+function renderLanguage() {
+  return el('section', { class: 'sheet-section sheet-row', 'aria-labelledby': 'lang-title' },
+    el('h3', { class: 'sheet-section-title', id: 'lang-title' }, t('settings.language')),
+    segmented({
+      id: 'lang', label: t('settings.language'), value: lang(),
+      options: LANGUAGES.map((l) => ({ id: l.id, label: l.name, lang: l.id })),
+      onPick: (id) => { store.update((s) => { s.settings.lang = id; }); changed(); }
+    }));
+}
+
+// Auto follows the device. A skin with one scheme (Urushi) fixes it.
+function renderScheme() {
+  const look = window.TOKENS.look();
+  const fixed = window.TOKENS.schemesOf(look.theme).length < 2;
+  const saved = store.get().settings.scheme;
+  return el('section', { class: 'sheet-section sheet-row', 'aria-labelledby': 'scheme-title' },
+    el('h3', { class: 'sheet-section-title', id: 'scheme-title' }, t('settings.scheme.title')),
+    segmented({
+      id: 'scheme', label: t('settings.scheme.title'), disabled: fixed,
+      value: fixed ? look.scheme : saved || 'auto',
+      options: ['auto', 'light', 'dark'].map((id) => ({ id, label: t(`settings.scheme.${id}`) })),
+      onPick: (id) => { store.update((s) => { s.settings.scheme = id === 'auto' ? null : id; }); changed(); }
+    }),
+    fixed ? el('p', { class: 'sheet-note sheet-row-note' }, t('settings.scheme.fixed', { name: t(`skin.theme.${look.theme}`) })) : null);
+}
+
+// ── Debug ────────────────────────────────────────────────────────────
+
+function renderDebug() {
+  const on = !!store.get().settings.debug;
+  return el('section', { class: 'sheet-section', 'aria-labelledby': 'debug-title' },
+    el('h3', { class: 'sheet-section-title', id: 'debug-title' }, t('settings.debug.title')),
+    switchRow({
+      id: 'debug', name: t('settings.debug.name'), note: t('settings.debug.body'), on,
+      onChange: (value) => {
+        store.update((s) => { s.settings.debug = value; });
+        ui.status.debug = null;
+        changed();
+      }
+    }),
+    on ? el('div', { class: 'btn-row' },
+      el('button', { class: 'btn btn-secondary', type: 'button', 'data-id': 'debug-points', onclick: addPoints },
+        t('settings.debug.add', { n: ECONOMY.debugPoints }))) : null,
+    renderStatus('debug'));
+}
+
+function addPoints() {
+  store.update((s) => store.enter(s, 'debug', { pts: ECONOMY.debugPoints }));
+  ui.status.debug = { kind: 'ok', text: t('settings.debug.added', { n: ECONOMY.debugPoints, total: store.points() }) };
+  changed();
+}
+
+// ── Moving devices ───────────────────────────────────────────────────
+
 function section(id, ...content) {
-  return el('section', { class: 'sheet-section', 'aria-labelledby': `transfer-${id}-title` },
-    el('h3', { class: 'sheet-section-title', id: `transfer-${id}-title` }, t(`transfer.${id}.title`)),
+  return el('div', { class: 'sheet-sub', role: 'group', 'aria-labelledby': `transfer-${id}-title` },
+    el('h4', { class: 'sheet-sub-title', id: `transfer-${id}-title` }, t(`transfer.${id}.title`)),
     el('p', { class: 'sheet-note' }, t(`transfer.${id}.body`)),
     content,
     ui.ask && ui.ask.section === id ? renderAsk() : null,

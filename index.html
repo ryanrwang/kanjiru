@@ -18,15 +18,15 @@
 <body>
   <header class="app-header">
     <h1 class="brand">
-      <span class="brand-kanji" lang="ja">漢じる</span>
-      <span class="brand-name">Kanjiru</span>
+      <a class="brand-link" id="brand" href="./">
+        <span class="brand-kanji" lang="ja">漢じる</span>
+        <span class="brand-name">Kanjiru</span>
+      </a>
     </h1>
-    <div class="header-actions">
-      <button class="pill wallet-btn" id="wallet" type="button"></button>
-      <button class="icon-btn lang-btn" id="lang-toggle" type="button"></button>
-      <button class="icon-btn" id="scheme-toggle" type="button"></button>
+    <nav class="header-actions">
+      <a class="wallet-btn" id="wallet" href="#points"></a>
       <button class="icon-btn" id="settings-open" type="button"></button>
-    </div>
+    </nav>
   </header>
 
   <main class="app-main" id="app"></main>

@@ -111,16 +111,17 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
           r.body ? el('span', { class: 'result-reward-body' }, r.body) : null)))) : null,
 
     balance !== null ? el('p', { class: 'result-balance' },
-      el('span', { class: 'result-balance-amount' }, t('result.balance', { icon: ECONOMY.currency.icon, n: balance }))) : null,
+      el('span', { class: 'result-balance-amount' }, t('result.balance', { icon: ECONOMY.currency.icon, n: balance })),
+      el('a', { class: 'result-balance-link', href: '#points' }, t('result.spend'))) : null,
 
     el('div', { class: 'share' },
       preview,
-      el('div', { class: 'btn-row' }, shareButton),
+      el('div', { class: 'btn-row result-actions' }, shareButton),
       status),
 
     el('p', { class: 'countdown' }, t('result.nextDaily'), ' ', countdown),
 
-    el('div', { class: 'btn-row' },
+    el('div', { class: 'btn-row result-actions' },
       el('button', { class: 'btn btn-secondary', type: 'button', onclick: onPractice },
         state.daily ? t('result.practice') : t('result.again')),
       el('button', { class: 'btn btn-ghost', type: 'button', onclick: onHome }, t('game.home')))

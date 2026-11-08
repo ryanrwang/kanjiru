@@ -15,6 +15,10 @@ export const ECONOMY = {
   // nothing.
   startingPoints: 150,
 
+  // Debug mode (Settings) adds this many each tap, as a 'debug' ledger
+  // entry, so test points can be told apart from earned ones.
+  debugPoints: 500,
+
   // Earned during a game, for each part of the answer a guess marks for the
   // first time. A part that goes from one mark to a better one later pays
   // the difference, so each part pays at most `hit`. Parts a power reveals

@@ -15,6 +15,7 @@ Last updated: 2026-11-08.
 - [x] **One daily of 4–6 parts:** one `main` mode whose answers are 1–4 kanji with 4–6 parts in all; k1–k4 retired. One game for everyone: the parts in writing order, like Wordle's letters, with the split between kanji hidden. Settings switches: Hard (real kanji, use what's found) and Guided (split, places, frames, dimmed keys). Easy retired. A Wordle-style screen with a fixed 28-key keyboard pinned to the bottom. Keep playing after the daily, for full points. Claude's first word review: 603 Keep words (step 4)
 - [x] **Loose strokes and hints:** answers with a loose single stroke (丨 丶 丿 乙 亅) leave the daily (`LISTS` `without`); 10 kanji fixed in `data/parts-overrides.json` bring back 25 words, so the daily has 453 answers. Parts a power shows (Reveal a part, Head start, Reveal a kanji) fill their cells, green, on each new row, and stay put at Hard. No page scroll while playing (step 4b)
 - [x] **Points, shop & achievements:** points and hints held are a ledger (save v2), so merging devices adds them up exactly. A finished game pays its points, streak rewards, a bonus hint and achievements, shown on the result card and as toasts. The shop opens from the points in the header: hints and locked looks, two taps to buy. The power bar floats above the keyboard, open before the first guess. Hard win replaces Full set (step 5)
+- [x] **Screens and menus:** the header holds only Points and Settings. The play page is home: a play card with the Hard and Guided switches, then How to play. The Points page holds the wallet, Looks with previews, Hints & powers and Achievements, and replaces the shop sheet. Settings gains Language, Appearance and a Debug mode (answer dots on the keys, add points) (2026-11-08)
 
 ## Order
 
@@ -150,11 +151,11 @@ Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first. Work on a new branch.
 1. Tile reveal styles keyed by settings.tiles: Flip (a basic one is in styles.css, `tile-flip`), Ink bleed (ink spreading through the tile) and Hanko stamp (pressed like a seal).
 2. Win effects keyed by settings.effect: Brush draw (the answer drawn stroke by stroke from KanjiVG; add stroke paths for answer kanji to the data build, keeping size in check), Petal fall and Hanabi.
 3. Textures for Urushi (lacquer sheen) and Kinpaku (gold-leaf shimmer).
-4. Previews in the Looks picker on the start screen.
+4. Previews in Looks on the Points page.
 5. Structure it so a new effect is one catalogue entry plus one small module or CSS block.
 6. Smooth on a mid-range phone, and off under prefers-reduced-motion.
 
-Done when every skin in js/config/skins.js has its real look and effect and can be previewed, and none is still marked `soon` (the shop won't sell a `soon` skin, and one an achievement unlocks can't be used until it's built).
+Done when every skin in js/config/skins.js has its real look and effect and can be previewed, and none is still marked `soon` (the Points page won't sell a `soon` skin, and one an achievement unlocks can't be used until it's built).
 ```
 
 ## 7. Device transfer

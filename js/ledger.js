@@ -11,6 +11,7 @@
  *            drop         a bonus hint after a win
  *            buy          a purchase (what: the power id, or "slot/skin")
  *            use          a hint used in a game
+ *            debug        points added in debug mode (Settings), for testing
  *     at     'YYYY-MM-DD'
  *     pts    points gained (below 0: spent)
  *     hints  { [powerId]: count gained (below 0: used) }
