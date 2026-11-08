@@ -22,6 +22,8 @@ php -S 0.0.0.0:8095 -t D:/Dropbox/Clearful
 
 Then open `http://localhost:8095/apps/kanjiru/` on the PC, or `http://<LAN IP>:8095/apps/kanjiru/` on the phone. Keep port 8095 for this project.
 
+On the Mac, work in the clone at `~/kanjiru-test/apps/kanjiru`, never the Dropbox checkout (Dropbox syncs it to the PC's). Serve it with `php -S 0.0.0.0:8099 -t ~/kanjiru-test`; `~/kanjiru-test/images` links to Dropbox's `images/`. A worktree beside it is served at `/apps/<its folder>/`.
+
 Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m unittest discover -s tools` for the compile step. Run both before committing engine or config changes.
 
 ## Key Files
@@ -30,7 +32,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `index.html` | Shell: loads `tokens.js`, the fonts, `styles.css`, then `app.js` |
 | `tokens.js` | Design tokens, skins' colours (`THEMES`) and `TOKENS.applyLook()` |
 | `styles.css` | All styles, using token variables only |
-| `app.js` | Start screen built from the catalogues, data loading, and the routes (`#k1` daily, `#k1/practice`) |
+| `app.js` | Start screen built from the catalogues, data loading, and the routes (`#main` daily, `#main/practice` keep playing) |
 | `js/config/modes.js` | Game modes: the main daily (4–6 parts, 1–4 kanji); k1–k4 retired |
 | `js/config/levels.js` | Levels: Normal, plus the Hard and Guided switches in Settings (`settingsLevel()`); Easy retired |
 | `js/config/skins.js` | Skin catalogue: colours, tile reveal, win effect |
@@ -50,7 +52,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/engine/stats.js` | Stats and streaks from history, achievement checks, streak rewards |
 | `js/engine/data.js` | Loads `data/game/*.json` and `data/parts.json` into the engine's shape |
 | `js/engine/random.js` | Seeded randomness, so dailies and powers come out the same for everyone |
-| `js/play/screen.js` | The game screen: board, hints, parts picker (kanji strip at Easy, cells at Normal and Hard), result. `openGame(root, ctx)` |
+| `js/play/screen.js` | The game screen: board (one row of cells, or Guided's split, places and frames), keyboard, hints, result. Parts a power showed start each row in their cells. `openGame(root, ctx)` |
 | `js/play/session.js` | Games in the save: start or resume (`save.playing`), record to history, pay points, spend powers |
 | `js/play/hints.js` | Clues, the power bar and the sheet that uses a power |
 | `js/play/result.js` | The result card: answer, points, streak, share, countdown |
@@ -62,6 +64,8 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/i18n/en.js`, `js/i18n/ja.js` | All interface text, English (the reference) and Japanese |
 | `tools/build_data.py` | Downloads the dictionaries and writes `data/candidates.json` (settings at the top; see `tools/README.md`) |
 | `data/candidates.json` | Every candidate answer, with kanji info and part breakdowns |
+| `data/parts.json` | The parts palette: 251 tiles, their forms (氵 for 水) and drawings for glyphs fonts may lack |
+| `data/parts-overrides.json` | Hand-fixed part breakdowns, each with a `why`; `build_data.py` uses them instead of its own split |
 | `tools/compile_game.py` | Writes `data/game/`: the slim kanji file and the daily schedule from the Keep words (see `tools/README.md`) |
 | `data/game/kanji.json` | Every guessable kanji: strokes, JLPT, frequency, meanings, readings, parts |
 | `data/game/answers.json` | The daily schedule: the epoch and each mode's answer list (`LISTS` in `tools/compile_game.py`), Keep words only |
@@ -73,7 +77,8 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 - Rebuild: `python -I tools/build_data.py` from this folder. Sources are pinned; downloads go to `tools/sources/` (ignored by Git).
 - Review: open `http://localhost:8095/apps/kanjiru/review/` with the PHP server running.
 - Waller's kanji lists come from Internet Archive snapshots, because tanos.co.uk is offline.
-- Known part-breakdown problems to solve before the game uses them: loose strokes that aren't components (本, 未 and 末 all become 木), contents of an enclosure marked `none` instead of `inner` (国, 間), positions relative to a subgroup (命), variant forms (氵 vs 水, `orig`), unprintable `CDP-…` component names (原, 願, 武, 源), and atomic answers (金, 車, 雨).
+- Part breakdowns: the rules are in `tools/README.md` ("Parts"), hand fixes in `data/parts-overrides.json`. A rebuild needs the pinned sources in `tools/sources/`; on the Mac, copy them from the Dropbox checkout's `tools/sources/` rather than downloading again.
+- Loose strokes: answers with a stray single stroke as a part (丨 丶 丿 乙 亅) stay out of the daily until their kanji are fixed in `data/parts-overrides.json` (`LOOSE_STROKES` in `tools/compile_game.py`).
 
 ## Rules
 - **Everything is a catalogue.** Modes, skins, powers, achievements and point values live in `js/config/`. Code reads them through `js/registry.js` and never hard-codes a list, a length, a price or an id. Growing the game means adding entries.
@@ -86,7 +91,6 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 - **Check the console.** `validate()` logs `[kanjiru config]` warnings at start-up when catalogues disagree. Fix them before committing.
 - **Answers are N3 or easier.** Guesses may use any jōyō kanji built from the puzzle's palette.
 - **Game data is compiled.** After a rebuild or a review session, run `python -I -X utf8 tools/compile_game.py` and commit `data/game/`. It never invents answers: with no Keep words the answer lists are empty.
-- **Testing the game before words are reviewed:** put a few answers in a local `data/game/answers.json` and run `git update-index --skip-worktree data/game/answers.json` so they can't be committed. Undo with `--no-skip-worktree` and `git checkout data/game/answers.json`. Never commit made-up answers.
 - **Which modes play:** a mode needs `playable: true` in `js/config/modes.js` (the game screen supports it) and answers. Until both, the start screen shows "soon".
 - **Levels:** a game's level lives in its start (`start.level`) and decides what a guess is (`levels.js` `guess`). Code checks the level's fields, never its id.
 - **Dev-only files don't deploy.** `tools/`, `review/`, `tests/`, `package.json`, `data/candidates.json` and `data/review.json` are excluded in `deploy.yml`. The review page writes files, so it must never reach the server.

@@ -110,7 +110,7 @@ export function whyNot(engine, state, power, held) {
   const code = engine.canUse(state, power.id);
   if (!code) return '';
   if (code === 'when') return t(power.when.includes('before') ? 'game.powers.why.before' : 'game.powers.why.during');
-  return t(`game.powers.why.${code}`);
+  return t(`game.powers.why.${code}`, { n: power.minLength || 1 });
 }
 
 // The sheet for one power: what it does, how many you hold, and Use.

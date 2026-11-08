@@ -32,7 +32,9 @@ After playing step 3, the user found one kanji too short: 79% of one-kanji answe
 - **Decided — Yellow is one colour:** the engine's `near` (another cell) shows yellow, and so does the older `other` mark (`--color-feedback-other`, its own token so a colour-blind mode can split it). 🟨 in the share text.
 - **Decided — First Keep list:** the user asked Claude to review the words. The first pass keeps every candidate with 4–6 parts that's on Waller's N5–N3 vocab lists, marked common in JMdict, written in kanji (not usually kana), with no rare, archaic, slang or sensitive tags. It cuts 15 by hand: 自殺 and 人種 (sensitive), 家内 and 字引 (dated), 一体, 具体, 前者, 後者 and 気味 (odd as answers), and the short weekday names (日曜 to 土曜; the 曜日 forms stay). That's 603 Keep words, about 1.7 years of dailies, in `data/review.json`, which the review page can still change.
 - **Open — More words:** 2,389 common two-kanji words with 4–6 parts aren't on a JLPT list. Many are everyday words worth keeping; review them later.
-- **Decided — Loose strokes leave the daily for now (step 4b):** 177 of the 603 Keep answers have a stray single stroke as a part (丨 丶 丿 乙 亅; e.g. 今日, 電気, 仕事). With every part a cell, those cells are close to guesswork. They stay Keep, but the daily list leaves them out (426 answers, over a year) until their breakdowns are fixed in `data/parts-overrides.json`; fixed ones come back on the next compile. 一 is a real part and stays.
+- **Decided — Loose strokes leave the daily for now (step 4b):** 177 of the 603 Keep answers had a stray single stroke as a part (丨 丶 丿 乙 亅; e.g. 今日, 電気, 仕事). With every part a cell, those cells are close to guesswork. They stay Keep, but the daily list leaves them out (`LISTS` `without` in `tools/compile_game.py`) until their breakdowns are fixed in `data/parts-overrides.json`; fixed ones come back on the next compile. 一 is a real part and stays. Days already played keep their answer (勝 and 経由 were days 8 and 9).
+- **Decided — First fixes (step 4b):** 10 kanji fixed with tiles the palette already has, the way similar kanji split: 重 動 種 (𠂉 over 里, as in 毎), 産 (立 厂 生), 着 (羊 目), 表 (龶 衣), 平 (干 八, as in 前), 号 (口 丂), 母 (毋, as in 毎), 犯 (犭 卩, as in 危). That brought back 25 words: the daily has 453 answers, and 146 Keep words are still left out.
+- **Decided — The rest stay out:** the most common left-out kanji (事 13 words, 年 11, 中 8, 今 7, 以 6) are made of strokes. As whole tiles, most of their words would have under 4 parts (仕事 would have 3), so a new tile wouldn't bring them back.
 - **Decided — Live before launch:** since PR #6 the live URL plays the daily (epoch 2026-11-01). It isn't linked anywhere; step 8 sets the real epoch, so puzzle 1 is launch day.
 
 ## Scoring (Decided, step 2)
@@ -43,7 +45,7 @@ Every guessed kanji is broken into parts (`data/parts.json` tiles with positions
 |---|---|---|
 | `hit` | Green (`--color-feedback-hit`) | The part is in the answer, in the same position |
 | `near` | Yellow (`--color-feedback-near`) | The part is in the answer, in a different position |
-| `other` | (2–4 kanji only; colour in step 4) | The part isn't in this kanji, but is in another kanji of the word |
+| `other` | Yellow (`--color-feedback-other`) | Per-kanji scoring only: the part isn't in this kanji, but is in another kanji of the word |
 | `miss` | Grey (`--color-feedback-miss`) | The part isn't in the answer, or every copy of it is already marked |
 
 - **Positions are needed** because a plain set of parts isn't unique: 員 and 唄 are both 口 + 貝, and 古 and 叶 are both 十 + 口.
@@ -98,7 +100,7 @@ From `js/config/economy.js`, every number there:
 
 - **Puzzle number:** days since the epoch, by the local date. The epoch is `EPOCH` in `tools/compile_game.py`, written into `data/game/answers.json` with the answer order (`js/engine/daily.js` reads it). Set it to launch day at step 8, then never change it.
 - **Answer order:** a fixed (seeded) shuffle of the Keep words. Days already played, up to tomorrow, are locked; later days are shuffled again on each compile, so new Keep words mix in evenly. When the list runs out it starts again from the top.
-- **A year of dailies** needs 365 Keep words per mode. One kanji has 530 candidates once the look-alikes leave; four kanji has only 144, so its daily would repeat after 144 days.
+- **A year of dailies** needs 365 answers. The main list has 453 (step 4b).
 - **Practice:** a random Keep answer, skipping the last 30 played in that mode (`rules.js` `practice.avoidRecent`).
 - **Streak:** one streak across modes: days in a row with at least one daily won. A day not yet played doesn't break it. Streak rewards pay each time a run reaches their length.
 - **Stats:** wins, fastest win, clean wins and kanji collected count practice too. Streaks and full-set days count dailies only. Kanji collected counts every kanji of a solved word.
@@ -108,7 +110,7 @@ From `js/config/economy.js`, every number there:
 
 Each puzzle shows a subset of the 251 tiles instead of all of them, like Wordle's keyboard. The engine is `js/engine/palette.js`.
 
-- **What's in it:** every part of the answer, the six single strokes (`rules.js` `palette.always`), and random decoys up to the mode's `palette` size in `modes.js`: 40, 50, 56 and 64 for 1–4 kanji.
+- **What's in it:** every part of the answer, the six single strokes (`rules.js` `palette.always`), and random decoys up to the mode's `palette` size in `modes.js` (40) times the level's `paletteScale` (0.7): 28 keys ("Levels").
 - **Guesses:** only kanji built entirely from the palette's tiles, typed ones included (`rules.js` `guessFromPalette`).
 - **Same for everyone:** a daily's palette comes from its puzzle number.
 - **Decoys:** picked by weight: how many jōyō kanji use the tile, plus 20× how many kanji it shares with a part of the answer (`rules.js` `decoyWeight`). Neighbours make more real kanji buildable.
@@ -130,7 +132,7 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 - **Decided — Easy is retired:** it worked as a kanji finder, not a part puzzle. Its level stays (`offered: false`) so old games still read; a game on the go at Easy starts again at the current level.
 - **Decided — Settings switches:** Hard and Guided are in Settings (the gear on the start screen), under "Game". They apply to the next puzzle, and to one not started yet. The start screen says which level is on.
 - **Decided — Hard: real kanji, any split:** the parts, in order, must split into real jōyō kanji, any way (the answer's split isn't needed). The row shows the kanji they make, fewest kanji first (子女, 村日), hanging off its right edge so the cells stay centred. Note: many tiles are kanji on their own (日, 木, 口), so this mostly turns away guesses with parts that can't stand or combine (亠 月).
-- **Decided — Hard: use what's been found:** like Wordle's hard mode, every green stays in its cell, and every part found green or yellow is in the guess again, as many times as it was found ("二 stays in cell 1", "Use 土").
+- **Decided — Hard: use what's been found:** like Wordle's hard mode, every green stays in its cell, and every part found green or yellow is in the guess again, as many times as it was found ("二 stays in cell 1", "Use 土"). A part a power showed stays in its cell too ("日 stays in cell 2: a hint showed it there"; step 4b).
 - **Decided — Guided:** shows each kanji's cells apart, their places (左 右) above them, a frame per kanji filled in with the parts found green, and how many kanji still fit under it. The keyboard dims the keys no jōyō kanji has in the selected cell's place (`tilesForPlace()` in `js/engine/palette.js`); dimmed keys keep their spot.
 - **Decided — The keyboard never changes:** the same 28 keys (`paletteScale` 0.7 of the mode's 40) in the same spots for the whole game, at every level, in stroke order. Keys show the best mark each part has had, like Wordle's keyboard.
 - **Decided — Every row, like Wordle:** every row shows from the start, the cells as big as fit, and nothing beside them. The parts sit at the bottom as a keyboard, pinned there, with Delete and Guess keys. Hints open from a button in the head. While a game is on, the site header steps aside.
@@ -139,7 +141,8 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 - **Decided — Kanji frame (Guided):** a frame in each answer kanji's shape fills in with each part found green, in its place, whether by a guess or a power. A dot stands for each part still hidden. A solved kanji shows whole, on green.
 - **Proposed — Frame layout:** top and bottom span the frame; left, inner and right share the middle; an outer part (門, 辶) covers it all, with the inner inset. A place with several parts stacks them (土 over 寸 for 時). The frames catch up once the row has flipped.
 - **Decided — The board fits the screen:** the user found a narrow column in the middle of a phone a poor use of space, and asked for a board that scales to any number of kanji.
-- **Proposed — How it fits (`fitBoard()` in `js/play/screen.js`):** cells take the largest layout-token size (64, 56, 48, 40, 32 or 24 px) whose rows fit the width on one line and, with the head, frames, place names and keyboard, the screen's height. Hard leaves room on both sides for the row's kanji. With the split shown, each kanji's frame sits above its own cells (80 or 64 px), and if even 24 px cells are too wide, rows wrap between kanji. It refits when the screen turns or resizes. A 6-part answer gets 56 px cells on a 402 × 780 phone and 48 px on a 375 × 667 one.
+- **Proposed — How it fits (`fitBoard()` in `js/play/screen.js`):** cells take the largest layout-token size (64, 56, 48, 40, 32 or 24 px) whose rows fit the width on one line and, with the head, frames, place names, clues found and keyboard, the screen's height. The power bar and messages come and go, so they don't count. Hard leaves room on both sides for the row's kanji. With the split shown, each kanji's frame sits above its own cells (80 or 64 px), and if even 24 px cells are too wide, rows wrap between kanji. It refits when the screen turns or resizes. A 6-part answer gets 56 px cells on a 402 × 780 phone and 48 px on a 375 × 667 one; Guided's frames leave 24–40 px cells on the smaller phone.
+- **Decided — No page scroll in a game (step 4b):** while the keyboard is up, the site footer and the page's bottom padding step aside too, so the screen doesn't scroll under the player's thumb. The result card brings them back.
 - **Proposed — Short place names:** over cells narrower than 40 px, places use short names (L, R, btm, out, in; Japanese is already one character).
 - **Decided — Kanji that fit (`countLeft`, Guided):** under each kanji's frame, how many kanji still fit that slot: the same number of parts, buildable from the palette, none swept away or shown grey, the revealed strokes, layout and parts, a green part at that cell of the kanji's writing order and a part not green there not at it (`engine.fits()`).
 - **Decided — Normal takes any parts:** they don't have to make a kanji.
@@ -151,13 +154,13 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 - **Proposed — Start screen:** the example rows show 時間's five cells: 口 日 寸 木 月 (日 yellow, 寸 green), then 日 土 寸 日 門, then 時間 solved.
 - **Open — Tuning:** 28 keys, 6 rows, the Hard and Guided points, what each part pays. All catalogue edits; decide after a few days of play.
 - **Decided — No real-word check at Hard:** the parts must make real kanji, any split; the guess doesn't have to be a real word.
-- **Decided — Hints under the new rules (step 4b):** Reveal a part (and Head start) show the part in its cell, green, on the board, not just its name. Stroke count, Layout and Reveal a kanji give away where kanji split; they stay as paid hints, since that's what they're for.
+- **Decided — Hints under the new rules (step 4b):** Reveal a part, Head start and Reveal a kanji put the parts they show in their cells, green: each new row starts with them filled in (`engine.shownCells()`). At Normal the player may change one; at Hard it stays. Stroke count, Layout and Reveal a kanji give away where kanji split; they stay as paid hints, since that's what they're for. Meaning, Reading, Sweep and Extra guess need no change. Reveal a kanji is only offered when the answer has 2 or more kanji.
 - **Decided — Meaning stays a hint:** no free meaning at any level for now (`freeMeaning: false`). If dailies feel too hard, showing it after guess 4 is a one-line change.
 
 ## The game screen (steps 3 and 4)
 
 - **Reveal:** each new row flips tile by tile (`settings.tiles`; Flip for now, step 6 adds the rest). Off under reduced motion.
-- **Hints:** the bar of powers with the count held opens from the Hints button in the head, above the keyboard; clues already found stay on show there. Tapping a power opens a sheet that says what it does and why it can't be used now, if so. Using one spends it from the inventory.
+- **Hints:** the bar of powers with the count held opens from the Hints button in the head, above the keyboard; clues already found stay on show there. Tapping a power opens a sheet that says what it does and why it can't be used now, if so. Using one spends it from the inventory. Parts it shows fill their cells on the board too ("Levels", "Hints under the new rules").
 - **Saving:** the game on the go is saved as its start and log after every move (`save.playing`), so a reload carries on. A finished daily is recorded to history and can't be played again; its result shows until the next daily.
 - **Points:** paid into the wallet once, when a game ends: what `engine.points()` gives. Streak rewards, bonus drops and achievements are step 5.
 - **Result card:** the answer with its meanings, readings and parts, points, streak, share text and a countdown to the next daily, with Keep playing (after the daily) or Next puzzle (after another one). A game from another device (merged in) shows without points, since only its guesses are known.
@@ -251,7 +254,7 @@ Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in strok
   - Not in Noto Sans/Serif JP: 龶 㐄 业 𢆉.
   - Not in JIS X 0213, so a phone's own fonts may lack them: 𠂊 ⺌ ⺍ ⺗ ⺧ ⺷ 卌.
   - `review/parts.html` tests the device's own fonts. On Windows, all draw.
-- **Hand fixes:** 10 kanji in `data/parts-overrides.json` (万 三 円 年 実 寒 声 勤 無 舞).
+- **Hand fixes:** 20 kanji in `data/parts-overrides.json`: 万 三 円 年 実 寒 声 勤 無 舞 (step 1) and 重 動 種 産 着 表 平 号 母 犯 (step 4b).
 
 ### How the known problems were fixed
 
@@ -268,12 +271,12 @@ Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in strok
 ### Still open
 
 - **Look-alikes:** settled in step 2: 未 末 押 招 leave the one-kanji answers ("Scoring", "Winning").
-- **Clumsy breakdowns:** 160 answers still have single strokes, and a few have several (乗, 呼, 段, 喜, 候). Flag them on the parts check page, then fix them in `data/parts-overrides.json`.
+- **Clumsy breakdowns:** 150 one-kanji candidates still have single-stroke parts, and a few have several (乗, 呼, 段, 喜, 候). Words with a loose stroke stay out of the daily ("The puzzle"). Flag them on the parts check page, then fix them in `data/parts-overrides.json`.
 - **Phones:** check `review/parts.html` on iOS and Android to confirm which glyphs need the drawings.
 
 ## Hosting
 
 - **Live:** https://www.ryanrwang.com/apps/kanjiru/ (also clearful.net). Each push to `main` deploys by FTPS (`.github/workflows/deploy.yml`).
 - **Not deployed:** `tools/`, `review/`, `tests/`, `package.json`, the data working files and `*.md`. The game loads `data/game/` and `data/parts.json`.
-- **Local:** `php -S 0.0.0.0:8095 -t D:/Dropbox/Clearful`, then open `/apps/kanjiru/`.
+- **Local:** `php -S 0.0.0.0:8095 -t D:/Dropbox/Clearful` on the PC, or `php -S 0.0.0.0:8099 -t ~/kanjiru-test` on the Mac, then open `/apps/kanjiru/`.
 - **Apps page:** not listed on `/apps/` yet; add it at launch.

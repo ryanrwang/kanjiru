@@ -40,6 +40,46 @@
     "舞": {
       "parts": [["𠂉", "top"], ["卌", "top"], ["一", "top"], ["夕", "bottom"], ["㐄", "bottom"]],
       "why": "Same top as 無, which KanjiVG leaves as loose strokes."
+    },
+    "重": {
+      "parts": [["𠂉", "top"], ["里", "bottom"]],
+      "why": "The stroke and line over 里 draw 𠂉, as in 毎 and 海; KanjiVG leaves them loose."
+    },
+    "動": {
+      "parts": [["𠂉", "left"], ["里", "left"], ["力", "right"]],
+      "why": "Same left as 重: 𠂉 over 里."
+    },
+    "種": {
+      "parts": [["禾", "left"], ["𠂉", "right"], ["里", "right"]],
+      "why": "Same right as 重: 𠂉 over 里."
+    },
+    "産": {
+      "parts": [["立", "outer"], ["厂", "outer"], ["生", "inner"]],
+      "why": "The stroke down the left and 立's last line draw 厂 around 生; KanjiVG leaves the stroke loose."
+    },
+    "着": {
+      "parts": [["羊", "outer"], ["目", "inner"]],
+      "why": "The long stroke is part of 羊 here; KanjiVG leaves it loose."
+    },
+    "表": {
+      "parts": [["龶", "top"], ["衣", "bottom"]],
+      "why": "KanjiVG splits 衣 around 龶, which left 二 and a loose stroke on top."
+    },
+    "平": {
+      "parts": [["干", "outer"], ["八", "inner"]],
+      "why": "The two strokes inside 干 are 八 (as 丷), as in 前 and 並; KanjiVG leaves them loose."
+    },
+    "号": {
+      "parts": [["口", "top"], ["丂", "bottom"]],
+      "why": "The bottom is 丂; KanjiVG leaves it as a line and a loose stroke."
+    },
+    "母": {
+      "parts": [["毋", "whole"]],
+      "why": "The shape is the 毋 tile, as in 毎 and 海; KanjiVG leaves its two dots loose."
+    },
+    "犯": {
+      "parts": [["犭", "left"], ["卩", "right"]],
+      "why": "The right is 㔾, which counts as 卩, as in 危 and 範; KanjiVG leaves its two strokes loose."
     }
   }
 }
