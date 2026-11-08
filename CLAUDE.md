@@ -74,7 +74,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `data/review.json` | The user's review decisions. Never overwrite it from a script |
 
 ## Word data
-- Rebuild: `python -I tools/build_data.py` from this folder. Sources are pinned; downloads go to `tools/sources/` (ignored by Git).
+- Rebuild: `python -I -X utf8 tools/build_data.py` from this folder. Sources are pinned; downloads go to `tools/sources/` (ignored by Git).
 - Review: open `http://localhost:8095/apps/kanjiru/review/` with the PHP server running.
 - Waller's kanji lists come from Internet Archive snapshots, because tanos.co.uk is offline.
 - Part breakdowns: the rules are in `tools/README.md` ("Parts"), hand fixes in `data/parts-overrides.json`. A rebuild needs the pinned sources in `tools/sources/`; on the Mac, copy them from the Dropbox checkout's `tools/sources/` rather than downloading again.

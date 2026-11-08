@@ -1192,6 +1192,28 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .picker.is-keyboard .picker-choices { gap: var(--spacing-xs); }
 
+/* With the keyboard up, a message floats just above it, over the bottom
+   of the board, and goes after a moment (say() in js/play/screen.js), so
+   it never moves the board or makes the page scroll. The coloured bar on
+   the left comes from .status-line. */
+.picker.is-keyboard .status-line {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 100%;
+  margin-bottom: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-top: var(--stroke-thin) solid var(--color-border-default);
+  border-right: var(--stroke-thin) solid var(--color-border-default);
+  border-bottom: var(--stroke-thin) solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-raised);
+  box-shadow: var(--shadow-md);
+  color: var(--color-text-primary);
+}
+
 .picker.is-keyboard .palette {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--layout-cell), 1fr));
