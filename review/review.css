@@ -177,3 +177,128 @@
   text-align: center;
   color: var(--color-text-muted);
 }
+
+/* ── Parts (both pages) ───────────────────────────────────────────── */
+
+.kanji-parts-head a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.kanji-parts-head a:hover .kanji { color: var(--color-link-hover); }
+
+.kanji-parts-row { flex-wrap: wrap; }
+
+/* KanjiVG strokes for glyphs the fonts may lack: 1em square, like text. */
+.glyph-svg {
+  width: 1em;
+  height: 1em;
+  overflow: visible;
+}
+
+.glyph-svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: calc(var(--stroke-thick) * 1.25);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ── Parts check page ─────────────────────────────────────────────── */
+
+.review-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.review-note {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.palette-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+}
+
+.palette-head {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+
+.palette-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.palette-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-md);
+  border: var(--stroke-thin) solid transparent;
+}
+
+.palette-tile:hover { background: var(--color-interactive-hover); }
+.palette-tile[aria-pressed="true"] { background: var(--color-interactive-selected); border-color: var(--color-border-focus); }
+.palette-tile.is-missing .tile { border-color: var(--color-status-danger); }
+
+.palette-forms {
+  display: flex;
+  gap: var(--spacing-xs);
+  font-family: var(--font-family-kanji);
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  line-height: var(--font-lineHeight-tight);
+}
+
+.palette-uses {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  line-height: var(--font-lineHeight-tight);
+}
+
+.palette-tile.is-missing .palette-uses { color: var(--color-status-danger); font-weight: var(--font-weight-bold); }
+
+.kanji-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+}
+
+.kanji-card.is-flagged { outline: var(--stroke-thick) solid var(--color-status-danger); }
+
+.kanji-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.kanji-big {
+  font-family: var(--font-family-kanji);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-tight);
+}
+
+.kanji-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 0;
+  color: var(--color-text-secondary);
+}
+
+.kanji-facts {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}

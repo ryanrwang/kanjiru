@@ -3,20 +3,19 @@
  *
  * Reads ../data/candidates.json, shows each candidate answer with its part
  * breakdown, and records Keep / Maybe / Cut per word plus a flag per kanji
- * whose parts look wrong. Decisions save to ../data/review.json through
- * review.php (PHP's built-in server only), with a copy in this browser.
+ * whose parts look wrong. Saving is in common.js; parts.html checks the
+ * parts themselves.
  *
  * The list is a snapshot taken when the filters change, so deciding a word
  * doesn't make the page jump. Change a filter or press Refresh to rebuild it.
  */
 
-const PAGE_SIZE = 40;
-const LOCAL_KEY = 'kanjiru.review';
+import {
+  el, $, store, scheduleSave, loadReview, download, setStatus,
+  isFlagged, flagButton, loadPalette, partsRow
+} from './common.js';
 
-const POS_LABEL = {
-  left: 'left', right: 'right', top: 'top', bottom: 'bottom',
-  outer: 'outer', inner: 'inner', whole: 'whole', none: '—'
-};
+const PAGE_SIZE = 40;
 
 const STATUSES = [
   ['pending', 'Pending'], ['keep', 'Keep'], ['maybe', 'Maybe'], ['cut', 'Cut'], ['all', 'All']
@@ -24,90 +23,11 @@ const STATUSES = [
 
 const state = {
   data: null,
-  review: { decisions: {}, parts: {} },
+  palette: null,
   filters: { length: 'all', status: 'pending', level: 'all', q: '' },
   list: [],
-  page: 0,
-  serverSave: true
+  page: 0
 };
-
-// ── DOM helper ───────────────────────────────────────────────────────
-
-function el(tag, attrs = {}, ...children) {
-  const node = document.createElement(tag);
-  Object.entries(attrs).forEach(([key, value]) => {
-    if (value === null || value === undefined || value === false) return;
-    if (key === 'class') node.className = value;
-    else if (key.startsWith('on')) node.addEventListener(key.slice(2), value);
-    else node.setAttribute(key, value === true ? '' : value);
-  });
-  children.flat().forEach((child) => {
-    if (child === null || child === undefined || child === false) return;
-    node.append(child.nodeType ? child : document.createTextNode(String(child)));
-  });
-  return node;
-}
-
-const $ = (id) => document.getElementById(id);
-
-// ── Saving ───────────────────────────────────────────────────────────
-
-function setStatus(text) {
-  $('save-status').textContent = text;
-}
-
-let saveTimer = null;
-
-function scheduleSave() {
-  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(state.review)); } catch (e) { /* ignore */ }
-  setStatus('Saving…');
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveNow, 400);
-}
-
-async function saveNow() {
-  if (!state.serverSave) {
-    setStatus('Saved in this browser only');
-    return;
-  }
-  try {
-    const res = await fetch('review.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state.review)
-    });
-    if (!res.ok) throw new Error(res.status);
-    setStatus('Saved to data/review.json');
-  } catch (e) {
-    setStatus('File save failed — kept in this browser');
-  }
-}
-
-async function loadReview() {
-  try {
-    const res = await fetch('review.php', { cache: 'no-store' });
-    if (!res.ok) throw new Error(res.status);
-    const saved = await res.json();
-    return { decisions: saved.decisions || {}, parts: saved.parts || {} };
-  } catch (e) {
-    // No PHP (e.g. a static server): work from the browser copy.
-    state.serverSave = false;
-    try {
-      const local = JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}');
-      return { decisions: local.decisions || {}, parts: local.parts || {} };
-    } catch (err) {
-      return { decisions: {}, parts: {} };
-    }
-  }
-}
-
-function download() {
-  const blob = new Blob([JSON.stringify(state.review, null, 2) + '\n'], { type: 'application/json' });
-  const a = el('a', { href: URL.createObjectURL(blob), download: 'review.json' });
-  document.body.append(a);
-  a.click();
-  a.remove();
-}
 
 // ── Filtering ────────────────────────────────────────────────────────
 
@@ -123,7 +43,7 @@ function infoFor(word) {
 }
 
 function decisionOf(word) {
-  return state.review.decisions[word.word] || 'pending';
+  return store.review.decisions[word.word] || 'pending';
 }
 
 function matches(word, ignoreStatus) {
@@ -182,34 +102,18 @@ function renderCounts() {
 
 function partsBlock(char) {
   const k = state.data.kanji[char];
-  const flagged = state.review.parts[char] === 'flag';
-  const parts = (k && k.parts) || [];
-  return el('div', { class: `kanji-parts${flagged ? ' is-flagged' : ''}` },
+  const box = el('div', { class: `kanji-parts${isFlagged(char) ? ' is-flagged' : ''}` });
+  box.append(
     el('div', { class: 'kanji-parts-head' },
-      el('span', {}, el('span', { class: 'kanji', lang: 'ja' }, char),
-        k ? ` · ${k.strokes} stroke${k.strokes === 1 ? '' : 's'}${k.jlpt ? ` · N${k.jlpt}` : ''}` : ' · not in data'),
-      el('button', {
-        class: 'flag-btn',
-        type: 'button',
-        'aria-pressed': String(flagged),
-        title: 'Flag this kanji’s parts as wrong or awkward',
-        onclick: (e) => {
-          if (state.review.parts[char] === 'flag') delete state.review.parts[char];
-          else state.review.parts[char] = 'flag';
-          const now = state.review.parts[char] === 'flag';
-          e.currentTarget.setAttribute('aria-pressed', String(now));
-          e.currentTarget.closest('.kanji-parts').classList.toggle('is-flagged', now);
-          scheduleSave();
-        }
-      }, flagged ? '⚑ Flagged' : '⚐ Parts')
+      el('a', { href: `parts.html#${encodeURIComponent(char)}`, title: 'Open in the parts check' },
+        el('span', { class: 'kanji', lang: 'ja' }, char),
+        k ? ` · ${k.strokes} stroke${k.strokes === 1 ? '' : 's'}${k.jlpt ? ` · N${k.jlpt}` : ''}` +
+            `${k.override ? ' · hand-fixed' : ''}` : ' · not in data'),
+      flagButton(char, box)
     ),
-    el('div', { class: 'kanji-parts-row' },
-      parts.map((p) => el('span', { class: 'part', title: p.orig ? `${p.el} (from ${p.orig})` : p.el },
-        el('span', { class: 'tile', lang: 'ja' }, p.el),
-        el('span', { class: 'part-pos' }, POS_LABEL[p.pos] || p.pos)
-      ))
-    )
+    partsRow((k && k.parts) || [], state.palette)
   );
+  return box;
 }
 
 function wordCard(word) {
@@ -218,8 +122,8 @@ function wordCard(word) {
   const card = el('li', { class: `card word-card is-${decision}` });
 
   const setDecision = (value) => {
-    if (state.review.decisions[word.word] === value) delete state.review.decisions[word.word];
-    else state.review.decisions[word.word] = value;
+    if (store.review.decisions[word.word] === value) delete store.review.decisions[word.word];
+    else store.review.decisions[word.word] = value;
     const now = decisionOf(word);
     card.className = `card word-card is-${now}`;
     card.querySelectorAll('.decision').forEach((b) => {
@@ -297,8 +201,8 @@ async function start() {
       'Could not load data/candidates.json. Run: python -I tools/build_data.py'));
     return;
   }
-  state.review = await loadReview();
-  setStatus(state.serverSave ? 'Saving to data/review.json' : 'No PHP: saving in this browser');
+  state.palette = await loadPalette();
+  await loadReview();
 
   $('search').addEventListener('input', (e) => {
     state.filters.q = e.target.value.trim();
@@ -306,7 +210,7 @@ async function start() {
   });
   $('bulk-keep').addEventListener('click', () => {
     pageItems().forEach((w) => {
-      if (decisionOf(w) === 'pending') state.review.decisions[w.word] = 'keep';
+      if (decisionOf(w) === 'pending') store.review.decisions[w.word] = 'keep';
     });
     render();
     scheduleSave();

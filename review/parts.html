@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Parts check · Kanjiru</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <script src="../tokens.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="review.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1 class="brand">
+      <span class="brand-kanji" lang="ja">部</span>
+      <span class="brand-name">Parts check</span>
+    </h1>
+    <div class="header-actions">
+      <a class="chip" href="./">Word review</a>
+      <span class="pill" id="save-status">Loading…</span>
+    </div>
+  </header>
+
+  <main class="app-main review-main">
+    <section class="card review-controls" aria-labelledby="palette-title">
+      <h2 class="review-title" id="palette-title">Palette</h2>
+      <p class="review-note" id="palette-summary"></p>
+      <div id="palette"></div>
+    </section>
+
+    <section class="card review-controls" id="kanji-section" aria-labelledby="kanji-title">
+      <h2 class="review-title" id="kanji-title">Breakdowns</h2>
+      <p class="review-note">Each part shows where it sits in the whole kanji. Flag any that look wrong; the next build lists them.</p>
+      <div class="filter-group" id="filter-kind" role="group" aria-label="Which kanji"></div>
+      <input class="review-search" id="search" type="search" placeholder="Search kanji, reading or meaning" autocomplete="off">
+      <p class="review-counts" id="counts"></p>
+    </section>
+
+    <div class="review-bulk">
+      <button class="chip" type="button" id="download">Download review.json</button>
+    </div>
+
+    <ol class="review-list" id="list"></ol>
+
+    <nav class="review-pager" id="pager" aria-label="Pages"></nav>
+  </main>
+
+  <script type="module" src="parts.js"></script>
+</body>
+</html>
