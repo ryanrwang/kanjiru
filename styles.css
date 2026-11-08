@@ -1220,8 +1220,13 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .hints-btn.is-open { color: var(--color-text-accent); }
 
-/* A game fills the screen like Wordle: the site header steps aside. */
+/* A game fills the screen like Wordle: the site header steps aside, and
+   while the keyboard is up so do the footer and the page's bottom padding,
+   which fitBoard() in js/play/screen.js doesn't leave room for. The
+   result card gets them back. */
 body.is-game .app-header { display: none; }
+body.is-game:has(.picker.is-keyboard) .app-footer { display: none; }
+body.is-game:has(.picker.is-keyboard) .app-main { padding-bottom: 0; }
 
 /* Tile reveal (settings.tiles). Flip is the default; a tile style from
    js/config/skins.js gets its own block keyed by [data-tiles] (step 6).

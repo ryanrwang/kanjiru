@@ -49,11 +49,19 @@ SHUFFLE_SEED = "kanjiru"
 LOCK_AHEAD_DAYS = 1
 
 # The answer lists, one per mode (js/config/modes.js `answers`). A Keep word
-# goes in each list whose rules it meets: how many kanji it has, and how
-# many parts (palette tiles) they have in all. "main" is the daily: 4-6
-# parts, like Wordle's five letters, in 1 to 4 kanji.
+# goes in each list whose rules it meets: how many kanji it has (`lengths`),
+# how many parts (palette tiles) they have in all (`parts`), and, if the
+# rule has `without`, none of its parts is one of those tiles. "main" is the
+# daily: 4-6 parts, like Wordle's five letters, in 1 to 4 kanji.
+#
+# Loose strokes: a cell holding a stray single stroke (丨 丶 丿 乙 亅) is
+# close to guesswork, so those words leave the daily until their breakdowns
+# are fixed in data/parts-overrides.json. They stay Keep, and come back on
+# the next compile once fixed. 一 is a real part, so it stays.
+LOOSE_STROKES = ("丨", "丶", "丿", "乙", "亅")
+
 LISTS = {
-    "main": {"lengths": (1, 2, 3, 4), "parts": (4, 6)},
+    "main": {"lengths": (1, 2, 3, 4), "parts": (4, 6), "without": LOOSE_STROKES},
 }
 
 # Kanji with the same parts in the same places as another joyo kanji (未/末)
@@ -126,6 +134,12 @@ def part_count(candidates: dict, word: str) -> int | None:
     return sum(len(kanji[ch]["parts"]) for ch in word)
 
 
+def word_tiles(candidates: dict, word: str) -> list[str]:
+    """Every part (palette tile) of a word's kanji, in order."""
+    kanji = candidates["kanji"]
+    return [part["el"] for ch in word if ch in kanji for part in kanji[ch]["parts"]]
+
+
 def compile_answers(candidates: dict, review: dict | None, previous: dict | None,
                     today: datetime.date, epoch: str = EPOCH, lists: dict = LISTS) -> tuple[dict, dict]:
     """Returns (answers.json content, report for the summary)."""
@@ -140,11 +154,16 @@ def compile_answers(candidates: dict, review: dict | None, previous: dict | None
     locked_count = max(0, puzzle_number(epoch, today) + LOCK_AHEAD_DAYS)
 
     def fits(word: str, rule: dict) -> bool:
+        """The rule's length and part count (`without` is checked apart, to count it)."""
         info = by_word[word]
         parts = part_count(candidates, word)
         low, high = rule["parts"]
         return (info["length"] in rule["lengths"] and parts is not None and low <= parts <= high
                 and not (info["length"] == 1 and word in twins))
+
+    def has_unwanted(word: str, rule: dict) -> bool:
+        unwanted = set(rule.get("without", ()))
+        return any(tile in unwanted for tile in word_tiles(candidates, word))
 
     report = {
         "keep": len(keep),
@@ -154,7 +173,9 @@ def compile_answers(candidates: dict, review: dict | None, previous: dict | None
     }
     answers, words = {}, {}
     for name, rule in lists.items():
-        wanted = {w for w in keep if w in by_word and fits(w, rule)}
+        fitting = {w for w in keep if w in by_word and fits(w, rule)}
+        left_out = {w for w in fitting if has_unwanted(w, rule)}
+        wanted = fitting - left_out
         previous_list = prev_answers.get(name, []) if same_epoch else []
         locked = previous_list[:min(locked_count, len(previous_list))]
         rest = sorted(wanted - set(locked))
@@ -166,7 +187,9 @@ def compile_answers(candidates: dict, review: dict | None, previous: dict | None
         report["lists"][name] = {
             "answers": len(locked) + len(rest),
             "locked": len(locked),
-            "locked_not_kept": sorted(w for w in locked if w not in wanted),
+            "locked_left_out": sorted(w for w in locked if w not in wanted),
+            "without": sorted(left_out),
+            "without_tiles": list(rule.get("without", ())),
             "by_length": dict(sorted(lengths.items())),
         }
         for word in answers[name]:
@@ -262,8 +285,12 @@ def main(argv: list[str] | None = None) -> int:
         note = "a year of dailies" if days >= DAYS_IN_A_YEAR else f"{DAYS_IN_A_YEAR - days} short of a year"
         mix = ", ".join(f"{n} kanji: {c}" for n, c in info["by_length"].items())
         print(f"  {name}: {days} answers ({note}; {mix or 'none'}); {info['locked']} locked as already played")
-        if info["locked_not_kept"]:
-            print(f"    still scheduled though no longer Keep (day already played): {' '.join(info['locked_not_kept'])}")
+        if info["without"]:
+            tiles = " ".join(info["without_tiles"])
+            print(f"    left out, a part is {tiles}: {len(info['without'])} Keep words "
+                  f"(they come back once their parts are fixed)")
+        if info["locked_left_out"]:
+            print(f"    still scheduled though left out now (day already played): {' '.join(info['locked_left_out'])}")
     if report["lookalikes"]:
         print(f"Left out, look-alike kanji: {' '.join(report['lookalikes'])}")
     if report["not_candidates"]:

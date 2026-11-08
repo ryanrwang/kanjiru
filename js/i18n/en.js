@@ -66,6 +66,7 @@ export default {
     cells: 'Next guess: {n} of {cells} cells filled',
     cellEmpty: '{cell}, empty',
     cellFilled: '{cell}: {part}',
+    cellShown: '{cell}: {part}, shown by a hint',
     cellNumber: 'Cell {n}',
     cellPlace: 'Cell {n}, {place}',
     shape: 'Cells: {places}',
@@ -118,13 +119,14 @@ export default {
         during: 'Only after your first guess.',
         useless: 'It wouldn’t show anything new.',
         over: 'The game is over.',
-        mode: 'Not in this mode.',
+        mode: 'Only for answers of {n} or more kanji.',
         unknown: 'Not in this mode.'
       }
     },
     errors: {
       slots: 'Fill all {cells} cells first.',
       'not-real': 'Those parts don’t make real kanji in that order. Try another mix.',
+      'keep-shown': '{part} stays in cell {cell}: a hint showed it there.',
       'keep-hit': '{part} stays in cell {cell}: you found it there.',
       'use-near': 'Use {part}: you found it in the word.',
       level: 'That kind of guess isn’t used at this level.',
@@ -199,7 +201,7 @@ export default {
     whenBoth: 'Before or during a game',
     whenBefore: 'Before your first guess',
     whenDuring: 'During a game',
-    minLength: '{n}+ kanji modes',
+    minLength: 'Answers of {n}+ kanji',
     have: 'You have {n}'
   },
 
@@ -348,11 +350,11 @@ export default {
     },
     'reveal-part': {
       name: 'Reveal a part',
-      desc: 'Marks one part of the answer green.'
+      desc: 'Puts one part of the answer in its cell, green.'
     },
     'head-start': {
       name: 'Head start',
-      desc: 'Reveals 2 parts before your first guess.'
+      desc: 'Puts 2 parts in their cells, green, before your first guess.'
     },
     'extra-guess': {
       name: 'Extra guess',
@@ -360,7 +362,7 @@ export default {
     },
     'reveal-kanji': {
       name: 'Reveal a kanji',
-      desc: 'Fills in one whole kanji of the word.'
+      desc: 'Fills in one whole kanji of the word, green.'
     }
   },
 

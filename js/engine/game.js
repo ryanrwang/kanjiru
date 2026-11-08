@@ -137,7 +137,7 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   // level and tile ids per kanji for a 'parts' level (levels.js guess).
   // Codes: over, level (the wrong kind of guess), length, not-kanji, slots,
   // not-in-palette, not-real, repeat, not-a-word, and with useHints,
-  // keep-hit and use-near (hintProblem gives the part and cell).
+  // keep-shown, keep-hit and use-near (hintProblem gives the part and cell).
   function checkGuess(state, input) {
     if (state.status !== 'playing') return 'over';
     return levelOf(state).guess === 'parts' ? checkParts(state, input) : checkWord(state, input);
@@ -185,9 +185,12 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   // Order levels with useHints (Hard), like Wordle's hard mode: what earlier
   // guesses found must be used. Every green stays in its cell, and every
   // part shown green or yellow is in the guess as many times as it was
-  // found. The first problem, { code, part, cell }, or null.
+  // found. A part a power showed is a green too (keep-shown). The first
+  // problem, { code, part, cell }, or null.
   function hintProblem(state, picks) {
     const flat = picks.flat();
+    const moved = shownCells(state).find(({ cell, el }) => flat[cell] !== el);
+    if (moved) return { code: 'keep-shown', part: moved.form, cell: moved.cell + 1 };
     const guesses = state.guesses.filter((g) => g.parts);
     for (const g of guesses) {
       const tiles = g.slots.flatMap((slot) => slot.tiles);
@@ -226,7 +229,7 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   function guess(state, input) {
     const error = checkGuess(state, input);
     if (error) {
-      const hint = error === 'keep-hit' || error === 'use-near' ? hintProblem(state, input) : null;
+      const hint = ['keep-shown', 'keep-hit', 'use-near'].includes(error) ? hintProblem(state, input) : null;
       return { state, error, detail: hint ? { part: hint.part, cell: hint.cell } : {} };
     }
     const next = clone(state);
@@ -260,6 +263,22 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   }
 
   // ── What the player knows ──────────────────────────────────────────
+
+  // The cells powers showed (Reveal a part, Head start, Reveal a kanji),
+  // counted from 0 in writing order across the word: [{ cell, el, form }].
+  // The game screen fills them in on the next row, green.
+  function shownCells(state) {
+    const answer = answerSlots(state);
+    const first = answer.map((_, s) => answer.slice(0, s).reduce((n, slot) => n + slot.parts.length, 0));
+    const out = new Map();
+    const add = (slot, part) => {
+      const { el, form } = answer[slot].parts[part];
+      out.set(first[slot] + part, { cell: first[slot] + part, el, form: form || el });
+    };
+    state.revealed.parts.forEach(({ slot, part }) => add(slot, part));
+    state.revealed.kanji.forEach((slot) => answer[slot].parts.forEach((_, part) => add(slot, part)));
+    return [...out.values()].sort((a, b) => a.cell - b.cell);
+  }
 
   const solvedSlots = (state) => {
     const out = new Set(state.revealed.kanji);
@@ -531,7 +550,7 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   }
 
   return {
-    newGame, guess, checkGuess, usePower, canUse, clues, answerInfo,
+    newGame, guess, checkGuess, usePower, canUse, clues, shownCells, answerInfo,
     replay, points, record, rollDrop, fits, effects: Object.keys(EFFECTS)
   };
 }

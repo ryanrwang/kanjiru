@@ -64,6 +64,7 @@ export default {
     cells: '次の回答：{cells}マス中{n}マス',
     cellEmpty: '{cell}（空）',
     cellFilled: '{cell}：{part}',
+    cellShown: '{cell}：{part}（ヒントで表示）',
     cellNumber: '{n}マス目',
     cellPlace: '{n}マス目（{place}）',
     shape: 'マス：{places}',
@@ -116,13 +117,14 @@ export default {
         during: '最初の回答のあとだけ使えます。',
         useless: '新しくわかることがありません。',
         over: 'ゲームは終了しました。',
-        mode: 'このモードでは使えません。',
+        mode: '{n}字以上の答えだけで使えます。',
         unknown: 'このモードでは使えません。'
       }
     },
     errors: {
       slots: '{cells}マスすべてを埋めてください。',
       'not-real': 'その順番のパーツでは実在する漢字になりません。別の組み合わせを試してください。',
+      'keep-shown': '{part}は{cell}マス目のままです。ヒントでそこに表示されました。',
       'keep-hit': '{part}は{cell}マス目のままです。そこで見つけました。',
       'use-near': '{part}を使ってください。ことばの中にあります。',
       level: 'このレベルではその答え方はできません。',
@@ -197,7 +199,7 @@ export default {
     whenBoth: 'ゲーム前・ゲーム中に使える',
     whenBefore: '最初の回答の前に使える',
     whenDuring: 'ゲーム中に使える',
-    minLength: '{n}字以上のモード',
+    minLength: '{n}字以上の答え',
     have: '所持数 {n}'
   },
 
@@ -346,11 +348,11 @@ export default {
     },
     'reveal-part': {
       name: 'パーツ公開',
-      desc: '答えのパーツを1つ緑にします。'
+      desc: '答えのパーツを1つ、そのマスに緑で入れます。'
     },
     'head-start': {
       name: 'スタートダッシュ',
-      desc: '最初の回答の前にパーツを2つ公開します。'
+      desc: '最初の回答の前に、パーツを2つそのマスに緑で入れます。'
     },
     'extra-guess': {
       name: 'もう一回',
@@ -358,7 +360,7 @@ export default {
     },
     'reveal-kanji': {
       name: '漢字公開',
-      desc: '熟語の漢字を1字まるごと公開します。'
+      desc: '熟語の漢字を1字まるごと緑で入れます。'
     }
   },
 

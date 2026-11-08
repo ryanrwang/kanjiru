@@ -11,7 +11,9 @@
  * parts sit below as a keyboard with Delete and Guess keys. One cell of the
  * next row is selected: a tapped part fills it and the next empty cell is
  * selected; tapping a cell selects it. The keyboard keeps the same keys in
- * the same spots for the whole game.
+ * the same spots for the whole game. A part a power showed (Reveal a part,
+ * Head start, Reveal a kanji) starts each new row in its cell, green; at
+ * Hard it must stay there (engine.shownCells).
  *
  * The level (js/config/levels.js; the Settings switches) changes the board:
  *   Normal      one row of cells: where one kanji ends is for the player to
@@ -156,6 +158,18 @@ export function openGame(root, ctx) {
     return where.pos ? t('game.cellPlace', { n: i + 1, place: placeName(where) }) : t('game.cellNumber', { n: i + 1 });
   };
 
+  // The cells powers showed: cell → its part (engine.shownCells).
+  const shownNow = () => new Map(engine.shownCells(state()).map((c) => [c.cell, c]));
+  // Puts each shown part in its cell of the next row (over whatever was
+  // there), and moves the selection off a filled cell.
+  function prefill() {
+    shownNow().forEach(({ el: id }, i) => { ui.cells[i] = id; });
+    if (ui.cells[ui.active]) {
+      const empty = ui.cells.indexOf(null);
+      if (empty >= 0) ui.active = empty;
+    }
+  }
+
   // ── Head ───────────────────────────────────────────────────────────
 
   function renderHead() {
@@ -224,19 +238,23 @@ export function openGame(root, ctx) {
 
   // The next row's cells. Each is a button that selects it; the selected
   // one takes the next tapped part.
+  // A cell still holding the part a power showed there is green.
   function pendingCells() {
     let n = 0;
     const filled = ui.cells.filter(Boolean).length;
+    const shown = shownNow();
     const perSlot = cellCounts().map((count) => Array.from({ length: count }, () => {
       const i = n++;
       const id = ui.cells[i];
+      const known = id && shown.has(i) && shown.get(i).el === id;
+      const label = known ? 'game.cellShown' : id ? 'game.cellFilled' : 'game.cellEmpty';
       return el('button', {
-        class: `tile is-cell is-pending ${id ? 'is-filled' : 'is-empty'}${i === ui.active ? ' is-active' : ''}`,
+        class: `tile is-cell is-pending ${known ? 'is-hit' : id ? 'is-filled' : 'is-empty'}${i === ui.active ? ' is-active' : ''}`,
         type: 'button', lang: 'ja',
         'aria-pressed': String(i === ui.active),
-        'aria-label': id ? t('game.cellFilled', { cell: cellName(i), part: id }) : t('game.cellEmpty', { cell: cellName(i) }),
+        'aria-label': t(label, { cell: cellName(i), part: id }),
         onclick: () => selectCell(i)
-      }, id ? glyph(id) : null);
+      }, id ? glyph(known ? shown.get(i).form : id) : null);
     }));
     return el('div', { class: 'board-row is-next', role: 'group', 'aria-label': t('game.cells', { n: filled, cells: ui.cells.length }) },
       el('span', { class: 'row-tiles' }, laidOut(perSlot)));
@@ -329,13 +347,15 @@ export function openGame(root, ctx) {
       return frameSizes.find((x) => x.px <= narrowest) || frameSizes[frameSizes.length - 1];
     };
     const frameFor = (c) => frameOfSize(c).id;
-    // Height: everything else on the screen while the keyboard is up (its
-    // hints and message come and go, so they don't count), plus the frames
-    // (with their count) and place names; else a share of the screen.
+    // Height: everything else on the screen while the keyboard is up, plus
+    // the frames (with their count) and place names; else a share of the
+    // screen. The clues count, since they stay once found; the power bar
+    // and the message come and go, so they don't.
     const keyboard = picker.isConnected && picker.classList.contains('is-keyboard');
+    const clueRows = hints.querySelector('.clues');
     const others = keyboard
       ? head.offsetHeight + picker.offsetHeight - hints.offsetHeight - message.offsetHeight + 2 * md
-        + (pl ? px(tk.spacing.lg) + xs : 0)
+        + (clueRows ? clueRows.offsetHeight : 0) + (pl ? px(tk.spacing.lg) + xs : 0)
       : 0;
     const solvedAny = engine.clues(state()).solved.length > 0;
     const framesHeight = (c) => (splitShown()
@@ -375,10 +395,13 @@ export function openGame(root, ctx) {
   // ── Kanji frames ───────────────────────────────────────────────────
 
   // Where each place sits in the frame: top and bottom span the width;
-  // left, inner and right share the middle; outer, whole and none cover it all.
+  // left, inner and right share the middle; outer, whole and none cover it
+  // all when they hold one part (門 around 日). Holding several (立 and 厂
+  // around 生 in 産), they'd pile up past the frame, so they take a column
+  // of the middle instead, before the inner.
   const COVER = ['outer', 'whole', 'none'];
-  function frameAreas(order) {
-    const mid = ['left', 'inner', 'right'].filter((pos) => order.includes(pos));
+  function frameAreas(order, covers) {
+    const mid = ['left', 'outer', 'none', 'inner', 'right'].filter((pos) => order.includes(pos) && !covers(pos));
     const cols = Math.max(mid.length, 1);
     const rows = [];
     if (order.includes('top')) rows.push(Array(cols).fill('top'));
@@ -433,16 +456,17 @@ export function openGame(root, ctx) {
     }
     const parts = data.kanji[ch].parts;
     const order = [...new Set(parts.map((p) => p.pos))];
+    const covers = (pos) => COVER.includes(pos) && parts.filter((p) => p.pos === pos).length === 1;
     const found = (i) => s.found[`${slot}:${i}`] === 'hit';
     const said = parts.filter((p, i) => found(i)).map((p) => t('game.framePart', { part: p.form || p.el, place: t(`pos.${p.pos}`) }));
     return el('span', {
-      class: `kanji-frame${order.includes('outer') ? ' has-outer' : ''}`,
-      style: frameAreas(order),
+      class: `kanji-frame${order.includes('outer') && covers('outer') ? ' has-outer' : ''}`,
+      style: frameAreas(order, covers),
       role: 'img',
       'aria-label': t('game.frameLabel', { parts: said.length ? said.join(t('game.listSep')) : t('game.frameEmpty') })
     }, order.map((pos) => {
       const here = parts.map((p, i) => ({ p, i })).filter(({ p }) => p.pos === pos);
-      const cover = COVER.includes(pos);
+      const cover = covers(pos);
       return el('span', {
         class: `frame-zone is-${pos}${cover ? ' is-cover' : ''}`,
         'data-n': String(Math.min(here.length, 4)),
@@ -508,10 +532,11 @@ export function openGame(root, ctx) {
     session.spendPower(id);
     game = { ...game, state: r.state };
     session.progress(mode, game);
+    prefill();
     say('info', t('game.powers.used', { name: t(`power.${id}.name`) }));
     renderHead();
+    renderHints();   // before the board, which fits around the clues
     renderBoard();
-    renderHints();
     renderChoices();
   }
 
@@ -524,9 +549,8 @@ export function openGame(root, ctx) {
     const out = new Map();
     const note = (id, mark) => { if (!out.has(id) || rank(mark) > rank(out.get(id))) out.set(id, mark); };
     s.guesses.forEach((g) => g.slots.forEach((slot) => slot.tiles.forEach((tile) => note(tile.el, tile.mark))));
-    const c = engine.clues(s);
-    c.parts.forEach((p) => note(p.el, 'hit'));
-    c.eliminated.forEach((id) => note(id, 'miss'));
+    engine.shownCells(s).forEach((c) => note(c.el, 'hit'));
+    engine.clues(s).eliminated.forEach((id) => note(id, 'miss'));
     return out;
   }
 
@@ -661,6 +685,7 @@ export function openGame(root, ctx) {
     ui.newRow = row;
     ui.cells = emptyCells();
     ui.active = 0;
+    prefill();
     // The frames catch up once the row has flipped.
     clearTimeout(frameTimer);
     ui.frameFrom = !reducedMotion() ? before : null;
@@ -746,6 +771,7 @@ export function openGame(root, ctx) {
     board.setAttribute('data-tiles', store.get().settings.tiles);
     boardDone.replaceChildren();
     doneRows = 0;
+    if (playing() && partsMode()) prefill();
     makeKeys();
     renderHead();
     renderBoard();

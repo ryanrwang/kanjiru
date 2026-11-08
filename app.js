@@ -1,7 +1,7 @@
 /*
  * Kanjiru — the start screen and the way into a game.
  *
- * The start screen shows how a game reads, the level picker, the modes, the
+ * The start screen shows how a game reads, which level is on, the modes, the
  * skin picker and the hints, all built from the catalogues in js/config/
  * and the text in js/i18n/. Nothing here hard-codes a mode, skin, power or word of text:
  * add one to its catalogue and it appears.

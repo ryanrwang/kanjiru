@@ -359,6 +359,34 @@ test('hard: greens stay in their cells, and every part found is used again', () 
   assert.equal(engine.guess(easy, [['口', '土', '子']]).error, undefined);
 });
 
+test('shown cells: the parts powers showed, in their cells across the word', () => {
+  const engine = setup();
+  const cells = ['日', '土', '寸'];
+  const game = play(engine, engine.newGame(normal('時')), '!head-start');
+  const shown = engine.shownCells(game);
+  assert.equal(shown.length, 2);
+  shown.forEach(({ cell, el, form }) => { assert.equal(el, cells[cell]); assert.equal(form, el); });
+  assert.deepEqual(engine.shownCells(engine.newGame(normal('時'))), []);
+  // A revealed kanji shows all its cells; the cells run on after the first kanji's.
+  const word = engine.usePower(engine.newGame(start('k2', '日本', { level: 'normal' })), 'reveal-kanji');
+  const slot = word.result.kanji[0].slot;
+  assert.deepEqual(engine.shownCells(word.state).map((c) => [c.cell, c.el]),
+    slot === 0 ? [[0, '日']] : [[1, '木'], [2, '一']]);
+});
+
+test('hard: a part a power showed stays in its cell, like a green', () => {
+  const engine = setup();
+  const game = play(engine, engine.newGame(hard('時')), '!head-start');   // 2 of 日 土 寸
+  const first = engine.shownCells(game)[0];
+  const r = engine.guess(game, [['木', '寸', '日']]);   // 村日: real kanji, every cell moved
+  assert.equal(r.error, 'keep-shown');
+  assert.deepEqual(r.detail, { part: first.form, cell: first.cell + 1 });
+  assert.equal(play(engine, game, ['日', '土', '寸']).status, 'won');
+  // Normal doesn't ask.
+  const easy = play(engine, engine.newGame(normal('時')), '!head-start');
+  assert.equal(engine.guess(easy, [['木', '寸', '日']]).error, undefined);
+});
+
 test('guided: the board shows the split, so the Layout hint has nothing new', () => {
   const engine = setup();
   assert.equal(engine.canUse(engine.newGame(guided('明')), 'layout'), 'useless');
