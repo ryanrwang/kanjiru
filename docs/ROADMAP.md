@@ -11,11 +11,12 @@ Last updated: 2026-11-07.
 - [x] **Parts & palette:** 251-tile palette in `data/parts.json`, fixed part breakdowns with positions, hand fixes in `data/parts-overrides.json`, and the parts check page (step 1)
 - [x] **Device transfer:** one-time codes from `api/transfer.php`, the Settings panel (gear in the header), Merge both or Replace this device, and copy/paste save text (step 7, PR #3)
 - [x] **Engine:** scoring, game state and every power, the per-puzzle palette, dailies, stats and achievements in `js/engine/`; `tools/compile_game.py` writes `data/game/`; 71 engine tests and 12 compile tests (step 2)
+- [x] **Game screen:** the one-kanji daily and practice in `js/play/`: board with flip reveal, parts palette and kanji strip, typed guesses, free meaning and powers, saved games, points paid, result card with share text and countdown (step 3)
 
 ## Order
 
 ```
-1 Parts & palette ✓ ──► 2 Engine ✓ ──► 3 Game screen ──► 4 Longer words
+1 Parts & palette ✓ ──► 2 Engine ✓ ──► 3 Game screen ✓ ──► 4 Longer words
                                           ├──► 5 Points, shop & achievements
                                           └──► 6 Skin effects
 7 Device transfer  ✓ done
@@ -23,8 +24,8 @@ Last updated: 2026-11-07.
 You: review words  (any time; the game only uses words marked Keep)
 ```
 
-- **Start now:** step 3. Review words alongside it: the dailies need Keep words, then `tools/compile_game.py`.
-- **After step 3:** steps 4, 5 and 6 can run side by side.
+- **Start now:** steps 4, 5 and 6 can run side by side.
+- **Review words first if you can:** the game shows "soon" until there are Keep words, then `tools/compile_game.py`.
 
 **Running threads at the same time:** every thread shares this one folder, and Git can only have one branch checked out in it. Two threads in the same folder will switch each other's branches. So either run one thread at a time, or start each one in its own worktree (the app's worktree option when you start a session).
 
@@ -72,7 +73,7 @@ Done when the tests pass, the rules are in docs/DESIGN.md, and nothing in the en
 
 ## 3. Game screen
 
-**Needs:** step 2. This is the step that makes the game playable.
+**Done** (step 3). The game screen is `js/play/`.
 
 ```
 Kanjiru step 3: build the playable game screen for the 1-kanji daily and practice, on top of the engine in js/engine/.
@@ -117,10 +118,10 @@ Kanjiru step 5: make the points economy real.
 
 Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first. Work on a new branch.
 
-1. Earning: points per part uncovered and per win, mode multipliers, daily vs practice (engine.points() already works these out), and streak rewards (streakRewards() in js/engine/stats.js), all from js/config/economy.js.
+1. Earning: a game's points (engine.points()) are already paid into the wallet when it ends (js/play/session.js finish()). Add streak rewards (streakRewards() in js/engine/stats.js), all from js/config/economy.js.
 2. Random bonus hint drops after a win (engine.rollDrop() picks one, weighted by each power's drop value, respecting hold limits).
 3. A shop: buy powers and locked skins with points, with confirm steps and clear prices in both languages.
-4. "Before" powers on the game's start (Head start, Extra guess) and "during" powers in game.
+4. Powers already work in game from the power bar (js/play/hints.js), spending the inventory; make them easy to find before the first guess.
 5. Achievements checked after each game (stats() and newAchievements() in js/engine/stats.js), with a toast, their rewards, and the skins they unlock.
 6. Show balance changes clearly (a small +points animation that respects reduced motion).
 
@@ -136,7 +137,7 @@ Kanjiru step 6: build the fancy skins.
 
 Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first. Work on a new branch.
 
-1. Tile reveal styles keyed by settings.tiles: Flip, Ink bleed (ink spreading through the tile) and Hanko stamp (pressed like a seal).
+1. Tile reveal styles keyed by settings.tiles: Flip (a basic one is in styles.css, `tile-flip`), Ink bleed (ink spreading through the tile) and Hanko stamp (pressed like a seal).
 2. Win effects keyed by settings.effect: Brush draw (the answer drawn stroke by stroke from KanjiVG; add stroke paths for answer kanji to the data build, keeping size in check), Petal fall and Hanabi.
 3. Textures for Urushi (lacquer sheen) and Kinpaku (gold-leaf shimmer).
 4. Previews in the Looks picker on the start screen.

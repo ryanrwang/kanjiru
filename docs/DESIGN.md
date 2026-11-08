@@ -97,12 +97,25 @@ Each puzzle shows a subset of the 251 tiles instead of all of them, like Wordle'
 - **The leak:** the answer's parts are always in the palette; with 34 decoys that gives little away.
 - **Why:** the user asked for it, since 251 tiles is a lot to scan on a phone.
 
-## Making a guess (Proposed)
+## Making a guess (Decided, built in step 3)
 
 - The player taps parts on the puzzle's palette, grouped by stroke count like jisho.org's radical search. `narrow()` in `js/engine/palette.js` does the filtering below.
-- Parts that can't combine with the ones already picked grey out.
-- A strip shows the real kanji that match, easiest first, and the player taps one to guess it. Every guess is therefore a real kanji, and its meaning can be shown, so guesses teach.
-- Players who type Japanese can enter a kanji with their keyboard instead.
+- Parts that can't combine with the ones already picked grey out. A tile's corner shows its most used other form (氵 on 水).
+- A strip shows the real kanji that match, easiest first. Every guess is therefore a real kanji, and its meaning shows, so guesses teach.
+- Players who type Japanese can enter a kanji with their keyboard instead. A typed kanji with a part outside the palette is shown with a red edge and turned away.
+- **Proposed — Tap twice to guess:** the first tap puts the kanji in the next row with its parts and meaning; a second tap (or Guess) makes the guess. One tap was the plan, but a stray tap on a phone would waste a row.
+- **Palette colours:** each tile shows the best mark it has had (green, yellow, grey), like Wordle's keyboard. Parts a power reveals are green; parts Sweep removes are grey.
+
+## The game screen (step 3)
+
+- **Board, proposed:** the rows guessed so far, then the next row, then one dot per row left. Empty rows would push the palette off a phone's screen.
+- **Reveal:** each new row flips tile by tile (`settings.tiles`; Flip for now, step 6 adds the rest). Off under reduced motion.
+- **Hints:** the free meaning after guess 3 (with a note until then) and a bar of the mode's powers with the count held. Tapping one opens a sheet that says what it does and why it can't be used now, if so. Using one spends it from the inventory.
+- **Saving:** the game on the go is saved as its start and log after every move (`save.playing`), so a reload carries on. A finished daily is recorded to history and can't be played again; its result shows until the next daily.
+- **Points:** paid into the wallet once, when a game ends: what `engine.points()` gives. Streak rewards, bonus drops and achievements are step 5.
+- **Result card:** the answer with its meanings, readings and parts, points, streak, share text and a countdown to the next daily. A game from another device (merged in) shows without points, since only its guesses are known.
+- **Share text:** the mode's numeral, the daily number, the score (X when lost) and one square per part per guess (`rules.js` `share`). 💡 marks a game that used a power; the free meaning doesn't count.
+- **Modes:** `playable` in `js/config/modes.js` says which modes the screen supports (k1 now; step 4 turns on the rest). A mode with no answers shows "soon".
 
 ## Hints, powers and points
 
@@ -110,7 +123,7 @@ Each puzzle shows a subset of the 251 tiles instead of all of them, like Wordle'
 - **Decided — Catalogue:** `js/config/powers.js`. Each power names an `effect` (revealStrokes, revealLayout, revealMeaning, revealReading, revealParts, eliminateParts, addGuesses, revealKanji) plus `params`, `when` (before / during), `cost`, `hold` and `drop`.
 - **Decided — Point values:** `js/config/economy.js`, with the rules in "Scoring", "Points". Daily games pay more than practice, streak milestones pay a reward, and wins drop a random hint. Each mode multiplies its points.
 - **Decided — Base rules:** the meaning is free after guess 3 (set per mode). A Hard toggle (no free meaning) can come later.
-- **Proposed — Honest sharing:** the share text marks a daily that used hints (e.g. 💡).
+- **Decided — Honest sharing:** the share text marks a game that used a power with 💡 (step 3).
 - **Open — Japanese mode:** the 意味 (Meaning) hint shows the English gloss, because the dictionary data is English only. For native speakers, the reading or example words may suit better.
 
 ## Skins
@@ -143,6 +156,7 @@ Each puzzle shows a subset of the 251 tiles instead of all of them, like Wordle'
 | Skins unlocked, achievements | Both kept; an achievement keeps the earlier date |
 | Points, hints held | The higher of the two, not the sum |
 | Looks and language | This device's stay |
+| Games on the go (`playing`) | This device's stay; a daily the other device finished is in history, which wins |
 
 - **Rule:** a new top-level key in the save needs a merge rule; `validate()` warns when one is missing.
 - **Proposed — Exact points (step 5):** record the points each game paid and each purchase in the save, so a merge can add points exactly instead of taking the higher.

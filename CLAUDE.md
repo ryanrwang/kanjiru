@@ -30,15 +30,15 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `index.html` | Shell: loads `tokens.js`, the fonts, `styles.css`, then `app.js` |
 | `tokens.js` | Design tokens, skins' colours (`THEMES`) and `TOKENS.applyLook()` |
 | `styles.css` | All styles, using token variables only |
-| `app.js` | Start screen, built from the catalogues |
+| `app.js` | Start screen built from the catalogues, data loading, and the routes (`#k1` daily, `#k1/practice`) |
 | `js/config/modes.js` | Game modes: one per answer length |
 | `js/config/skins.js` | Skin catalogue: colours, tile reveal, win effect |
 | `js/config/powers.js` | Hints and powers: effect, cost, when usable, drop weight |
 | `js/config/economy.js` | Every points number: per part, per win, streaks, drops |
 | `js/config/achievements.js` | Achievements as stat + threshold |
-| `js/config/rules.js` | Rules that aren't points or modes: the palette's always-shown tiles and decoy weights, palette-only guesses, practice repeats |
+| `js/config/rules.js` | Rules that aren't points or modes: the palette's always-shown tiles and decoy weights, palette-only guesses, practice repeats, share squares |
 | `js/registry.js` | One import for all catalogues, plus a start-up check that their ids agree |
-| `js/store.js` | The save in localStorage: versioned, with migrations, plus export, import and the merge rules (`MERGE`) |
+| `js/store.js` | The save in localStorage: versioned, with migrations, plus export, import and the merge rules (`MERGE`). Games on the go are in `playing` |
 | `js/settings.js` | Settings panel (gear in the header): send, receive and the save text, with Merge / Replace |
 | `js/transfer.js` | Calls `api/transfer.php` |
 | `js/dom.js` | `el()`, the small DOM helper |
@@ -49,6 +49,12 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/engine/stats.js` | Stats and streaks from history, achievement checks, streak rewards |
 | `js/engine/data.js` | Loads `data/game/*.json` and `data/parts.json` into the engine's shape |
 | `js/engine/random.js` | Seeded randomness, so dailies and powers come out the same for everyone |
+| `js/play/screen.js` | The game screen: board, hints, parts picker, result. `openGame(root, ctx)` |
+| `js/play/session.js` | Games in the save: start or resume (`save.playing`), record to history, pay points, spend powers |
+| `js/play/hints.js` | Clues, the power bar and the sheet that uses a power |
+| `js/play/result.js` | The result card: answer, points, streak, share, countdown |
+| `js/play/share.js` | The share text and emoji grid (squares in `rules.js` `share`) |
+| `js/play/glyph.js` | Part glyphs as text, or KanjiVG strokes where fonts may lack them |
 | `tests/` | `node --test` tests for the engine, on fixtures (never the real word list) |
 | `api/transfer.php` | Device transfer: a save in, a one-time code out, and back. Settings at the top |
 | `js/i18n.js` | Interface languages: `t()`, `setLang()`, `LANGUAGES`, missing-text check |
@@ -79,6 +85,8 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 - **Check the console.** `validate()` logs `[kanjiru config]` warnings at start-up when catalogues disagree. Fix them before committing.
 - **Answers are N3 or easier.** Guesses may use any jōyō kanji built from the puzzle's palette.
 - **Game data is compiled.** After a rebuild or a review session, run `python -I -X utf8 tools/compile_game.py` and commit `data/game/`. It never invents answers: with no Keep words the answer lists are empty.
+- **Testing the game before words are reviewed:** put a few answers in a local `data/game/answers.json` and run `git update-index --skip-worktree data/game/answers.json` so they can't be committed. Undo with `--no-skip-worktree` and `git checkout data/game/answers.json`. Never commit made-up answers.
+- **Which modes play:** a mode needs `playable: true` in `js/config/modes.js` (the game screen supports it) and answers. Until both, the start screen shows "soon".
 - **Dev-only files don't deploy.** `tools/`, `review/`, `tests/`, `package.json`, `data/candidates.json` and `data/review.json` are excluded in `deploy.yml`. The review page writes files, so it must never reach the server.
 - **Server data stays put.** `api/transfer.php` writes codes to `api/codes/`, which is gitignored, blocked by `.htaccess` and excluded in `deploy.yml`.
 - **Back-to-apps mark:** this app's hover move is `rw-brush`, a left-to-right clip-path wipe. Keep it unique across the apps family.

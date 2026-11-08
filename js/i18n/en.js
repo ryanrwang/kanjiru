@@ -32,8 +32,121 @@ export default {
 
   play: {
     title: 'Play',
-    note: 'Game screen coming next',
-    meta: '{guesses} guesses · ×{mult} pts'
+    note: 'A new daily every day, plus practice',
+    meta: '{guesses} guesses · ×{mult} pts',
+    soon: 'Coming soon',
+    loading: 'Loading…',
+    loadFailed: 'The game didn’t load. Check your connection and reload.',
+    practiceOnly: 'Practice only',
+    dailyNew: 'Daily #{n}',
+    dailyStarted: 'Daily #{n} · {guesses} guessed',
+    dailyWon: 'Daily #{n} · solved in {guesses} ✓',
+    dailyLost: 'Daily #{n} · not solved',
+    daily: 'Play',
+    continue: 'Continue',
+    result: 'Result',
+    practice: 'Practice'
+  },
+
+  game: {
+    home: 'Back to start',
+    daily: 'Daily #{n}',
+    practice: 'Practice',
+    count: '{n}/{rows}',
+    countTitle: 'Guesses used',
+    listSep: ', ',
+    meaningSep: ', ',
+    layoutSep: ' · ',
+    board: 'Your guesses',
+    rowLabel: 'Guess {n}: {word}. {parts}',
+    nextHint: 'Pick parts below, or type a kanji',
+    typeLabel: 'Your guess',
+    typePlaceholder: 'Type a kanji',
+    guess: 'Guess',
+    chosen: '{kanji}: {meaning}. Tap it again to guess.',
+    stripHint: 'Tap parts to see the kanji they make.',
+    matches: '{n} kanji',
+    clear: 'Clear',
+    palette: 'Parts',
+    strokes: '{n} strokes',
+    soon: 'This mode is coming soon: its words need reviewing first.',
+    on: 'On',
+    kun: 'Kun',
+    mark: {
+      hit: 'right spot',
+      near: 'wrong spot',
+      other: 'in another kanji',
+      miss: 'not in the answer'
+    },
+    clue: {
+      meaning: 'Meaning',
+      free: 'free',
+      meaningSoon: 'The meaning shows for free after guess {n}.',
+      reading: 'Reading',
+      strokes: 'Strokes',
+      layout: 'Layout',
+      parts: 'Parts',
+      kanji: 'Kanji',
+      eliminated: 'Swept',
+      eliminatedCount: '{n} parts greyed out below'
+    },
+    powers: {
+      title: 'Hints',
+      use: 'Use',
+      cancel: 'Cancel',
+      used: '{name} used.',
+      why: {
+        none: 'You have none yet. Wins can drop bonus hints; the shop is coming soon.',
+        before: 'Only before your first guess.',
+        during: 'Only after your first guess.',
+        useless: 'It wouldn’t show anything new.',
+        over: 'The game is over.',
+        mode: 'Not in this mode.',
+        unknown: 'Not in this mode.'
+      }
+    },
+    errors: {
+      empty: 'Pick a kanji first.',
+      over: 'The game is over.',
+      length: 'The answer is {n} kanji long.',
+      'not-kanji': 'Guess a jōyō kanji.',
+      'not-in-palette': 'That kanji has a part that isn’t in this puzzle.',
+      repeat: 'You already guessed that.',
+      'not-a-word': 'That isn’t a word.'
+    }
+  },
+
+  pos: {
+    left: 'left',
+    right: 'right',
+    top: 'top',
+    bottom: 'bottom',
+    outer: 'outside',
+    inner: 'inside',
+    whole: 'whole',
+    none: 'across'
+  },
+
+  result: {
+    won: 'Solved in {n}!',
+    lost: 'Out of guesses',
+    parts: 'Parts',
+    points: 'Points',
+    pointsEarned: '+{n} pts',
+    pointsWhy: 'parts {parts} + solve {solve}, ×{mult}',
+    streak: 'Daily streak',
+    streakDays: '{n} in a row',
+    share: 'Share',
+    copied: 'Copied. Paste it anywhere.',
+    copyManually: 'Select the text above and copy it.',
+    nextDaily: 'Next daily in',
+    practice: 'Play practice',
+    again: 'Play again'
+  },
+
+  share: {
+    daily: 'Kanjiru {numeral} #{puzzle} {score}{hints}',
+    practice: 'Kanjiru {numeral} practice {score}{hints}'
   },
 
   looks: {

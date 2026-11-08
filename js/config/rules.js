@@ -23,5 +23,12 @@ export const RULES = {
   guessFromPalette: true,
 
   // Practice answers skip the most recent ones played in that mode.
-  practice: { avoidRecent: 30 }
+  practice: { avoidRecent: 30 },
+
+  // The share text after a game: one square per part, per guess, and a
+  // mark when the game used a hint or power (the free meaning doesn't count).
+  share: {
+    marks: { hit: '🟩', near: '🟨', other: '🟦', miss: '⬜' },
+    hints: '💡'
+  }
 };

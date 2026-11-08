@@ -15,6 +15,10 @@
  *                 key: the puzzle number for a daily, "p" + a timestamp for
  *                 practice (js/engine/daily.js historyKey). guesses: the words
  *                 guessed; powers: power ids used (js/engine/game.js record)
+ *   playing       { [modeId]: { daily, practice } }   games on the go, each
+ *                 { start, log, done }: engine.replay(start, log) rebuilds it.
+ *                 A finished daily stays (done) until the next one, so its
+ *                 result can be shown again (js/play/session.js)
  *
  * History is the source of truth: streaks and stats are worked out from it,
  * which also makes merging two devices simple (MERGE, below).
@@ -42,7 +46,8 @@ export function fresh() {
     inventory: {},
     unlocked: {},
     achievements: {},
-    history: {}
+    history: {},
+    playing: {}
   };
 }
 
@@ -215,7 +220,10 @@ export const MERGE = {
   // Achievements from both, with the earlier date.
   achievements: eachKey((a, b) => (String(b) < String(a) ? b : a)),
   // Games from both; streaks and stats are worked out again from these.
-  history: eachKey((mineMode, theirMode) => eachKey(betterGame)(mineMode, theirMode))
+  history: eachKey((mineMode, theirMode) => eachKey(betterGame)(mineMode, theirMode)),
+  // Games on the go belong to the device in your hand. A daily the other
+  // device finished is in history, which wins over one on the go here.
+  playing: (mine) => mine
 };
 
 export function mergeSaves(mine, theirs) {

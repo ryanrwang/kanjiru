@@ -9,7 +9,7 @@ Answers stay at JLPT N3 or easier, so learners and native speakers can both play
 Play it at https://www.ryanrwang.com/apps/kanjiru/
 
 ## Status
-Early. The start screen, skins, catalogues and save system are in; the game screen comes next.
+Early. The one-kanji daily and practice are playable; they go live once the word list is reviewed. Longer words, the shop and the fancy skins come next.
 
 ## How it's built
 - Vanilla JavaScript, no build step, no dependencies.

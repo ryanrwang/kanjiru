@@ -76,6 +76,7 @@ export function validate() {
     if (m.freeMeaning !== null && !(Number.isInteger(m.freeMeaning) && m.freeMeaning >= 0)) {
       say(`mode "${m.id}" needs freeMeaning: a guess count, or null for never`);
     }
+    if (typeof m.playable !== 'boolean') say(`mode "${m.id}" needs playable: true or false`);
   });
 
   // Points for marks the engine gives (js/engine/score.js MARKS).
@@ -83,6 +84,9 @@ export function validate() {
     if (!(ECONOMY.perPart[mark] >= 0)) say(`economy.perPart.${mark} needs a number`);
   });
   if (!Array.isArray(RULES.palette.always)) say('rules.palette.always needs a list of tiles');
+  ['miss', ...MARK_POINTS].forEach((mark) => {
+    if (!(RULES.share && RULES.share.marks && RULES.share.marks[mark])) say(`rules.share.marks.${mark} needs a square`);
+  });
 
   // Skins
   SLOTS.forEach((slot) => {
