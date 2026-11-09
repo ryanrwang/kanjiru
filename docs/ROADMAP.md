@@ -29,8 +29,8 @@ Last updated: 2026-11-08.
 You: review words  (any time; the game only uses words marked Keep)
 ```
 
-- **Next:** step 8b. Its first half (About, the install tip, accessibility) is on branch `launch`; the Apps page and puzzle 1 wait for launch day. Step 6 can wait until after launch. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
-- **Launch date:** not picked yet; ask the user. Flipping it is part of 8b ("Launch day, ready to run").
+- **Next:** the rest of step 8b: the Apps page card (it needs a screenshot) and checking the install on real phones. Step 6 can wait until after launch. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
+- **No dailies (2026-11-09):** the user chose random puzzles only, as many as you like, so there's no launch date (docs/DESIGN.md, "No dailies").
 - **Words:** 453 daily answers from 603 Keep words are enough for launch (about 1.2 years). More can be added any time on the review page, then `tools/compile_game.py`. 146 Keep words with loose strokes come back as their kanji are fixed.
 
 **Running threads at the same time:** every thread shares this one folder, and Git can only have one branch checked out in it. Two threads in the same folder will switch each other's branches. So either run one thread at a time, or start each one in its own worktree (the app's worktree option when you start a session).
@@ -200,11 +200,13 @@ Step 8 was split in two, so the half that doesn't touch the screens could run wh
 
 **Progress (2026-11-08):** items 1–3 are on branch `launch`: the About page (`js/about.js`, from Settings and the result card), the install tip (`js/install.js`, on the play page and in Settings), keyboard play and screen reader text in the game, and WCAG AA contrast in every look (docs/DESIGN.md, "Accessibility"). Still to do: check the install on a real iPhone and Android phone once it's live, then items 4 and 5 on launch day.
 
-**Launch day, ready to run:**
+**No dailies (2026-11-09):** for 3–5 people playing now and then, the user dropped the daily: every game is a random puzzle, and the streak is wins in a row. So item 5 and "Launch day, ready to run" steps 1–3 are dropped (PR #14, the epoch for 2026-11-10, was closed). Launching is item 4, the Apps page card, whenever the user wants; its h3 reads "A Kanji Word Puzzle".
+
+**Launch day, ready to run** (steps 1–3 only if dailies come back):
 1. In `tools/compile_game.py`, set `EPOCH = "YYYY-MM-DD"` to launch day, then run `python -I -X utf8 tools/compile_game.py`; on the day it prints "today is puzzle 1".
 2. Run `node --test` and `python -I -X utf8 -m unittest discover -s tools`, commit `tools/compile_game.py` and `data/game/`, and merge to `main` that day (the deploy takes under a minute).
 3. Check https://www.ryanrwang.com/apps/kanjiru/ shows Daily #1, and that `data/game/answers.json` there has the new epoch.
-4. Apps page, in the Clearful repo (read `D:\Dropbox\Clearful\.claude\github-deploy.md` first): the user uploads an 800 × 600 `images/gallery/apps/kanjiru.webp` by FTP (a dark screenshot, like the other apps' cards), then a card goes into `apps/index.html` before Return to Top: `href="kanjiru/"`, `id="kanjiru"`, alt "Kanjiru kanji puzzle app", h2 "Kanjiru 漢じる", h3 "A Daily Kanji Puzzle". The file mixes CRLF and LF, so keep its endings. Compare with the server first (`verify-live`), then branch, PR and squash-merge, and check `/apps/` on both domains.
+4. Apps page, in the Clearful repo (read `D:\Dropbox\Clearful\.claude\github-deploy.md` first): the user uploads an 800 × 600 `images/gallery/apps/kanjiru.webp` by FTP (a dark screenshot, like the other apps' cards), then a card goes into `apps/index.html` before Return to Top: `href="kanjiru/"`, `id="kanjiru"`, alt "Kanjiru kanji puzzle app", h2 "Kanjiru 漢じる", h3 "A Kanji Word Puzzle". The file mixes CRLF and LF, so keep its endings. Compare with the server first (`verify-live`), then branch, PR and squash-merge, and check `/apps/` on both domains.
 
 ```
 Kanjiru step 8b: launch.

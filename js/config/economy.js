@@ -35,12 +35,13 @@ export const ECONOMY = {
   dailyMultiplier: 1,
   practiceMultiplier: 1,
 
-  // Paid each time a daily streak reaches these lengths.
+  // Paid each time a streak of wins in a row reaches these lengths. A loss
+  // ends the streak, and the next one pays again.
   streakRewards: [
-    { days: 3,   points: 30 },
-    { days: 7,   points: 100, power: 'extra-guess' },
-    { days: 30,  points: 500, power: 'head-start' },
-    { days: 100, points: 2000 }
+    { wins: 3,  points: 30 },
+    { wins: 5,  points: 100, power: 'extra-guess' },
+    { wins: 10, points: 500, power: 'head-start' },
+    { wins: 25, points: 2000 }
   ],
 
   // Random bonus hint after a win; which one is picked by each power's

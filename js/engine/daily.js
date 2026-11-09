@@ -92,6 +92,14 @@ export function historyKey(game, now = Date.now()) {
 
 export const isDailyKey = (k) => /^\d+$/.test(String(k));
 
+// When a keep-playing game finished (ms), from its history key; 0 for any
+// other key (a daily has only its date).
+export function keyTime(key) {
+  const m = /^p([0-9a-z]+)$/.exec(String(key));
+  const ms = m ? parseInt(m[1], 36) : 0;
+  return Number.isFinite(ms) ? ms : 0;
+}
+
 // Milliseconds until the next local midnight, for the countdown.
 export function msToNextDaily(now = new Date()) {
   const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);

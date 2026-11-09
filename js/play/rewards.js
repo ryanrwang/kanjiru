@@ -33,14 +33,14 @@ export function earnAchievements(save, { date = ledger.today(), game = null } = 
 // streak rewards it reached, a bonus hint and any achievements. Returns the
 // new entries besides the game's own points.
 //   game          "modeId/historyKey", so the result card can find them again
-//   streakBefore  the current streak before this game went into history
+//   streakBefore  wins in a row before this game went into history
 export function payGame(save, { engine, state, game, date, points, streakBefore = 0, rng = Math.random }) {
   const out = [];
   ledger.add(save.ledger, 'game', { pts: points, game, at: date });
-  if (state.daily && state.status === 'won') {
-    const after = stats(save.history, { today: date }).currentStreak;
+  if (state.status === 'won') {
+    const after = stats(save.history).currentStreak;
     streakRewards(streakBefore, after).forEach((r) => {
-      out.push(ledger.add(save.ledger, 'streak', { pts: r.points || 0, hints: oneOf(r.power), game, what: r.days, at: date }));
+      out.push(ledger.add(save.ledger, 'streak', { pts: r.points || 0, hints: oneOf(r.power), game, what: r.wins, at: date }));
     });
   }
   const drop = engine.rollDrop(state, ledger.balance(save.ledger).hints, rng);

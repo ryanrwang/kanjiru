@@ -6,12 +6,12 @@
  *
  * Stats (worked out from the save's history):
  *   wins          puzzles solved, any mode
- *   bestStreak    longest run of daily puzzles solved
+ *   bestStreak    most wins in a row (a loss ends a run)
  *   fastestWin    fewest guesses in a win (lower is better → use atMost)
  *   cleanWins     wins with no hints or powers used
  *   collected     different kanji solved
  *   hardWins      wins with Hard on (a level with hard: true, levels.js)
- *   fullSetDays   days with every daily mode solved
+ *   fullSetDays   days with every daily mode solved (no mode has one now)
  *
  * Fields
  *   id       stable key (never rename); skins.js unlocks refer to it
@@ -28,8 +28,12 @@ export const ACHIEVEMENTS = [
   { id: 'unaided',      test: { stat: 'cleanWins', atLeast: 1 }, reward: { points: 50 } },
   { id: 'hard-win',     test: { stat: 'hardWins', atLeast: 1 }, reward: { points: 200 } },
   { id: 'sharp-eye',    test: { stat: 'fastestWin', atMost: 2 } },
-  { id: 'streak-7',     test: { stat: 'bestStreak', atLeast: 7 } },
-  { id: 'streak-30',    test: { stat: 'bestStreak', atLeast: 30 } },
+  // Days in a row with a daily won, until dailies went (2026-11-09): wins
+  // in a row took their place.
+  { id: 'streak-7',     test: { stat: 'bestStreak', atLeast: 7 }, retired: true },
+  { id: 'streak-30',    test: { stat: 'bestStreak', atLeast: 30 }, retired: true },
+  { id: 'win-run-5',    test: { stat: 'bestStreak', atLeast: 5 } },
+  { id: 'win-run-10',   test: { stat: 'bestStreak', atLeast: 10 } },
   { id: 'collector-50', test: { stat: 'collected', atLeast: 50 }, reward: { power: 'reveal-part' } },
   // With one daily mode, a full set was just a daily won (step 5): Hard win
   // took its place.

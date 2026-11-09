@@ -40,7 +40,8 @@ from pathlib import Path
 # The date of daily puzzle 1. Every puzzle number, and so every daily answer,
 # hangs on it, so after launch never change it.
 #
-# Launch day (step 8b): set it to that date, run this script, commit
+# No mode has a daily now (2026-11-09), so it's unused. If one comes back:
+# set it to its launch day, run this script, commit
 # data/game/ and deploy that day (before the epoch there is no daily). The
 # whole schedule is shuffled afresh, and on their next visit testers' earlier
 # dailies become keep-playing games (settleDailies() in js/store.js), so

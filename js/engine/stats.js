@@ -7,14 +7,14 @@
  * `guesses` is the list of guessed words (a number also works).
  *
  * The rules (docs/DESIGN.md, "Dailies and stats"):
- *   - One streak across modes: days in a row with at least one daily won.
- *     A day not played yet doesn't break it.
+ *   - One streak across modes: wins in a row, in the order the games were
+ *     played, dailies and keep-playing games alike. A loss ends it.
  *   - Wins, fastest win, clean wins, Hard wins and kanji collected count
- *     practice too.
- *   - Streaks and full-set days count dailies only.
+ *     every game.
+ *   - Full-set days count dailies only.
  */
 import { ACHIEVEMENTS, ECONOMY, LEVELS } from '../registry.js';
-import { dayIndex, isDailyKey } from './daily.js';
+import { isDailyKey, keyTime } from './daily.js';
 
 const guessCount = (g) => (Array.isArray(g.guesses) ? g.guesses.length : Number(g.guesses) || 0);
 const powerCount = (g) => (Array.isArray(g.powers) ? g.powers.length : Number(g.powers) || 0);
@@ -26,32 +26,30 @@ export function games(history = {}) {
     Object.entries(byKey || {}).map(([key, g]) => ({ modeId, key, daily: isDailyKey(key), ...g })));
 }
 
-// Longest and current run of consecutive days in a set of 'YYYY-MM-DD'.
-export function runs(dates, today) {
-  const days = [...new Set([...dates].map(dayIndex))].sort((a, b) => a - b);
+// Most and current wins in a row, over every game in the order played: by
+// date, then a day's keep-playing games by when they finished (daily.js
+// keyTime). A daily has only its date, so it counts as its day's first.
+export function winRuns(all) {
+  const ordered = all.slice().sort((a, b) =>
+    String(a.date).localeCompare(String(b.date)) || keyTime(a.key) - keyTime(b.key));
   let best = 0;
   let run = 0;
-  days.forEach((d, i) => {
-    run = i > 0 && d === days[i - 1] + 1 ? run + 1 : 1;
+  ordered.forEach((g) => {
+    run = g.won ? run + 1 : 0;
     best = Math.max(best, run);
   });
-  // The current run ends today, or yesterday if today isn't won yet.
-  const set = new Set(days);
-  let day = dayIndex(today);
-  if (!set.has(day)) day -= 1;
-  let current = 0;
-  while (set.has(day)) { current += 1; day -= 1; }
-  return { best, current };
+  return { best, current: run };
 }
 
-// options.today: 'YYYY-MM-DD'. options.dailyModes: the mode ids that have a
-// daily now (with answers); a full-set day needs a won daily in each.
-// options.levels: the level catalogue, for Hard wins (a level's `hard`).
-export function stats(history, { today, dailyModes = [], levels = LEVELS } = {}) {
+// options.dailyModes: the mode ids that have a daily now (with answers); a
+// full-set day needs a won daily in each. options.levels: the level
+// catalogue, for Hard wins (a level's `hard`). options.today is no longer
+// needed (streaks don't hang on dates) but callers may still pass it.
+export function stats(history, { dailyModes = [], levels = LEVELS } = {}) {
   const all = games(history);
   const wins = all.filter((g) => g.won);
   const dailyWins = wins.filter((g) => g.daily);
-  const streak = runs(dailyWins.map((g) => g.date), today);
+  const streak = winRuns(all);
 
   const wonModesByDate = new Map();
   dailyWins.forEach((g) => {
@@ -103,7 +101,7 @@ export function progress(test, statValues) {
 }
 
 // Streak rewards for the lengths a streak passed going from `before` to
-// `after` days. Each run pays again when it reaches a length.
+// `after` wins in a row. Each run pays again when it reaches a length.
 export function streakRewards(before, after, economy = ECONOMY) {
-  return economy.streakRewards.filter((r) => before < r.days && after >= r.days);
+  return economy.streakRewards.filter((r) => before < r.wins && after >= r.wins);
 }

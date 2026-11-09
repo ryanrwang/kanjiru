@@ -63,16 +63,16 @@ test('a new epoch: old dailies become keep-playing games, in every mode', () => 
   assert.equal(save.playing.main.practice.start.answer, '山道');
 });
 
-test('their wins, kanji and points still count; the streak starts again', () => {
+test('their wins, kanji, points and win streak still count', () => {
   const save = testerSave();
   const before = stats(save.history, { today: '2026-11-08' });
   const pts = points(save);
   const hints = held(save);
   settleDailies(save, LAUNCH);
   const after = stats(save.history, { today: '2026-11-08' });
-  assert.equal(before.currentStreak, 2);   // 6 and 7 won (5 lost)
-  assert.equal(after.currentStreak, 0);
-  assert.equal(after.bestStreak, 0);
+  assert.equal(before.currentStreak, 3);   // 6, 7 and the keep-playing game won (5 lost)
+  assert.equal(after.currentStreak, before.currentStreak);
+  assert.equal(after.bestStreak, before.bestStreak);
   assert.equal(after.dailyWins, 0);
   assert.equal(after.wins, before.wins);
   assert.equal(after.collected, before.collected);
@@ -98,7 +98,8 @@ test('the new epoch\'s puzzle 1 can be played and saved under "1"', () => {
   assert.equal(settleDailies(save, LAUNCH), 0, 'a daily of this epoch stays');
   assert.equal(save.history.main['1'].answer, '新年');
   assert.equal(save.history.main['2026-11-01#1'].answer, '一つ');
-  assert.equal(stats(save.history, { today: LAUNCH }).currentStreak, 1);
+  // Wins in a row carry on across epochs: 6, 7, the keep-playing game and the new 1.
+  assert.equal(stats(save.history, { today: LAUNCH }).currentStreak, 4);
 });
 
 test('settling twice changes nothing', () => {

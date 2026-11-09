@@ -33,25 +33,30 @@ test('a game pays its points into the ledger', () => {
 
 test('reaching a streak length pays its reward, with its power', () => {
   const reward = ECONOMY.streakRewards.find((r) => r.power);
-  const days = Array.from({ length: reward.days - 1 }, (_, i) => `2026-10-${String(i + 1).padStart(2, '0')}`);
-  const date = `2026-10-${String(reward.days).padStart(2, '0')}`;
+  const days = Array.from({ length: reward.wins - 1 }, (_, i) => `2026-10-${String(i + 1).padStart(2, '0')}`);
+  const date = `2026-10-${String(reward.wins).padStart(2, '0')}`;
   const { save, streakBefore } = played(days, date);
   save.achievements = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, '2026-01-01']));   // none of theirs
-  const out = payGame(save, { engine: noDrop, state: state(), game: `main/${reward.days}`, date, points: 0, streakBefore });
+  const out = payGame(save, { engine: noDrop, state: state(), game: `main/${reward.wins}`, date, points: 0, streakBefore });
   const streak = out.filter((e) => e.why === 'streak');
-  assert.deepEqual(streak.map((e) => e.what), [String(reward.days)]);
+  assert.deepEqual(streak.map((e) => e.what), [String(reward.wins)]);
   assert.equal(streak[0].pts, reward.points);
   assert.deepEqual(streak[0].hints, { [reward.power]: 1 });
   assert.equal(held(save)[reward.power], 1);
 });
 
-test('practice and lost games pay no streak rewards', () => {
-  const { save, streakBefore } = played(['2026-11-01', '2026-11-02'], '2026-11-03');
+test('keep-playing wins pay streak rewards too; a lost game pays none', () => {
+  const first = ECONOMY.streakRewards[0];
+  const days = Array.from({ length: first.wins - 1 }, (_, i) => `2026-11-${String(i + 1).padStart(2, '0')}`);
+  const date = `2026-11-${String(first.wins).padStart(2, '0')}`;
+  const { save, streakBefore } = played(days, date);
   save.achievements = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, '2026-01-01']));
-  const practice = payGame(save, { engine: noDrop, state: state({ daily: false }), game: 'main/p1', date: '2026-11-03', points: 0, streakBefore });
-  assert.equal(practice.length, 0);
-  const lost = payGame(save, { engine: noDrop, state: state({ status: 'lost' }), game: 'main/3', date: '2026-11-03', points: 0, streakBefore });
-  assert.equal(lost.length, 0);
+  const practice = payGame(save, { engine: noDrop, state: state({ daily: false }), game: 'main/p1', date, points: 0, streakBefore });
+  assert.deepEqual(practice.map((e) => e.what), [String(first.wins)]);
+
+  const lost = played(days, date, { ...win(date), won: false });
+  const out = payGame(lost.save, { engine: noDrop, state: state({ status: 'lost' }), game: 'main/x', date, points: 0, streakBefore: lost.streakBefore });
+  assert.deepEqual(out.filter((e) => e.why === 'streak'), []);
 });
 
 test('a bonus hint the engine rolls goes into the ledger', () => {

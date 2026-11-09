@@ -16,7 +16,7 @@
  *   tier    'basic' or 'fancy' (fancy ones get the textures and animations)
  *   unlock  { type: 'free' }
  *           { type: 'points', cost: 400 }            — buy in the shop (js/shop.js)
- *           { type: 'achievement', id: 'streak-7' }  — see achievements.js
+ *           { type: 'achievement', id: 'win-run-5' }  — see achievements.js
  *   soon    true: its look isn't built yet (step 6), so the shop doesn't
  *           sell it. An achievement still unlocks it
  *
@@ -38,13 +38,13 @@ export const SKINS = {
     { id: 'matcha',  tier: 'basic', unlock: FREE },
     { id: 'sakura',  tier: 'basic', unlock: FREE },
     { id: 'urushi',  tier: 'fancy', unlock: { type: 'points', cost: 800 } },
-    { id: 'kinpaku', tier: 'fancy', unlock: { type: 'achievement', id: 'streak-30' } }
+    { id: 'kinpaku', tier: 'fancy', unlock: { type: 'achievement', id: 'win-run-10' } }
   ],
 
   tiles: [
     { id: 'flip',  tier: 'basic', unlock: FREE },
     { id: 'ink',   tier: 'fancy', unlock: { type: 'points', cost: 400 }, soon: true },
-    { id: 'stamp', tier: 'fancy', unlock: { type: 'achievement', id: 'streak-7' }, soon: true }
+    { id: 'stamp', tier: 'fancy', unlock: { type: 'achievement', id: 'win-run-5' }, soon: true }
   ],
 
   effect: [

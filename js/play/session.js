@@ -165,6 +165,17 @@ export function spendPower(powerId) {
   store.update((s) => store.enter(s, 'use', { hints: { [powerId]: -1 } }));
 }
 
+// For the start screen, in a mode without dailies: the game on the go,
+// without starting one. { guesses, level }: guesses made so far (0 when
+// there's none, or it has no moves yet) and the level it's at, or the one
+// a new game would start at.
+export function practiceStatus(mode) {
+  const saved = (store.get().playing[mode.id] || {}).practice;
+  const guesses = saved && saved.start ? (saved.log || []).filter((step) => 'guess' in step).length : 0;
+  const level = guesses ? saved.start.level : currentLevel();
+  return { guesses, level: LEVEL[level] ? level : currentLevel() };
+}
+
 // For the start screen: today's daily in a mode, without starting it.
 // { puzzle, entry, started, guesses, level } or null. level: the one it
 // was played at, the one it's on the go at, or the one it would start at.

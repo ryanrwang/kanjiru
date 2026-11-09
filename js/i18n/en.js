@@ -7,7 +7,7 @@
  */
 export default {
   meta: {
-    description: 'A daily kanji puzzle: guess the word from its parts.'
+    description: 'A kanji word puzzle: guess the word from its parts.'
   },
 
   header: {
@@ -32,7 +32,8 @@ export default {
     miss: 'Not in the answer'
   },
 
-  // The play card: today's daily, the Hard and Guided switches, then play again.
+  // The play card: the game (or today's daily, in a mode with one), the Hard
+  // and Guided switches, then Play.
   play: {
     soon: 'Coming soon',
     loading: 'Loading…',
@@ -40,6 +41,7 @@ export default {
     practiceOnly: 'No daily yet. Keep playing for points.',
     daily: 'Daily #{n}',
     ready: 'Guess today’s word from its parts in {rows} tries.',
+    readyAny: 'Guess a word from its parts in {rows} tries.',
     going: '{n} of {rows} guesses used · {level}',
     won: 'Solved in {n} ✓ · {level}',
     lost: 'Not solved today · {level}',
@@ -188,7 +190,7 @@ export default {
     rewards: 'Rewards',
     balance: 'You have {icon} {n} pts',
     spend: 'Spend them',
-    streak: 'Daily streak',
+    streak: 'Win streak',
     streakDays: '{n} in a row',
     share: 'Share',
     copied: 'Copied. Paste it anywhere.',
@@ -209,9 +211,9 @@ export default {
   points: {
     title: 'Points',
     wallet: 'Your points',
-    how: 'Each part you find pays up to {part}, a win {win} or more, and streaks and achievements pay extra.',
+    how: 'Each part you find pays up to {part}, a win {win} or more, and win streaks and achievements pay extra.',
     hints: 'Hints held',
-    streak: 'Daily streak',
+    streak: 'Win streak',
     achievements: 'Achievements',
     of: '{n} of {total}'
   },
@@ -260,7 +262,7 @@ export default {
     hint: '{icon} {name}',
     hints: '{icon} {name} ×{n}',
     sep: ' · ',
-    streak: '{n} days in a row!',
+    streak: '{n} wins in a row!',
     drop: 'Bonus hint',
     achievement: 'Achievement: {name}',
     unlocks: 'Unlocks {name}'
@@ -330,7 +332,7 @@ export default {
   about: {
     title: 'About',
     open: 'About and credits',
-    lead: 'A daily kanji puzzle: guess the word from its parts, like Wordle.',
+    lead: 'A kanji word puzzle: guess the word from its parts, like Wordle.',
     name: 'The name is 感じる (kanjiru, “to sense”), with the 漢 of 漢字 (kanji).',
     by: 'Made by Ryan Wang',
     privacy: {
@@ -510,6 +512,8 @@ export default {
     'first-win': { name: 'First kanji', desc: 'Solve your first puzzle.' },
     'streak-7': { name: 'One week', desc: 'Solve 7 dailies in a row.' },
     'streak-30': { name: 'One month', desc: 'Solve 30 dailies in a row.' },
+    'win-run-5': { name: 'On a roll', desc: 'Solve 5 puzzles in a row.' },
+    'win-run-10': { name: 'Unstoppable', desc: 'Solve 10 puzzles in a row.' },
     'sharp-eye': { name: 'Sharp eye', desc: 'Solve a puzzle in 2 guesses.' },
     unaided: { name: 'Unaided', desc: 'Win without any hints.' },
     'hard-win': { name: 'Hard win', desc: 'Solve a puzzle with Hard on.' },

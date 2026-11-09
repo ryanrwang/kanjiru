@@ -1,6 +1,6 @@
 # Kanjiru
 
-A daily kanji puzzle in the spirit of Wordle: guess the word (1–4 kanji, 4–6 parts in all) from its parts. Each guess colours its parts: right part in the right spot, right part in the wrong spot, or not in the answer.
+A kanji word puzzle in the spirit of Wordle: guess the word (1–4 kanji, 4–6 parts in all) from its parts. Each guess colours its parts: right part in the right spot, right part in the wrong spot, or not in the answer.
 
 ## Start here
 - **`docs/DESIGN.md`**: every game decision so far, marked Decided, Proposed or Open, with the reasons. Confirm anything Proposed with the user before building on it.
@@ -37,8 +37,8 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `.htaccess` | Gzips the JSON data and has it rechecked every visit (the site's root `.htaccess` does pages, CSS and JS) |
 | `tokens.js` | Design tokens, skins' colours (`THEMES`) and `TOKENS.applyLook()` |
 | `styles.css` | All styles, using token variables only |
-| `app.js` | The header (a breadcrumb on the Points and About pages), the play page (How to play, the play card with the level switches, then the install tip), data loading, and the routes (`''` play page, `#points`, `#about`, `#main` daily, `#main/practice` keep playing) |
-| `js/config/modes.js` | Game modes: the main daily (4–6 parts, 1–4 kanji); k1–k4 retired |
+| `app.js` | The header (a breadcrumb on the Points and About pages), the play page (How to play, the play card with the level switches, then the install tip), data loading, and the routes (`''` play page, `#points`, `#about`, `#main` a random game, or a mode's daily where it has one, `#main/practice` keep playing after a daily) |
+| `js/config/modes.js` | Game modes: main (4–6 parts, 1–4 kanji), with no daily since 2026-11-09, so every game is a random puzzle (`daily: false`); k1–k4 retired |
 | `js/config/levels.js` | Levels: Normal, plus the Hard and Guided switches on the play card (`settingsLevel()`); Easy retired |
 | `js/config/skins.js` | Skin catalogue: colours, tile reveal, win effect |
 | `js/config/powers.js` | Hints and powers: effect, cost, when usable, drop weight |
@@ -60,7 +60,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/engine/game.js` | `createEngine(data)`: game state, guesses, every power effect, points, replay, history entries, bonus drops |
 | `js/engine/palette.js` | The puzzle's palette (a seeded subset of tiles), `buildable()`, `narrow()` for the picker, and `tilesForPlace()` for a cell's parts |
 | `js/engine/daily.js` | Date → puzzle number → answer, practice picks, history keys |
-| `js/engine/stats.js` | Stats and streaks from history, achievement checks, streak rewards |
+| `js/engine/stats.js` | Stats and the streak (wins in a row) from history, achievement checks, streak rewards |
 | `js/engine/data.js` | Loads `data/game/*.json` and `data/parts.json` into the engine's shape |
 | `js/engine/random.js` | Seeded randomness, so dailies and powers come out the same for everyone |
 | `js/play/screen.js` | The game screen: board (one row of cells, or Guided's split, places and frames), keyboard, hints, result, and keyboard play (arrows, Enter, Backspace). Parts a power showed start each row in their cells; in debug mode the keys show the answer as numbered dots. `openGame(root, ctx)` |
@@ -101,6 +101,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 - **Ids are permanent.** Saves store mode, skin, power and achievement ids. Never rename one; add a new entry and retire the old.
 - **The save is versioned.** Changing its shape means bumping `VERSION` in `js/store.js` and adding a migration. Adding a key needs nothing: missing keys are filled from `fresh()`.
 - **History is the source of truth.** Streaks and stats are worked out from `history`, never stored as counters.
+- **No dailies now:** every game is a random puzzle (docs/DESIGN.md, "No dailies"). The daily code stays for a mode with `daily: true`.
 - **The epoch is fixed after launch.** Dailies from another epoch become keep-playing games (`settleDailies()` in `js/store.js`), so moving it never breaks a save, but it does change every player's puzzle numbers.
 - **A new module needs a preload.** Add its `<link rel="modulepreload">` to `index.html`'s `<head>`; `node --test` (`tests/head.test.js`) names any that are missing or extra.
 - **Service worker:** `sw.js` answers from the network first, so a deploy reaches players at once; never let it cache `api/`. The app's browser pane can't run service workers, so check it in Chrome on `localhost` (the LAN link is plain http, so phones run without it). To clear one: DevTools → Application → Service workers → Unregister.
