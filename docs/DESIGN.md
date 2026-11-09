@@ -35,7 +35,7 @@ After playing step 3, the user found one kanji too short: 79% of one-kanji answe
 - **Decided — Loose strokes leave the daily for now (step 4b):** 177 of the 603 Keep answers had a stray single stroke as a part (丨 丶 丿 乙 亅; e.g. 今日, 電気, 仕事). With every part a cell, those cells are close to guesswork. They stay Keep, but the daily list leaves them out (`LISTS` `without` in `tools/compile_game.py`) until their breakdowns are fixed in `data/parts-overrides.json`; fixed ones come back on the next compile. 一 is a real part and stays. Days already played keep their answer (勝 and 経由 were days 8 and 9).
 - **Decided — First fixes (step 4b):** 10 kanji fixed with tiles the palette already has, the way similar kanji split: 重 動 種 (𠂉 over 里, as in 毎), 産 (立 over 厂 and 生), 着 (羊 over 目), 表 (龶 衣), 平 (干 八, as in 前), 号 (口 丂), 母 (毋, as in 毎), 犯 (犭 卩, as in 危). That brought back 25 words: the daily has 453 answers, and 146 Keep words are still left out.
 - **Decided — The rest stay out:** the most common left-out kanji (事 13 words, 年 11, 中 8, 今 7, 以 6) are made of strokes. As whole tiles, most of their words would have under 4 parts (仕事 would have 3), so a new tile wouldn't bring them back.
-- **Decided — Live before launch:** since PR #6 the live URL plays the daily (epoch 2026-11-01). It isn't linked anywhere; step 8b sets the real epoch, so puzzle 1 is launch day.
+- **Decided — Launch day is 2026-11-10:** puzzle 1 is that day. From PR #6 until then the live URL played dailies from a test epoch (2026-11-01), unlinked; the day before launch it says "No daily yet" and offers Keep playing.
 
 ## Scoring (Decided, step 2)
 
@@ -98,7 +98,7 @@ From `js/config/economy.js`, every number there:
 
 ### Dailies and stats
 
-- **Puzzle number:** days since the epoch, by the local date. The epoch is `EPOCH` in `tools/compile_game.py`, written into `data/game/answers.json` with the answer order (`js/engine/daily.js` reads it). Set it to launch day at step 8b, then never change it.
+- **Puzzle number:** days since the epoch, by the local date. The epoch is `EPOCH` in `tools/compile_game.py`, written into `data/game/answers.json` with the answer order (`js/engine/daily.js` reads it). It is launch day, 2026-11-10; never change it.
 - **Decided — A new epoch (step 8a):** dailies are saved under their puzzle number, so when the epoch moves, testers' earlier games would mark new puzzles as played. A daily's own date says which epoch it was played under (its date less its number, plus one), so `settleDailies()` in `js/store.js` turns any daily that doesn't fit the epoch now into a keep-playing game, under `<epoch>#<number>` (`2026-11-01#7`). Its win, kanji and points still count; it stops being that number's daily and stops counting toward the streak. Its ledger entries follow it, and a daily on the go from another epoch is dropped. It runs when the game data loads and on every save received from another device, so a device not opened since launch can't bring old numbers into a merge. No save version bump: the shape is the same. The user picked this over archiving them where stats can't see them (2026-11-08).
 - **Launch day** is then one line: `EPOCH` in `tools/compile_game.py`, a recompile, and a deploy that day.
 - **Answer order:** a fixed (seeded) shuffle of the Keep words. Days already played, up to tomorrow, are locked; later days are shuffled again on each compile, so new Keep words mix in evenly. When the list runs out it starts again from the top.

@@ -81,7 +81,7 @@ python -I -X utf8 tools/compile_game.py
 
 Settings at the top:
 
-- `EPOCH = "2026-11-01"`: the date of puzzle 1. Set it to launch day at launch, then never change it. A new epoch unlocks every day.
+- `EPOCH = "2026-11-10"`: the date of puzzle 1, launch day. Never change it now: a new epoch unlocks every day and renumbers every player's puzzles.
 - `SHUFFLE_SEED`: changing it reorders every day not yet played.
 - `LOCK_AHEAD_DAYS = 1`: days past today that are locked too, for time zones ahead of this computer.
 - `ALLOW_LOOKALIKE_ANSWERS = False`: True keeps the look-alikes as answers.

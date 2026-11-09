@@ -29,9 +29,9 @@ Last updated: 2026-11-08.
 You: review words  (any time; the game only uses words marked Keep)
 ```
 
-- **Next:** step 8b. Its first half (About, the install tip, accessibility) is on branch `launch`; the Apps page and puzzle 1 wait for launch day. Step 6 can wait until after launch. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
-- **Launch date:** not picked yet; ask the user. Flipping it is part of 8b ("Launch day, ready to run").
-- **Words:** 453 daily answers from 603 Keep words are enough for launch (about 1.2 years). More can be added any time on the review page, then `tools/compile_game.py`. 146 Keep words with loose strokes come back as their kanji are fixed.
+- **Next:** the rest of step 8b: the Apps page card (it needs a screenshot) and checking the install on real phones. Step 6 can wait until after launch. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
+- **Launch date:** 2026-11-10 (Daily #1). `EPOCH` is set and `data/game/` recompiled; never change it now.
+- **Words:** 451 daily answers from 603 Keep words are enough for launch (about 1.2 years). More can be added any time on the review page, then `tools/compile_game.py`. 146 Keep words with loose strokes come back as their kanji are fixed.
 
 **Running threads at the same time:** every thread shares this one folder, and Git can only have one branch checked out in it. Two threads in the same folder will switch each other's branches. So either run one thread at a time, or start each one in its own worktree (the app's worktree option when you start a session).
 
@@ -199,6 +199,8 @@ Step 8 was split in two, so the half that doesn't touch the screens could run wh
 **Needs:** step 8a, and the screen layout overhaul merged.
 
 **Progress (2026-11-08):** items 1–3 are on branch `launch`: the About page (`js/about.js`, from Settings and the result card), the install tip (`js/install.js`, on the play page and in Settings), keyboard play and screen reader text in the game, and WCAG AA contrast in every look (docs/DESIGN.md, "Accessibility"). Still to do: check the install on a real iPhone and Android phone once it's live, then items 4 and 5 on launch day.
+
+**Launch date set (2026-11-09):** the user picked 2026-11-10. `EPOCH` is set to it and `data/game/` recompiled (the schedule reshuffled, 451 answers), deployed the day before, so today's page says "No daily yet" and tomorrow's is Daily #1. Still to do: check Daily #1 live on 2026-11-10, the Apps page card, and the phone install check.
 
 **Launch day, ready to run:**
 1. In `tools/compile_game.py`, set `EPOCH = "YYYY-MM-DD"` to launch day, then run `python -I -X utf8 tools/compile_game.py`; on the day it prints "today is puzzle 1".
