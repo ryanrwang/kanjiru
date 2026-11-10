@@ -76,7 +76,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/i18n/en.js`, `js/i18n/ja.js` | All interface text, English (the reference) and Japanese |
 | `tools/build_data.py` | Downloads the dictionaries and writes `data/candidates.json` (settings at the top; see `tools/README.md`). `--parts-only` redoes just the part breakdowns and `data/parts.json` |
 | `data/candidates.json` | Every candidate answer, with kanji info and part breakdowns |
-| `data/parts.json` | The parts palette: 263 tiles, their forms (氵 for 水, 𠆢 for 人) and drawings for glyphs fonts may lack |
+| `data/parts.json` | The parts palette: 263 tiles, their forms (氵 for 水, 𠆢 for 人) and drawings for the 5 glyphs Noto lacks |
 | `data/parts-overrides.json` | Hand-fixed part breakdowns, each with a `why`; `build_data.py` uses them instead of its own split |
 | `docs/PARTS-AUDIT.md` | The parts audit (2026-11-10): every tile's Kangxi radical, every kanji it changed, and what was left alone |
 | `tools/compile_game.py` | Writes `data/game/`: the slim kanji file and the daily schedule from the Keep words (see `tools/README.md`). `EPOCH` is the date of puzzle 1 |

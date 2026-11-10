@@ -258,6 +258,23 @@ class PartsOnly(unittest.TestCase):
         uses = {t["id"]: t["uses"] for t in tiles}
         self.assertEqual((uses["日"], uses["月"]), (2, 2))
 
+    def test_only_glyphs_the_fonts_lack_are_drawn(self):
+        # ⺌ is in the fonts but not in JIS X 0213: text. 龶 is in neither: drawn.
+        with zipfile.ZipFile(bd.SOURCES_DIR / bd.KANJIVG_FILE, "a") as z:
+            for glyph in "⺌龶":
+                z.writestr(f"kanji/{ord(glyph):05x}.svg", kanjivg_svg(glyph, [(None, None, [("㇑", line(50, 10, 50, 90))])]))
+        css = bd.SOURCES_DIR / bd.NOTO_CSS_FILE
+        css.write_text(css.read_text(encoding="utf-8").replace("U+6708", "U+6708, U+2E8C"), encoding="utf-8")
+        with mock.patch.object(bd, "PALETTE", "一 丨 丶 丿 乙 亅 日 月 ⺌ 龶"):
+            self.run_parts_only()
+        tiles = json.loads((self.dir / "data" / "parts.json").read_text(encoding="utf-8"))["tiles"]
+        form = {f["glyph"]: f for t in tiles for f in t["forms"]}
+        self.assertEqual(form["⺌"].get("jis"), False)
+        self.assertNotIn("svg", form["⺌"], "the game's Noto shows it")
+        self.assertEqual(form["龶"].get("font"), False)
+        self.assertIn("svg", form["龶"])
+        self.assertNotIn("svg", form["日"])
+
     def test_never_writes_the_review_file(self):
         self.run_parts_only()
         self.assertEqual((self.dir / "data" / "review.json").read_text(encoding="utf-8"), self.review)

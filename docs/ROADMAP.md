@@ -31,7 +31,7 @@ You: review words  (any time; the game only uses words marked Keep)
 
 - **Next:** the rest of step 8b: the Apps page card (it needs a screenshot) and checking the install on real phones. Step 6 can wait until after launch. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
 - **No dailies (2026-11-09):** the user chose random puzzles only, as many as you like, so there's no launch date (docs/DESIGN.md, "No dailies").
-- **Words:** 461 answers from 603 Keep words are enough for launch. More can be added any time on the review page, then `tools/compile_game.py`. 114 Keep words with loose strokes come back as their kanji are fixed.
+- **Words:** 460 answers from 603 Keep words are enough for launch. More can be added any time on the review page, then `tools/compile_game.py`. 114 Keep words with loose strokes come back as their kanji are fixed.
 - **Parts audit (2026-11-10, branch `claude/radical-audit`):** after native players' feedback, every tile mapped to its Kangxi radical, display forms such as 𠆢 and 丷, 12 new tiles (263), and 273 kanji re-split (`docs/PARTS-AUDIT.md`; Proposed in docs/DESIGN.md, "Part breakdowns"). Adds `tools/build_data.py --parts-only`. Tick it into Done when it merges.
 
 **Running threads at the same time:** every thread shares this one folder, and Git can only have one branch checked out in it. Two threads in the same folder will switch each other's branches. So either run one thread at a time, or start each one in its own worktree (the app's worktree option when you start a session).

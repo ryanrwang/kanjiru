@@ -10,7 +10,7 @@ Builds `data/candidates.json` (the Kanjiru answers, with each kanji's info and p
    - `kanji`: every jōyō kanji with strokes, grade, JLPT level, frequency, meanings, readings, `parts`, `atomic` (it is a tile itself) and `override` (its parts come from the overrides file).
    - `parts`: a list of `{el, pos}` in stroke order. `el` is the tile, `pos` is where it sits in the whole kanji, and `form` is added when the glyph shown differs from the tile (氵 for 水).
    - `words`: every N5 to N3 kanji that isn't a tile itself, plus the common JMdict words of 2 to 4 kanji that use only N5 to N3 kanji.
-4. Writes `data/parts.json`: `tiles`, each with `id`, `strokes`, `uses` (jōyō kanji containing it) and `forms`. Each form has a `glyph`, its own `strokes` and `uses`, and, if the fonts may lack it, `font: false` (not in Noto Sans/Serif JP) or `jis: false` (not in JIS X 0213), plus `svg`: KanjiVG's strokes to draw instead (`viewBox` and `paths`; stroke them, no fill).
+4. Writes `data/parts.json`: `tiles`, each with `id`, `strokes`, `uses` (jōyō kanji containing it) and `forms`. Each form has a `glyph`, its own `strokes` and `uses`, `jis: false` when it's not in JIS X 0213, and `font: false` when it's not in Noto Sans/Serif JP, with `svg`: KanjiVG's strokes to draw instead (`viewBox` and `paths`; stroke them, no fill). The game loads Noto, so only glyphs Noto lacks are drawn (`DRAW_NON_JIS` brings back drawings for glyphs outside JIS X 0213).
 5. Prints a summary: the palette, parts per kanji, positions, single strokes, atomic answers, look-alike kanji, hand overrides, the kanji flagged on the review page (from `data/review.json`, read only), counts per length, and run time.
 
 Python 3.10 or later, standard library only. Run it from the project folder (`-X utf8` lets Windows print the kanji in the summary):
@@ -99,7 +99,7 @@ python -I -X utf8 tools/compile_game.py
 
 - **Answers are Keep words only,** from `data/review.json` (read, never written). With no Keep words every list is empty, and the summary says so. Use `--review PATH` to read another file, such as the main folder's when running from a worktree.
 - **Left out:** one-kanji look-alikes (未 末 押 招: same parts in the same places as another kanji), and Keep words that are no longer candidates. The summary lists both.
-- **Loose strokes:** a `LISTS` rule with `without` leaves out words with any of those tiles as a part. `main` leaves out the loose single strokes 丨 丶 丿 乙 亅 (`LOOSE_STROKES`; 一 is a real part and stays), since a cell holding one is close to guesswork. The words stay Keep, and come back on the next compile once `data/parts-overrides.json` fixes their kanji. The summary counts them, and lists any already-played day whose answer is now left out (it keeps its slot).
+- **Loose strokes:** a `LISTS` rule with `without` leaves out words with any of those tiles as a part. `main` leaves out the loose single strokes 丨 丶 丿 乙 亅 (`LOOSE_STROKES`; 一 is a real part and stays), since a cell holding one is close to guesswork. The words stay Keep, and come back on the next compile once `data/parts-overrides.json` fixes their kanji. The summary counts them, and lists any already-played day whose answer is now left out (in a list with a daily, it keeps its slot).
 - **Stable order:** answers for days already played, up to tomorrow, never move. Every later day is shuffled again from a fixed seed, so newly kept words mix in evenly. A word cut after its day is listed but stays in its slot.
 - **The summary** shows each list's answer count against the 365 a year of dailies needs.
 
@@ -108,6 +108,7 @@ Settings at the top:
 - `EPOCH = "2026-11-01"`: the date of puzzle 1. No mode has a daily now, so it's unused; if one comes back, set it to launch day, then never change it. A new epoch unlocks every day.
 - `SHUFFLE_SEED`: changing it reorders every day not yet played.
 - `LOCK_AHEAD_DAYS = 1`: days past today that are locked too, for time zones ahead of this computer.
+- `LISTS` `daily`: whether a mode plays the list as a daily. Only then are days already played locked; `main` has none (`daily: False`), so every answer meets its rules.
 - `ALLOW_LOOKALIKE_ANSWERS = False`: True keeps the look-alikes as answers.
 - `MAX_KANJI_MEANINGS = 3`.
 

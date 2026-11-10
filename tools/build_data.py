@@ -214,6 +214,14 @@ STROKE_PATTERNS = {
 }
 CROSSING = 0.6  # share of the ㇒'s height that must reach below the ㇐ for ナ
 
+# Drawn from KanjiVG's strokes instead of shown as text: only glyphs the
+# game's own fonts lack. The game loads Noto Sans JP and Noto Serif JP from
+# Google Fonts on every device, so a glyph they have shows as text even on a
+# phone whose own fonts lack it. The user found the font looks much better
+# than the drawing (2026-11-10). True draws glyphs outside JIS X 0213 too,
+# as before, for a phone's own fonts.
+DRAW_NON_JIS = False
+
 # Decided: a one-kanji answer that is a tile itself (金, 車, 雨) has one part
 # and gives no clues, so it leaves the one-kanji answers. It stays guessable
 # and stays in longer words.
@@ -1223,7 +1231,7 @@ def build_parts(trees: dict, others: dict, wanted: set, kanjidic: dict, fonts: d
             if not in_noto:
                 form["font"] = False
                 not_in_noto.append(glyph)
-            if not is_jis(glyph) or not in_noto:
+            if not in_noto or (DRAW_NON_JIS and not is_jis(glyph)):
                 form["svg"] = fallback_drawing(glyph, occurrences.get(glyph, []), others)
                 drawn.append(glyph)
             forms.append(form)
@@ -1262,7 +1270,7 @@ def report_parts(kanji: dict, palette: list, report: dict, atomic_answers: list)
         log(f"  WARNING tiles no kanji uses: {''.join(report['unused_tiles'])}")
     if report["unused_forms"]:
         log(f"  forms no kanji uses: {''.join(report['unused_forms'])}")
-    log(f"  drawn from KanjiVG (not JIS or not in Noto JP): {''.join(report['drawn'])}")
+    log(f"  drawn from KanjiVG (not in Noto JP): {''.join(report['drawn'])}")
     log(f"  not in Noto Sans/Serif JP at all: {''.join(report['not_in_noto']) or 'none'}")
     counts = {}
     for v in joyo.values():
@@ -1367,9 +1375,10 @@ def write_outputs(sources: dict, kanji: dict, words: list, palette: list) -> Non
             "about": "The parts palette: one tile per part players can tap. A tile's forms "
                      "are the glyphs it covers (氵 counts as 水). strokes and uses (joyo kanji "
                      "containing it) come from the part breakdowns in candidates.json.",
-            "fonts": "font: false = not in Noto Sans JP or Noto Serif JP; jis: false = not in "
-                     "JIS X 0213, so a phone's own fonts may lack it. Either way, svg holds "
-                     "KanjiVG's strokes to draw instead (stroke them, no fill).",
+            "fonts": "font: false = not in Noto Sans JP or Noto Serif JP, which the game loads, "
+                     "so svg holds KanjiVG's strokes to draw instead (stroke them, no fill). "
+                     "jis: false = not in JIS X 0213, so a phone's own fonts may lack it; "
+                     "it shows as text in Noto all the same.",
             "positions": POSITIONS,
             "source": f"KanjiVG {KANJIVG_RELEASE} and data/parts-overrides.json",
             "licence": "CC BY-SA 4.0, adapted from KanjiVG (CC BY-SA 3.0, Ulrich Apel)",
