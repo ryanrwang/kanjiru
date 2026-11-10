@@ -1,8 +1,10 @@
 /*
  * The Points page (#points, opened by the points in the header; the header
  * shows 漢 › Points): the wallet, the looks with examples, the hints and
- * powers, and the achievements. Buying takes two taps: Buy, then a modal
- * that names the price and what's left (rules in js/shop.js).
+ * powers (one per row: what it does, how many you hold, Buy), and the
+ * achievements. Buying takes two taps: Buy, then a modal that names the
+ * price and what's left (rules in js/shop.js). A hint's modal has Don't
+ * ask again (settings.confirmHintBuy; Settings turns it back on).
  *
  *   const page = openPoints(root, { onLook, onWallet });
  *   page.refresh();   // the scheme changed
@@ -16,7 +18,7 @@
  * playing over a solved row. A reveal or effect plays when it first comes
  * into view, when it's tapped or hovered, and when it's picked.
  */
-import { POWERS, SLOTS, SKINS, ECONOMY, ACHIEVEMENTS, ACHIEVEMENT, MODES } from './registry.js';
+import { OFFERED_POWERS, SLOTS, SKINS, ECONOMY, ACHIEVEMENTS, ACHIEVEMENT, MODES } from './registry.js';
 import { t } from './i18n.js';
 import { el } from './dom.js';
 import * as store from './store.js';
@@ -25,6 +27,7 @@ import { stats, progress } from './engine/stats.js';
 import { localDate } from './engine/daily.js';
 import { amounts, skinsFor, achievementStats } from './play/rewards.js';
 import { bump } from './toast.js';
+import { hintRow } from './play/hints.js';
 import { example as effectExample } from './play/effects.js';
 
 const pts = (n) => t('currency.amount', { n });
@@ -73,22 +76,25 @@ const miniTiles = (tiles) => tiles.map(([part, mark], i) => {
 });
 
 // The confirm before buying, in a modal: the price, and what's left after.
+// never: offer Don't ask again (hints); onYes(ticked) gets whether it was.
 let confirmSheet = null;
-function confirmBuy({ icon, name, cost, have, onYes }) {
+function confirmBuy({ icon, name, cost, have, onYes, never = false }) {
   if (!confirmSheet) {
     confirmSheet = el('dialog', { class: 'sheet confirm-sheet', 'aria-labelledby': 'confirm-title' });
     confirmSheet.addEventListener('click', (event) => { if (event.target === confirmSheet) confirmSheet.close(); });
     document.body.append(confirmSheet);
   }
+  const box = never ? el('input', { type: 'checkbox', id: 'confirm-never', 'data-id': 'never' }) : null;
   const yes = el('button', {
     class: 'btn btn-primary', type: 'button',
-    onclick: () => { confirmSheet.close(); onYes(); }
+    onclick: () => { confirmSheet.close(); onYes(!!(box && box.checked)); }
   }, t('shop.confirmYes', { cost }));
   confirmSheet.replaceChildren(el('div', { class: 'sheet-body' },
     el('header', { class: 'power-sheet-head' },
       el('span', { class: 'power-icon', 'aria-hidden': 'true' }, icon),
       el('h2', { class: 'sheet-title', id: 'confirm-title' }, t('shop.confirmTitle', { name }))),
     el('p', {}, t('shop.confirm', { cost, have, left: have - cost, name })),
+    box ? el('label', { class: 'check-row', for: 'confirm-never' }, box, el('span', {}, t('shop.dontAsk'))) : null,
     el('div', { class: 'btn-row' }, yes,
       el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => confirmSheet.close() }, t('shop.cancel')))));
   confirmSheet.showModal();
@@ -318,39 +324,44 @@ export function openPoints(root, ctx) {
 
   // ── Hints and powers ───────────────────────────────────────────────
 
-  function powerCard(p, save) {
+  // One hint per row (js/play/hints.js hintRow): what it does, how many
+  // you hold, and Buy on the right, which asks first unless Don't ask
+  // again was ticked. Under it: when it can be used if that's not always,
+  // why it can't be bought, or what was just bought.
+  function powerRow(p, save) {
     const key = `power:${p.id}`;
     const offer = powerOffer(p.id, save);
     const name = t(`power.${p.id}.name`);
-    const pay = () => {
+    const pay = (never) => {
       if (!buyPower(p.id)) return;
+      if (never) store.update((s) => { s.settings.confirmHintBuy = false; });
       ui.done = { key, text: t('shop.bought', { name, n: store.held()[p.id] || 0, left: store.points() }) };
       render(key);
       paid(p.cost);
     };
+    const ask = save.settings.confirmHintBuy !== false;
     const why = offer.why === 'not-for-sale' ? t('powers.earnedOnly') : whyText(offer, p.hold);
-    return el('div', { class: 'card power', 'data-key': key },
-      el('span', { class: 'power-icon', 'aria-hidden': 'true' }, p.icon),
-      el('div', { class: 'power-body' },
-        el('p', { class: 'power-name' },
-          el('span', {}, name),
-          el('span', { class: `power-held${offer.held ? ' is-held' : ''}` }, t('shop.have', { n: offer.held, hold: p.hold }))),
-        el('p', { class: 'power-desc' }, t(`power.${p.id}.desc`)),
-        el('p', { class: 'power-when' },
-          [whenText(p.when), p.minLength > 1 ? t('powers.minLength', { n: p.minLength }) : null].filter(Boolean).join(sep())),
-        doneLine(key),
-        el('div', { class: 'power-buy' },
-          p.cost === null ? null : buyButton(p.cost, offer.why, () => confirmBuy({
-            icon: p.icon, name, cost: p.cost, have: offer.have, onYes: pay
-          })),
-          why ? el('span', { class: 'power-why' }, why) : null)));
+    const when = [
+      p.when.length < 2 ? whenText(p.when) : null,
+      p.minLength > 1 ? t('powers.minLength', { n: p.minLength }) : null
+    ].filter(Boolean).join(sep());
+    const done = ui.done && ui.done.key === key ? el('p', { class: 'hint-note', role: 'status' }, ui.done.text) : null;
+    const line = done || ((why || when) ? el('p', { class: 'hint-why' }, [why, when].filter(Boolean).join(sep())) : null);
+    return hintRow({
+      power: p, held: offer.held, key,
+      action: p.cost === null ? null : buyButton(p.cost, offer.why, () => (ask
+        ? confirmBuy({ icon: p.icon, name, cost: p.cost, have: offer.have, onYes: pay, never: true })
+        : pay(false))),
+      line
+    });
   }
 
   function powers(save) {
     return el('section', { class: 'section', 'aria-labelledby': 'powers-title' },
       el('h2', { class: 'section-title', id: 'powers-title' },
         t('powers.title'), el('span', { class: 'section-note' }, t('powers.note'))),
-      el('div', { class: 'power-list' }, POWERS.map((p) => powerCard(p, save))));
+      el('div', { class: 'card power-rows' },
+        el('ul', { class: 'hint-list' }, OFFERED_POWERS.map((p) => powerRow(p, save)))));
   }
 
   // ── Achievements ───────────────────────────────────────────────────

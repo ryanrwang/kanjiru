@@ -57,9 +57,17 @@ export function add(ledger, why, { pts = 0, hints = null, game = null, what = nu
 
 const entries = (ledger) => (isObject(ledger) ? Object.values(ledger).filter(isObject) : []);
 
+// Each retired power's { id, n } from a powers catalogue, for balance().
+export function becomesOf(powers) {
+  return Object.fromEntries(powers.filter((p) => p.retired && p.becomes).map((p) => [p.id, p.becomes]));
+}
+
 // The sum of every entry: { points, hints: { [powerId]: n } }. Neither goes
 // below 0: a merge can join spends made on both devices from the same points.
-export function balance(ledger) {
+// becomes: { [retiredId]: { id, n } } (js/config/powers.js): hints of a
+// retired power count as n of another, before the floor at 0, so spending
+// the new one uses up what the old ones were worth.
+export function balance(ledger, becomes = {}) {
   let points = 0;
   const hints = {};
   entries(ledger).forEach((e) => {
@@ -67,6 +75,11 @@ export function balance(ledger) {
     Object.entries(isObject(e.hints) ? e.hints : {}).forEach(([id, n]) => {
       hints[id] = (hints[id] || 0) + (Number(n) || 0);
     });
+  });
+  Object.entries(becomes).forEach(([from, to]) => {
+    if (!hints[from] || !to || !to.id) return;
+    hints[to.id] = (hints[to.id] || 0) + hints[from] * (Number(to.n) || 1);
+    delete hints[from];
   });
   Object.keys(hints).forEach((id) => { if (hints[id] <= 0) delete hints[id]; });
   return { points: Math.max(0, points), hints };

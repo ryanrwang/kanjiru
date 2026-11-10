@@ -201,6 +201,37 @@ class Kanji(unittest.TestCase):
         self.assertEqual(row["meanings"], ["bright"])
 
 
+class Meanings(unittest.TestCase):
+    def test_answers_get_their_meanings_in_order_once(self):
+        out, report = cg.compile_meanings({"a": ["明", "時間"], "b": ["時間"]},
+                                          {"ja": {"時間": "ときの長さ", "明": "光が多い", "海": "使わない"}})
+        self.assertEqual(list(out["ja"]), ["明", "時間"])
+        self.assertEqual(report["ja"], {"missing": [], "shows": [], "kept": 2})
+
+    def test_a_meaning_that_shows_the_answer_is_left_out(self):
+        out, report = cg.compile_meanings({"main": ["時間", "日本", "明"]},
+                                          {"ja": {"時間": "分や秒で計る、ときの長さ", "日本": "日の出る国"}})
+        self.assertEqual(out, {"ja": {"時間": "分や秒で計る、ときの長さ"}})
+        self.assertEqual(report["ja"]["shows"], ["日本"])
+        self.assertEqual(report["ja"]["missing"], ["明"])
+
+    def test_no_file_means_no_meanings(self):
+        out, report = cg.compile_meanings({"main": ["明"]}, {"ja": None})
+        self.assertEqual(out, {"ja": {}})
+        self.assertEqual(report["ja"]["missing"], ["明"])
+
+    def test_answers_text_with_meanings_is_valid_json(self):
+        doc, _ = compile_(review("明", "日本"))
+        doc["meanings"], _ = cg.compile_meanings(doc["answers"], {"ja": {"明": "光が多い"}})
+        self.assertEqual(json.loads(cg.answers_text(doc)), doc)
+
+    def test_the_real_meanings_never_show_their_answer(self):
+        for lang, path in cg.MEANING_FILES.items():
+            given = cg.read_json(path) or {}
+            shown = [w for w, text in given.items() if cg.shows_answer(w, text)]
+            self.assertEqual(shown, [], f"{path.name}: these meanings show a kanji of their answer")
+
+
 class Files(unittest.TestCase):
     def test_answers_text_is_valid_json(self):
         doc, _ = compile_(review("明", "海", "日本", "本日"))
@@ -216,11 +247,17 @@ class Files(unittest.TestCase):
             rev.write_text(json.dumps(review("明", "時間"), ensure_ascii=False), encoding="utf-8")
             before = rev.read_bytes()
             out = tmp / "game"
+            meanings = tmp / "meanings-ja.json"
+            meanings.write_text(json.dumps({"時間": "分や秒で計る、ときの長さ"}, ensure_ascii=False), encoding="utf-8")
+            files, cg.MEANING_FILES = cg.MEANING_FILES, {"ja": meanings}
+            self.addCleanup(setattr, cg, "MEANING_FILES", files)
             code = cg.main(["--candidates", str(tmp / "candidates.json"), "--review", str(rev),
                             "--out", str(out), "--today", "2026-10-01"])
             self.assertEqual(code, 0)
             self.assertEqual(rev.read_bytes(), before)
-            self.assertEqual(json.loads((out / "answers.json").read_text(encoding="utf-8"))["answers"], {"main": ["時間"]})
+            written = json.loads((out / "answers.json").read_text(encoding="utf-8"))
+            self.assertEqual(written["answers"], {"main": ["時間"]})
+            self.assertEqual(written["meanings"], {"ja": {"時間": "分や秒で計る、ときの長さ"}})
             self.assertIn("明", json.loads((out / "kanji.json").read_text(encoding="utf-8"))["kanji"])
 
 

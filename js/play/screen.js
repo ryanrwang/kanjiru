@@ -12,8 +12,14 @@
  * next row is selected: a tapped part fills it and the next empty cell is
  * selected; tapping a cell selects it. The keyboard keeps the same keys in
  * the same spots for the whole game. A part a power showed (Reveal a part,
- * Head start, Reveal a kanji) starts each new row in its cell, green; at
- * Hard it must stay there (engine.shownCells).
+ * Reveal a kanji) shows faintly in its empty cell on each new row, and a
+ * tap on that cell once selected puts it in; at Hard it must be there
+ * (engine.shownCells).
+ *
+ * Above the rows, the kanji guide: a frame per kanji with all that's known
+ * about it (renderFrame): solved, Guided's shape and parts, Layout's
+ * places, Stroke count's number. Over each kanji's cells in Guided; in a
+ * centred row otherwise, once something is known.
  *
  * The level (js/config/levels.js; the play card's switches) changes the board:
  *   Normal      one row of cells: where one kanji ends is for the player to
@@ -23,12 +29,14 @@
  *               kanji still fit (countLeft), and the keys that can't go in
  *               the selected cell dimmed (tilesForPlace in js/engine/palette.js).
  *   Hard        (realKanji) each row shows the kanji its parts make.
- * Hints (the power bar) open from a button in the head and float just above
- * the keyboard, over the bottom of the board, like a message, so they never
- * move the board. They're open before the first guess, so they're easy to
- * find, and close with a guess. Clues already found stay on show above the
- * keyboard. A hint you hold none of can be bought from its sheet (js/shop.js).
- * When the game ends, its rewards show as toasts and on the result card.
+ * The site header reads 漢 › Play over the kind and level, with the hints
+ * held as a pill on the right (app.js asks head()). It opens the hints
+ * modal (js/play/hints.js): each hint, how many you hold, and Use, which
+ * asks once more. A hint used plays its animation (js/play/reveal.js), on
+ * a card over the board or on the board itself, and its clue stays on
+ * show above the keyboard. A hint you hold none of can be bought there
+ * (js/shop.js). When the game ends, its rewards show as toasts and on the
+ * result card.
  * In debug mode (Settings), each key whose part is in the answer shows the
  * answer's cells it fills as numbered dots, so the dots spell the answer.
  *
@@ -50,7 +58,8 @@ import { MARKS } from '../engine/score.js';
 import { stats } from '../engine/stats.js';
 import { localDate, answersFor } from '../engine/daily.js';
 import * as session from './session.js';
-import { renderClues, renderPowerBar, whyNot, openPowerSheet, closePowerSheet } from './hints.js';
+import { renderClues, hintsFor, whyNot, openHints, closeHints, layoutDrawing } from './hints.js';
+import { showCard, playOnBoard } from './reveal.js';
 import { renderResult } from './result.js';
 import { describe } from './rewards.js';
 import { powerOffer, buyPower } from '../shop.js';
@@ -58,16 +67,14 @@ import { toast } from '../toast.js';
 import { ask, closeAsk } from '../confirm.js';
 import { celebrate } from './effects.js';
 
-const BULB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>';
 const DELETE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H9l-7 7 7 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M17 9l-6 6M11 9l6 6"/></svg>';
-const FLAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/></svg>';
-const BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
 
 const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const rank = (mark) => MARKS.indexOf(mark);
 
 // callbacks: onHome(), onPractice() (daily → keep playing), onWallet()
-// (points changed), onReload() (a new day: open the route again).
+// (points or hints held changed, or the game ended: the header redraws,
+// asking head()), onReload() (a new day: open the route again).
 export function openGame(root, ctx) {
   const { data, engine, glyph, mode, kind } = ctx;
   // options.skip: an answer a new practice game mustn't be (New puzzle).
@@ -96,14 +103,13 @@ export function openGame(root, ctx) {
   const shape = el('div', { class: 'board-shape' });
   const boardDone = el('div', { class: 'board-rows', role: 'list' });
   const boardNext = el('div', { class: 'board-rows' });
-  const head = el('div');
   const hints = el('div', { class: 'game-hints' });
   const picker = el('div', { class: 'picker' });
-  // Floats above the keyboard: the message, then the power bar.
+  // Floats above the keyboard: the message.
   const float = el('div', { class: 'picker-float' });
   const message = el('p', { class: 'status-line', role: 'status' });
-  const powers = el('div', { class: 'game-powers', id: 'game-powers' });
-  float.append(message, powers);
+  float.append(message);
+  let card = null;   // the hint card over the board (js/play/reveal.js)
   const choices = el('div', { class: 'picker-choices' });
   const result = el('div', { class: 'game-result' });
   const live = el('p', { class: 'visually-hidden', 'aria-live': 'polite' });
@@ -116,8 +122,6 @@ export function openGame(root, ctx) {
       active: 0,       // the selected cell, which a tapped part fills
       keyFocus: null,  // the key that takes Tab into the keyboard
       frameFrom: null, // the state the frames show while a row reveals
-      // The power bar is open: before the first guess, so hints are easy to find.
-      hintsOpen: !!game && !game.done && game.state.status === 'playing' && game.state.guesses.length === 0,
       message: null,   // { kind: 'error' | 'info', text }
       newRow: -1,      // the row to reveal
       points: game && game.done ? engine.points(game.state) : null,
@@ -189,53 +193,36 @@ export function openGame(root, ctx) {
     return where.pos ? t('game.cellPlace', { n: i + 1, place: placeName(where) }) : t('game.cellNumber', { n: i + 1 });
   };
 
-  // The cells powers showed: cell → its part (engine.shownCells).
+  // The cells powers showed: cell → its part (engine.shownCells). A new
+  // row doesn't start with them filled in (the user found that pushy,
+  // 2026-11-10): each shows faintly in its empty cell instead, and a tap on
+  // that cell once it's selected puts it in.
   const shownNow = () => new Map(engine.shownCells(state()).map((c) => [c.cell, c]));
-  // Puts each shown part in its cell of the next row (over whatever was
-  // there), and moves the selection off a filled cell.
-  function prefill() {
-    shownNow().forEach(({ el: id }, i) => { ui.cells[i] = id; });
-    if (ui.cells[ui.active]) {
-      const empty = ui.cells.indexOf(null);
-      if (empty >= 0) ui.active = empty;
-    }
-  }
 
   // ── Head ───────────────────────────────────────────────────────────
 
-  function renderHead() {
+  // What the site header shows during a game (app.js): the kind and level
+  // under 漢 › Play, and while it's on, the hints held, which open the
+  // hints modal.
+  function head() {
     const s = state();
-    const back = el('button', {
-      class: 'icon-btn', type: 'button', 'data-id': 'back', title: t('game.home'), 'aria-label': t('game.home'), onclick: ctx.onHome
-    });
-    back.innerHTML = BACK;
-    head.replaceChildren(el('header', { class: 'game-head' },
-      back,
-      el('h2', { class: 'game-title', id: 'game-title' },
-        el('span', {}, t(`mode.${mode.id}.name`)),
-        // The daily's number, or Keep playing after it; in a mode without
-        // dailies, just the level.
-        el('span', { class: 'game-kind' }, s.daily || mode.daily ? t('game.kindLevel', {
-          kind: s.daily ? t('game.daily', { n: s.puzzle }) : t('game.practice'),
-          level: t(`level.${s.level}.name`)
-        }) : t(`level.${s.level}.name`))),
-      playing() ? endButton() : null,
-      playing() ? hintsButton() : null));
+    return {
+      // The daily's number, or Keep playing after it; in a mode without
+      // dailies, just the level.
+      sub: s.daily || mode.daily ? t('game.kindLevel', {
+        kind: s.daily ? t('game.daily', { n: s.puzzle }) : t('game.practice'),
+        level: t(`level.${s.level}.name`)
+      }) : t(`level.${s.level}.name`),
+      playing: playing() && partsMode(),
+      held: hintsFor(s).reduce((n, p) => n + (store.held()[p.id] || 0), 0)
+    };
   }
 
-  // Ends the game early, at any time: give up (a loss, the answer shows) or,
-  // in a game that isn't a daily, a new puzzle (this one isn't recorded).
-  function endButton() {
-    const node = el('button', {
-      class: 'icon-btn end-btn', type: 'button', 'data-id': 'end',
-      title: t('game.end.open'), 'aria-label': t('game.end.open'),
-      onclick: endGame
-    });
-    node.innerHTML = FLAG;
-    return node;
-  }
-
+  // Ends the game early, at any time (the flag in the site header, app.js):
+  // give up (a loss, the answer shows) or, in a game that isn't a daily, a
+  // new puzzle (this one isn't recorded).
   async function endGame() {
+    if (!playing()) return;
     const pick = await ask({
       icon: '🏳️',
       title: t('game.end.title'),
@@ -246,6 +233,7 @@ export function openGame(root, ctx) {
       ].filter(Boolean)
     });
     if (!pick || !playing()) return;
+    if (card) card.dismiss();
     if (pick === 'new') {
       const skipped = state().answer;
       session.skipPractice(mode);
@@ -256,7 +244,6 @@ export function openGame(root, ctx) {
     const r = engine.giveUp(state());
     if (r.error) return;
     game = { ...game, state: r.state };
-    ui.hintsOpen = false;
     finish();
     live.textContent = t('game.end.gaveUp');
     byKeyboard = false;
@@ -268,22 +255,7 @@ export function openGame(root, ctx) {
     const title = result.querySelector('#result-title');
     if (title) { title.setAttribute('tabindex', '-1'); title.focus(); }
   }
-
-  // Opens and closes the power bar (renderHints), with the number of hints
-  // held on it.
-  function hintsButton() {
-    const held = Object.values(store.held()).reduce((a, n) => a + n, 0);
-    const label = held ? t('game.powers.titleHeld', { n: held }) : t('game.powers.title');
-    const node = el('button', {
-      class: `icon-btn hints-btn${ui.hintsOpen ? ' is-open' : ''}`, type: 'button', 'data-id': 'hints',
-      title: label, 'aria-label': label,
-      'aria-expanded': String(ui.hintsOpen), 'aria-controls': 'game-powers',
-      onclick: () => keepFocus(() => { ui.hintsOpen = !ui.hintsOpen; renderHead(); renderHints(); })
-    });
-    node.innerHTML = BULB;
-    if (held) node.append(el('span', { class: 'hints-count', 'aria-hidden': 'true' }, String(held)));
-    return node;
-  }
+  const renderHead = () => ctx.onWallet();
 
   // ── Board ──────────────────────────────────────────────────────────
 
@@ -321,8 +293,8 @@ export function openGame(root, ctx) {
   }
 
   // The next row's cells. Each is a button that selects it; the selected
-  // one takes the next tapped part.
-  // A cell still holding the part a power showed there is green.
+  // one takes the next tapped part. A cell holding the part a power showed
+  // there is green; an empty one shows that part faintly (a ghost).
   function pendingCells() {
     let n = 0;
     const filled = ui.cells.filter(Boolean).length;
@@ -331,15 +303,17 @@ export function openGame(root, ctx) {
       const i = n++;
       const id = ui.cells[i];
       const known = id && shown.has(i) && shown.get(i).el === id;
-      const label = known ? 'game.cellShown' : id ? 'game.cellFilled' : 'game.cellEmpty';
+      const ghost = !id && shown.has(i) ? shown.get(i) : null;
+      const label = known ? 'game.cellShown' : id ? 'game.cellFilled' : ghost ? 'game.cellGhost' : 'game.cellEmpty';
       return el('button', {
-        class: `tile is-cell is-pending ${known ? 'is-hit' : id ? 'is-filled' : 'is-empty'}${i === ui.active ? ' is-active' : ''}`,
+        class: `tile is-cell is-pending ${known ? 'is-hit' : id ? 'is-filled' : `is-empty${ghost ? ' is-ghost' : ''}`}${i === ui.active ? ' is-active' : ''}`,
         type: 'button', lang: 'ja', 'data-id': `cell-${i}`, 'data-index': i,
         tabindex: i === ui.active ? '0' : '-1',
         'aria-pressed': String(i === ui.active),
-        'aria-label': t(label, { cell: cellName(i), part: id }),
+        'aria-label': t(label, { cell: cellName(i), part: id || (ghost && ghost.form) }),
         onclick: () => selectCell(i)
-      }, id ? glyph(known ? shown.get(i).form : id) : null);
+      }, id ? glyph(known ? shown.get(i).form : id)
+        : ghost ? el('span', { class: 'cell-ghost', 'aria-hidden': 'true' }, glyph(ghost.form)) : null);
     }));
     return el('div', {
       class: 'board-row is-next', role: 'group', 'aria-describedby': 'game-cells-help',
@@ -463,9 +437,13 @@ export function openGame(root, ctx) {
     const cells = sizes(CELL_SIZES);
     const frameSizes = sizes(FRAME_SIZES);
     const keySizes = sizes(KEY_SIZES);
-    // Each frame no wider than its kanji's cells (the smallest if none is).
+    // Each frame no wider than its kanji's cells (the smallest if none is);
+    // in a centred row (no split shown), no bigger than a cell if it can be.
     const framesFor = (c) => {
-      if (!split) return frameSizes.slice(0, 1);
+      if (!split) {
+        const small = frameSizes.filter((x) => x.px <= c);
+        return small.length ? small : frameSizes.slice(-1);
+      }
       const narrowest = Math.min(...slotWidths(c));
       const narrow = frameSizes.filter((x) => x.px <= narrowest);
       return narrow.length ? narrow : frameSizes.slice(-1);
@@ -480,15 +458,17 @@ export function openGame(root, ctx) {
     if (keyboard) {
       const keyRows = fitKeys(tk, px);
       const keyNow = px(tk.layout[(KEY_SIZES.find(([id]) => id === picker.dataset.keys) || KEY_SIZES[0])[1]]);
-      const above = Math.max(0, head.getBoundingClientRect().top + window.scrollY);
-      const fixed = above + head.offsetHeight + 2 * md + picker.offsetHeight
+      // Everything above the board (the site header), the gap to the
+      // keyboard, and the keyboard.
+      const above = Math.max(0, board.getBoundingClientRect().top + window.scrollY);
+      const fixed = above + md + picker.offsetHeight
         + (pl ? px(tk.spacing.lg) + xs : 0) - keyRows * keyNow;
       others = (k) => fixed + keyRows * k;
     }
-    const solvedAny = engine.clues(state()).solved.length > 0;
-    const framesHeight = (c, f) => (split
-      ? f + xs + (level().countLeft ? md + xs : 0)
-      : (solvedAny ? c + xs : 0));
+    // The kanji guide, when it shows: its frames, and in Guided how many
+    // kanji still fit under them.
+    const guide = guideShown(state());
+    const framesHeight = (c, f) => (guide ? f + xs + (split && level().countLeft ? md + xs : 0) : 0);
     const rowsHeight = (c, lines) => rows * lines * c + (rows * lines - 1) * xs;
     const fits = (c, f, k, lines) => (keyboard
       ? others(k) + framesHeight(c, f) + rowsHeight(c, lines) <= window.innerHeight
@@ -532,9 +512,9 @@ export function openGame(root, ctx) {
     else picker.removeAttribute('data-keys');
   }
 
-  // ── Kanji frames ───────────────────────────────────────────────────
+  // ── Kanji guide ────────────────────────────────────────────────────
 
-  // Where each place sits in the frame: top and bottom span the width;
+  // Where each place sits in a Guided frame: top and bottom span the width;
   // left, inner and right share the middle; outer, whole and none cover it
   // all when they hold one part (門 around 日). Holding several (立 and 厂
   // around 生 in 産), they'd pile up past the frame, so they take a column
@@ -555,55 +535,101 @@ export function openGame(root, ctx) {
     };
   }
 
-  // Above the rows, laid out like a row (styles.css), so each kanji's part
-  // centres over its cells: a slot n cells and g place gaps wide.
-  //   Guided: one frame per kanji, its shape, with each part found green (by
-  //     a guess or a power: state.found) in its place, a dot for each part
-  //     still hidden, and how many kanji still fit under it.
-  //   Otherwise: only a kanji once it's solved, which gives away its cells,
-  //     and nothing at all before that.
-  // A solved kanji shows whole. While a row reveals, the frames show the
-  // state before it (ui.frameFrom), then catch up.
+  // The kanji guide (2026-11-10): one frame per kanji of the answer, above
+  // the rows, holding everything known about it from the level and the
+  // hints, so it works with none, any or all of them:
+  //   solved       the kanji itself, on green (a guess, or Reveal a kanji)
+  //   Guided       its shape, filled in with each part found green (by a
+  //                guess or a power: state.found), a dot for each still
+  //                hidden, and how many kanji still fit under it
+  //   Layout       its places, drawn as lines (without Guided)
+  //   Stroke count its strokes: a badge on the frame, or its middle when
+  //                nothing else shows
+  // With the split shown (Guided) each frame sits over its kanji's cells
+  // and is always there. Without it the frames sit in a centred row apart
+  // from the cells, so where each kanji ends stays a puzzle, and show only
+  // once something is known; they show no parts found, for the same reason.
+  // Tapping a frame opens the kanji card (js/play/reveal.js). While a row
+  // reveals, the guide shows the state before it (ui.frameFrom), then
+  // catches up.
+  function guideShown(s) {
+    if (!partsMode()) return false;
+    const c = engine.clues(s);
+    return splitShown() || c.solved.length > 0 || !!c.strokes || !!c.layout;
+  }
+
   function renderFrame() {
-    if (!partsMode()) { frames.replaceChildren(); return; }
     const s = ui.frameFrom || state();
+    const show = guideShown(s);
+    board.classList.toggle('has-guide', show);
+    // Not shown yet: whatever shows first is new, and comes in.
+    if (!show) { frames.replaceChildren(); frameShown = new Set(); return; }
+    const c = engine.clues(s);
+    const split = splitShown();
     const pl = places();
     const counts = cellCounts();
-    const solved = new Set(engine.clues(s).solved);
-    const split = splitShown();
-    if (!split && !solved.size) { frames.replaceChildren(); return; }
+    const solved = new Set(c.solved);
     const seen = new Set();
     const isNew = (k) => { seen.add(k); return frameShown !== null && !frameShown.has(k); };
     const fit = split && level().countLeft ? (s === state() ? fitsNow() : engine.fits(s).map((list) => list.length)) : null;
     const slots = [...s.answer].map((ch, slot) => {
-      const node = el('span', { class: 'frame-slot' },
-        split || solved.has(slot) ? frameOf(s, ch, slot, solved.has(slot), isNew) : null,
-        fit && !solved.has(slot) ? el('span', { class: 'frame-count', title: t('game.fitTitle') }, t('game.fitCount', { n: fit[slot] })) : null);
-      node.style.setProperty('--n', counts[slot]);
-      node.style.setProperty('--g', split && pl ? pl[slot].filter((pos, i) => i && pos !== pl[slot][i - 1]).length : 0);
+      const node = el('button', {
+        class: 'frame-slot', type: 'button', 'data-id': `frame-${slot}`, title: t('game.clue.again'),
+        onclick: () => openClue('kanji')
+      },
+        frameOf(s, ch, slot, { solved: solved.has(slot), split, strokes: c.strokes ? c.strokes[slot] : null, layout: c.layout ? c.layout[slot] : null }, isNew),
+        fit && !solved.has(slot) ? el('span', { class: 'frame-count', title: t('game.fitTitle') }, t('game.fitCount', { n: fit[slot] })) : null,
+        el('span', { class: 'visually-hidden' }, t('game.clue.again')));
+      if (split) {
+        node.style.setProperty('--n', counts[slot]);
+        node.style.setProperty('--g', pl ? pl[slot].filter((pos, i) => i && pos !== pl[slot][i - 1]).length : 0);
+      }
       return node;
     });
-    frames.replaceChildren(el('span', { class: 'row-tiles' }, slots));
+    frames.classList.toggle('is-centred', !split);
+    frames.dataset.effects = 'revealStrokes revealLayout revealKanji';
+    frames.replaceChildren(el('span', { class: split ? 'row-tiles' : 'frame-row' }, slots));
     frameShown = seen;
   }
 
-  function frameOf(s, ch, slot, solved, isNew) {
+  // One kanji's frame: everything known about it (renderFrame), with its
+  // stroke count as a badge when anything else shows.
+  function frameOf(s, ch, slot, { solved, split, strokes, layout }, isNew) {
+    const many = cellCounts().length > 1;
+    const known = strokes !== null;
+    const said = (what) => [many ? t('game.reveal.kanji', { n: slot + 1 }) : null, what,
+      known ? t('game.clue.strokesN', { n: strokes }) : null].filter(Boolean).join(t('game.listSep'));
+    const badge = known ? el('span', { class: 'frame-strokes', 'aria-hidden': 'true' }, String(strokes)) : null;
+    const wrap = (frame) => el('span', { class: 'frame-wrap' }, frame, badge);
     if (solved) {
-      return el('span', {
+      return wrap(el('span', {
         class: `kanji-frame is-solved kanji${isNew(`solved:${slot}`) ? ' is-new' : ''}`,
-        lang: 'ja', role: 'img', 'aria-label': t('game.frameSolved', { kanji: ch })
-      }, ch);
+        lang: 'ja', role: 'img', 'aria-label': said(t('game.frameSolved', { kanji: ch }))
+      }, ch));
+    }
+    if (!split) {
+      // Layout's places as lines, or only the count, or (another kanji
+      // being known) an empty frame.
+      if (layout) {
+        return wrap(el('span', {
+          class: 'kanji-frame is-layout', role: 'img',
+          'aria-label': said(layout.map((pos) => t(`pos.${pos}`)).join(t('game.layoutSep')))
+        }, layoutDrawing(layout)));
+      }
+      return el('span', { class: 'frame-wrap' }, el('span', {
+        class: `kanji-frame is-plain${known ? ' has-count' : ''}`, role: 'img', 'aria-label': said(known ? null : t('game.frameUnknown'))
+      }, known ? el('span', { class: 'frame-count-big', 'aria-hidden': 'true' }, String(strokes)) : null));
     }
     const parts = data.kanji[ch].parts;
     const order = [...new Set(parts.map((p) => p.pos))];
     const covers = (pos) => COVER.includes(pos) && parts.filter((p) => p.pos === pos).length === 1;
     const found = (i) => s.found[`${slot}:${i}`] === 'hit';
-    const said = parts.filter((p, i) => found(i)).map((p) => t('game.framePart', { part: p.form || p.el, place: t(`pos.${p.pos}`) }));
-    return el('span', {
+    const told = parts.filter((p, i) => found(i)).map((p) => t('game.framePart', { part: p.form || p.el, place: t(`pos.${p.pos}`) }));
+    return wrap(el('span', {
       class: `kanji-frame${order.includes('outer') && covers('outer') ? ' has-outer' : ''}`,
       style: frameAreas(order, covers),
       role: 'img',
-      'aria-label': t('game.frameLabel', { parts: said.length ? said.join(t('game.listSep')) : t('game.frameEmpty') })
+      'aria-label': said(t('game.frameLabel', { parts: told.length ? told.join(t('game.listSep')) : t('game.frameEmpty') }))
     }, order.map((pos) => {
       const here = parts.map((p, i) => ({ p, i })).filter(({ p }) => p.pos === pos);
       const cover = covers(pos);
@@ -618,7 +644,7 @@ export function openGame(root, ctx) {
         // A covering part has no room for a dot: the inset inner shows it.
         return cover ? null : el('span', { class: 'frame-part is-hidden' });
       }));
-    }));
+    })));
   }
 
   function renderBoard() {
@@ -649,58 +675,107 @@ export function openGame(root, ctx) {
 
   // ── Hints ──────────────────────────────────────────────────────────
 
-  // Clues already found always show above the keyboard; the power bar
-  // floats over the board while it's open (the Hints button in the head).
+  // What the hints found shows above the keyboard (js/play/hints.js); the
+  // clue a card just showed lights up once the card has gone (reveal()),
+  // and a tap on it opens its card again.
   function renderHints() {
-    if (!playing()) { hints.replaceChildren(); powers.replaceChildren(); return; }
-    hints.replaceChildren(...[renderClues({ engine, state: state(), mode, glyph })].filter(Boolean));
-    powers.replaceChildren(...[ui.hintsOpen
-      ? renderPowerBar({ engine, state: state(), held: store.held(), points: store.points(), onPick: pickPower })
-      : null].filter(Boolean));
+    if (!playing()) { hints.replaceChildren(); return; }
+    hints.replaceChildren(...[renderClues({ engine, state: state(), onOpen: openClue })].filter(Boolean));
   }
 
-  // A power's sheet: Use, or Buy one first when none is held and it could
-  // be used now.
-  function pickPower(id) {
-    const power = POWER[id];
-    openPowerSheet({
-      power,
-      read: () => {
+  // A clue's card again: the kanji (everything the guide knows about each:
+  // solved, layout, strokes) or the meaning. Tapped again while it shows,
+  // it closes.
+  function openClue(which) {
+    const c = engine.clues(state());
+    if (card && card.which === which) { card.dismiss(); return; }
+    if (card) card.dismiss();
+    const answer = [...state().answer];
+    const solved = new Set(c.solved);
+    // Guided shows each kanji's places, so its card does too.
+    const layout = c.layout || (splitShown() ? answer.map((ch) => data.kanji[ch].parts.map((p) => p.pos)) : null);
+    const shown = showCard({
+      board, effect: which, clues: c,
+      result: { strokes: c.strokes, layout, kanji: answer.map((ch, i) => (solved.has(i) ? ch : null)) },
+      onDone: () => { if (card === shown) card = null; }
+    });
+    if (shown) { shown.which = which; card = shown; }
+  }
+
+  // The hints modal (the pill in the header): Use asks once more; a hint
+  // you hold none of and could use now can be bought there.
+  function pickHints() {
+    if (!playing() || !partsMode()) return;
+    openHints({
+      powers: hintsFor(state()),
+      read: (id) => {
         const held = store.held()[id] || 0;
         return {
           held,
           points: store.points(),
-          why: whyNot(engine, state(), power, held),
+          why: whyNot(engine, state(), POWER[id], held),
           offer: engine.canUse(state(), id) ? null : powerOffer(id)
         };
       },
-      onBuy: () => {
+      ask: () => store.get().settings.confirmHintBuy !== false,
+      onBuy: (id, { never }) => {
         if (!buyPower(id)) return false;
-        ctx.onWallet();
+        if (never) store.update((s) => { s.settings.confirmHintBuy = false; });
         renderHead();
-        renderHints();
         return true;
       },
-      onUse: () => usePower(id)
+      onUse: (id) => usePower(id)
     });
   }
 
   function usePower(id) {
     if (!(store.held()[id] > 0)) return;
-    const r = engine.usePower(state(), id);
-    if (r.error) { say('error', whyNot(engine, state(), POWER[id], 1)); return; }
+    const before = state();
+    const r = engine.usePower(before, id);
+    if (r.error) { say('error', whyNot(engine, before, POWER[id], 1)); return; }
     session.spendPower(id);
     game = { ...game, state: r.state };
     session.progress(mode, game);
-    prefill();
-    // Before the first guess the bar stays open for more; after it, it
-    // gets out of the way.
-    ui.hintsOpen = state().guesses.length === 0;
-    say('info', t('game.powers.used', { name: t(`power.${id}.name`) }));
+    const { effect } = POWER[id];
+    live.textContent = t('game.powers.used', { name: t(`power.${id}.name`) });
     renderHead();
     renderHints();   // before the board, which fits around the clues
     renderBoard();
     renderChoices();
+    reveal(effect, r.result, before);
+  }
+
+  // The hint's animation (js/play/reveal.js): a card over the board for one
+  // that tells you something, whose clue lights up when it goes; else on
+  // the board: the cells it filled, the keys it swept, the row it added.
+  function reveal(effect, result, before) {
+    if (card) card.dismiss();
+    const shown = showCard({
+      board, effect, result, clues: engine.clues(state()),
+      onDone: () => {
+        if (card === shown) card = null;
+        // Its clue lights up where it now lives: the meaning above the
+        // keyboard, the strokes and layout on the kanji guide's frames.
+        const nodes = [...hints.querySelectorAll(`[data-effects~="${effect}"]`),
+          ...(frames.dataset.effects || '').split(' ').includes(effect) ? frames.querySelectorAll('.kanji-frame') : []];
+        if (reducedMotion()) return;
+        nodes.forEach((node) => {
+          node.classList.add('is-glow');
+          node.addEventListener('animationend', () => node.classList.remove('is-glow'), { once: true });
+        });
+      }
+    });
+    card = shown;
+    if (card) return;
+    const shownBefore = new Set(engine.shownCells(before).map((c) => c.cell));
+    const cells = engine.shownCells(state()).filter((c) => !shownBefore.has(c.cell))
+      .map((c) => boardNext.querySelector(`[data-index="${c.cell}"]`));
+    playOnBoard({
+      effect, result, cells,
+      keyOf: (id) => choices.querySelector(`[data-key="${CSS.escape(id)}"]`),
+      palette: choices.querySelector('.palette'),
+      addedRow: boardNext.lastElementChild
+    });
   }
 
   // ── Keyboard ───────────────────────────────────────────────────────
@@ -753,7 +828,10 @@ export function openGame(root, ctx) {
     keepFocus(() => { renderBoard(); renderChoices(); });
   }
 
+  // Tapping the selected cell again puts in the part a hint showed there.
   function selectCell(i) {
+    const ghost = shownNow().get(i);
+    if (ui.active === i && !ui.cells[i] && ghost) { addPart(ghost.el); return; }
     ui.active = i;
     keepFocus(() => { renderBoard(); renderChoices(); });
   }
@@ -977,10 +1055,9 @@ export function openGame(root, ctx) {
     game = { ...game, state: r.state };
     const row = r.state.guesses.length - 1;
     ui.newRow = row;
-    ui.hintsOpen = false;
+    if (card) card.dismiss();
     ui.cells = emptyCells();
     ui.active = 0;
-    prefill();
     // The frames catch up once the row has flipped.
     clearTimeout(frameTimer);
     ui.frameFrom = !reducedMotion() ? before : null;
@@ -994,12 +1071,12 @@ export function openGame(root, ctx) {
     else finish();
 
     keepFocus(() => {
-      renderHead();
       renderBoard();
       ui.newRow = -1;
       renderHints();
       renderPicker();
     });
+    renderHead();
     const shown = boardDone.lastElementChild;
     if (shown) shown.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
     // The result, and on a win its effect, wait for the last row's reveal.
@@ -1103,16 +1180,15 @@ export function openGame(root, ctx) {
     board.setAttribute('data-tiles', store.get().settings.tiles);
     boardDone.replaceChildren();
     doneRows = 0;
-    if (playing() && partsMode()) prefill();
     makeKeys();
-    renderHead();
     renderBoard();
     renderHints();
     renderPicker();
     renderResultCard();
-    // The hints live inside the keyboard (renderPicker).
+    // The clues live inside the keyboard (renderPicker). The section is
+    // named by the header's crumb (app.js).
     root.replaceChildren(el('section', { class: 'game', 'aria-labelledby': 'game-title' },
-      head, board, picker, result, live,
+      board, picker, result, live,
       el('p', { class: 'visually-hidden', id: 'game-cells-help' }, t('game.cellsHelp')),
       el('p', { class: 'visually-hidden', id: 'game-keys-help' }, t('game.keysHelp'))));
     renderBoard();   // again, sized now that the board has a width (fitBoard)
@@ -1136,8 +1212,12 @@ export function openGame(root, ctx) {
   document.addEventListener('pointerdown', onPointer);
   return {
     refresh() { ui.message = null; build(); },
+    head,
+    openHints: pickHints,
+    endGame,
     destroy() {
-      clearInterval(timer); clearTimeout(resultTimer); clearTimeout(frameTimer); closePowerSheet(); closeAsk(); stopFx();
+      clearInterval(timer); clearTimeout(resultTimer); clearTimeout(frameTimer); closeHints(); closeAsk(); stopFx();
+      if (card) card.dismiss();
       cancelAnimationFrame(resizeFrame);
       window.removeEventListener('resize', onResize);
       document.removeEventListener('keydown', onKey);

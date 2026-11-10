@@ -5,7 +5,8 @@
   * answers.json: the daily schedule. `epoch` is the date of puzzle 1, and
     each list in LISTS (one per mode: js/config/modes.js `answers`) has its
     answers in a fixed shuffled order; `words` has the reading and meanings
-    of each answer of 2+ kanji.
+    of each answer of 2+ kanji, and `meanings` each answer's meaning in the
+    other interface languages (MEANING_FILES), for the Meaning hint.
 
 Answers are only the words marked Keep on the review page (data/review.json,
 read only). With no Keep words, the answer lists are empty and the summary
@@ -88,6 +89,14 @@ REVIEW_FILE = PROJECT_DIR / "data" / "review.json"   # the review page's; only r
 OUT_DIR = PROJECT_DIR / "data" / "game"
 
 KANJI_FIELDS = ["strokes", "jlpt", "freq", "meanings", "on", "kun", "parts"]
+
+# The answers' meanings in languages the dictionaries don't have, written by
+# hand: { answer: meaning }. The Meaning hint shows them in that language and
+# falls back to English. A meaning holding a kanji of its own answer would
+# give the answer away, so it's left out (and the summary names it).
+MEANING_FILES = {
+    "ja": PROJECT_DIR / "data" / "meanings-ja.json",
+}
 
 
 # --------------------------------------------------------------------------
@@ -220,6 +229,38 @@ def compile_answers(candidates: dict, review: dict | None, previous: dict | None
 
 
 # --------------------------------------------------------------------------
+# Meanings in other languages
+# --------------------------------------------------------------------------
+
+def shows_answer(word: str, meaning: str) -> bool:
+    """Whether a meaning holds any kanji of its own answer (時間: no 時, no 間)."""
+    return any(ch in meaning for ch in word)
+
+
+def compile_meanings(answers: dict, by_lang: dict) -> tuple[dict, dict]:
+    """Each language's meaning of every answer in the lists, in answer order.
+    Returns ({ lang: { answer: meaning } }, report): per language, the answers
+    with none (`missing`) and those whose meaning shows the answer (`shows`)."""
+    words = list(dict.fromkeys(w for items in answers.values() for w in items))
+    out, report = {}, {}
+    for lang, given in by_lang.items():
+        given = given or {}
+        kept = {}
+        missing, shows = [], []
+        for word in words:
+            text = str(given.get(word) or "").strip()
+            if not text:
+                missing.append(word)
+            elif shows_answer(word, text):
+                shows.append(word)
+            else:
+                kept[word] = text
+        out[lang] = kept
+        report[lang] = {"missing": missing, "shows": shows, "kept": len(kept)}
+    return out, report
+
+
+# --------------------------------------------------------------------------
 # Writing
 # --------------------------------------------------------------------------
 
@@ -236,7 +277,14 @@ def answers_text(doc: dict) -> str:
         lines.append(f"{dumps(length)}:[" + (f"\n{body}\n" if items else "") + "]" + ("," if i < len(entries) - 1 else ""))
     lines.append("},")
     word_lines = ",\n".join(f"{dumps(w)}:{dumps(info)}" for w, info in doc["words"].items())
-    lines.append('"words":{' + (f"\n{word_lines}\n" if word_lines else "") + "}")
+    lines.append('"words":{' + (f"\n{word_lines}\n" if word_lines else "") + "}" + ("," if "meanings" in doc else ""))
+    if "meanings" in doc:
+        langs = list(doc["meanings"].items())
+        lines.append('"meanings":{')
+        for i, (lang, items) in enumerate(langs):
+            body = ",\n".join(f"{dumps(w)}:{dumps(text)}" for w, text in items.items())
+            lines.append(f"{dumps(lang)}:{{" + (f"\n{body}\n" if body else "") + "}" + ("," if i < len(langs) - 1 else ""))
+        lines.append("}")
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -275,6 +323,9 @@ def main(argv: list[str] | None = None) -> int:
 
     kanji_text = dumps(compile_kanji(candidates)) + "\n"
     doc, report = compile_answers(candidates, review, previous, args.today)
+    doc["about"] += " meanings gives each answer's meaning in other languages (MEANING_FILES)."
+    doc["meanings"], meaning_report = compile_meanings(
+        doc["answers"], {lang: read_json(path) for lang, path in MEANING_FILES.items()})
     text = answers_text(doc)
 
     args.out.mkdir(parents=True, exist_ok=True)
@@ -302,6 +353,11 @@ def main(argv: list[str] | None = None) -> int:
                   f"(they come back once their parts are fixed)")
         if info["locked_left_out"]:
             print(f"    still scheduled though left out now (day already played): {' '.join(info['locked_left_out'])}")
+    for lang, info in meaning_report.items():
+        print(f"Meanings in {lang}: {info['kept']} answers"
+              + (f"; {len(info['missing'])} have none (English shows)" if info["missing"] else ""))
+        if info["shows"]:
+            print(f"    LEFT OUT, the meaning shows a kanji of the answer: {' '.join(info['shows'])}")
     if report["lookalikes"]:
         print(f"Left out, look-alike kanji: {' '.join(report['lookalikes'])}")
     if report["not_candidates"]:

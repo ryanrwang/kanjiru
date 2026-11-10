@@ -10,7 +10,7 @@
  *   const card = renderResult({ ... });   // card.node, card.tick()
  */
 import { RULES, LEVEL, ECONOMY } from '../registry.js';
-import { t } from '../i18n.js';
+import { t, lang } from '../i18n.js';
 import { el } from '../dom.js';
 import { bump } from '../toast.js';
 import { msToNextDaily } from '../engine/daily.js';
@@ -59,6 +59,7 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
   const { state } = game;
   const won = state.status === 'won';
   const info = engine.answerInfo(state.answer);
+  const local = (info.local || {})[lang()] || null;
   const url = `${location.origin}${location.pathname}`;
   // The squares keep the kanji apart only where the board did (levels.js showSplit).
   const level = LEVEL[state.level];
@@ -91,7 +92,10 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
     el('div', { class: 'answer' },
       el('span', { class: 'answer-kanji kanji', lang: 'ja' }, state.answer),
       el('div', { class: 'answer-info' },
-        info.meanings.length ? el('p', { class: 'answer-meanings' }, info.meanings.join(t('game.meaningSep'))) : null,
+        // In the interface's language where the answer has a meaning in it
+        // (data/meanings-ja.json), with the dictionary's English under it.
+        local ? el('p', { class: 'answer-meanings', lang: lang() }, local) : null,
+        info.meanings.length ? el('p', { class: `answer-meanings${local ? ' is-second' : ''}`, lang: 'en' }, info.meanings.join(t('game.meaningSep'))) : null,
         el('p', { class: 'answer-readings' }, readingNodes(info.reading)))),
     el('div', { class: 'answer-parts' },
       el('span', { class: 'answer-label' }, t('result.parts')), answerParts),

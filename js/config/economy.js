@@ -40,7 +40,7 @@ export const ECONOMY = {
   streakRewards: [
     { wins: 3,  points: 30 },
     { wins: 5,  points: 100, power: 'extra-guess' },
-    { wins: 10, points: 500, power: 'head-start' },
+    { wins: 10, points: 500, power: 'reveal-part' },
     { wins: 25, points: 2000 }
   ],
 

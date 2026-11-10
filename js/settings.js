@@ -3,6 +3,7 @@
  *
  *   Language    the interface language (follows the device until picked)
  *   Appearance  light, dark, or the device's (a skin with one scheme fixes it)
+ *   Hints       whether buying a hint asks first (Don't ask again turns it off)
  *   Home screen how to add Kanjiru to it (js/install.js), with the browser's
  *               own Install button where it offers one; gone once installed
  *   Move your progress to another device:
@@ -91,6 +92,7 @@ function render() {
     ),
     renderLanguage(),
     renderScheme(),
+    renderHints(),
     renderInstall(),
     el('section', { class: 'sheet-section', 'aria-labelledby': 'transfer-title' },
       el('h3', { class: 'sheet-section-title', id: 'transfer-title' }, t('transfer.title')),
@@ -147,6 +149,20 @@ function renderScheme() {
       onPick: (id) => { store.update((s) => { s.settings.scheme = id === 'auto' ? null : id; }); changed(); }
     }),
     fixed ? el('p', { class: 'sheet-note sheet-row-note' }, t('settings.scheme.fixed', { name: t(`skin.theme.${look.theme}`) })) : null);
+}
+
+// ── Hints ────────────────────────────────────────────────────────────
+
+// Buying a hint asks first; the confirm's Don't ask again turns this off,
+// and here it comes back on.
+function renderHints() {
+  return el('section', { class: 'sheet-section', 'aria-labelledby': 'hints-settings-title' },
+    el('h3', { class: 'sheet-section-title', id: 'hints-settings-title' }, t('settings.hints.title')),
+    switchRow({
+      id: 'confirm-hint-buy', name: t('settings.hints.name'), note: t('settings.hints.body'),
+      on: store.get().settings.confirmHintBuy !== false,
+      onChange: (value) => { store.update((s) => { s.settings.confirmHintBuy = value; }); changed(); }
+    }));
 }
 
 // ── Home screen ──────────────────────────────────────────────────────

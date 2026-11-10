@@ -3,8 +3,11 @@
  *
  * The header holds two things: the points, which open the Points page, and
  * the gear, which opens Settings (js/settings.js: language, light or dark,
- * moving devices, debug). Everything on a page is built from the catalogues
- * in js/config/ and the text in js/i18n/: add an entry and it appears.
+ * moving devices, debug). In a game on the go, the hints held take the
+ * points' place and open the hints modal. Away from the play page the brand
+ * is a breadcrumb: 漢 › Points, 漢 › About, 漢 › Play. Everything on a page
+ * is built from the catalogues in js/config/ and the text in js/i18n/: add
+ * an entry and it appears.
  *
  * Pages (the URL hash, so the phone's back gesture works):
  *   (none)            the play page: a play card per listed mode with the
@@ -50,6 +53,8 @@ const pts = (n) => t('currency.amount', { n });
 
 // ── Header: the points and Settings ──────────────────────────────────
 
+const FLAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/></svg>';
+const BULB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>';
 const GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 
 function applyLook() {
@@ -58,7 +63,7 @@ function applyLook() {
 
 let shownPoints = null;   // the points the header last showed on screen
 // Pages other than home, and their names in the breadcrumb.
-const CRUMBS = { points: 'points.title', about: 'about.title' };
+const CRUMBS = { points: 'points.title', about: 'about.title', game: 'header.game' };
 
 function renderHeader() {
   const settingsBtn = document.getElementById('settings-open');
@@ -75,15 +80,51 @@ function renderHeader() {
   else brand.removeAttribute('aria-label');
   brand.parentElement.querySelectorAll('.crumb').forEach((node) => node.remove());
   document.querySelector('.app-header').classList.toggle('is-crumb', !!crumb);
+  // In a game: the kind and level under 漢 › Play (js/play/screen.js head()).
+  const game = p.name === 'game' && view && view.head ? view.head() : null;
   if (crumb) {
     brand.after(
       el('span', { class: 'crumb crumb-sep', 'aria-hidden': 'true' }, '›'),
-      el('span', { class: 'crumb crumb-page', id: `${p.name}-title` }, crumb));
+      el('span', { class: `crumb crumb-page${game ? ' has-sub' : ''}`, id: `${p.name}-title` },
+        el('span', {}, crumb),
+        game ? el('span', { class: 'crumb-sub' }, game.sub) : null));
   }
 
+  // While a game is on, End game (a flag: give up, or a new puzzle; js/play/
+  // screen.js endGame) and the hints held, which open the hints modal, take
+  // the points' place.
+  const hintsOn = !!(game && game.playing);
+  let end = document.getElementById('end-open');
+  if (hintsOn && !end) {
+    end = el('button', {
+      class: 'icon-btn end-btn', id: 'end-open', type: 'button', 'data-id': 'end',
+      onclick: () => view && view.endGame && view.endGame()
+    });
+    end.innerHTML = FLAG;
+    document.getElementById('wallet').before(end);
+  } else if (!hintsOn && end) end.remove();
+  if (end) {
+    end.title = t('game.end.open');
+    end.setAttribute('aria-label', t('game.end.open'));
+  }
+  let hints = document.getElementById('hints-open');
+  if (hintsOn) {
+    if (!hints) {
+      hints = el('button', { class: 'wallet-btn hints-pill', id: 'hints-open', type: 'button', onclick: () => view && view.openHints && view.openHints() });
+      document.getElementById('wallet').before(hints);
+    }
+    const icon = el('span', { class: 'hints-pill-icon' });
+    icon.innerHTML = BULB;
+    hints.replaceChildren(el('span', { class: 'wallet-amount' }, icon, String(game.held)));
+    hints.title = t('game.powers.title');
+    hints.setAttribute('aria-label', t('header.hints', { n: game.held }));
+  } else if (hints) hints.remove();
+
   // The points open the Points page. A change since they last showed rises
-  // from them, once they're on screen (a game hides the header).
+  // from them, once they're on screen (a game on the go shows the hints).
   const wallet = document.getElementById('wallet');
+  // (While a game loads, neither: it's about to show the hints.)
+  wallet.hidden = hintsOn || (p.name === 'game' && !game);
   const now = store.points(save);
   const amount = el('span', { class: 'wallet-amount' },
     el('span', { class: 'wallet-icon', 'aria-hidden': 'true' }, ECONOMY.currency.icon), pts(now));
@@ -92,7 +133,7 @@ function renderHeader() {
   wallet.setAttribute('aria-label', t('header.wallet', { amount: pts(now) }));
   if (p.name === 'points') wallet.setAttribute('aria-current', 'page');
   else wallet.removeAttribute('aria-current');
-  if (!document.body.classList.contains('is-game')) {
+  if (!hintsOn && !(p.name === 'game' && !game)) {
     if (shownPoints !== null && now !== shownPoints) bump(amount, now - shownPoints);
     shownPoints = now;
   }
@@ -383,9 +424,10 @@ async function renderGame({ mode, kind }) {
     data: game.data, engine: game.engine, glyph: game.glyph, mode, kind,
     onHome: home,
     onPractice: () => location.replace(`#${mode.id}/practice`),
-    onWallet: renderHeader,
+    onWallet: () => { if (view) renderHeader(); },
     onReload: renderAll
   });
+  renderHeader();
 }
 
 function renderAll() {
@@ -393,7 +435,7 @@ function renderAll() {
   if (guide) { guide.stop(); guide = null; }
   clearInterval(playTimer);
   const p = page();
-  // Before the header, so points won in a game rise from it on the way out.
+  // Before the header, which shows the hints in a game on the go.
   document.body.classList.toggle('is-game', p.name === 'game');
   document.body.dataset.page = p.name;
   renderHeader();
