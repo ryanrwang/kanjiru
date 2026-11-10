@@ -5,12 +5,14 @@
  *
  * Shape (v2)
  *   v             schema version
- *   settings      { theme, tiles, effect, scheme, lang, level, debug, installLater }
+ *   settings      { theme, tiles, effect, scheme, lang, level, debug, installLater,
+ *                 confirmHintBuy }
  *                 scheme and lang null = follow the device; level: the
  *                 difficulty for new games (js/config/levels.js); debug:
  *                 the answer on the game's keys, and points to add (Settings);
  *                 installLater: the date the home-screen tip was put off
- *                 (js/install.js), or null
+ *                 (js/install.js), or null; confirmHintBuy: buying a hint
+ *                 asks first (false: Don't ask again was ticked)
  *   ledger        { [id]: { why, at, pts?, hints?, game?, what? } }   every
  *                 change to points and hints held (js/ledger.js); points()
  *                 and held() sum it. v1 kept wallet { points } and
@@ -41,6 +43,7 @@
 import { DEFAULT_LOOK } from './config/skins.js';
 import { ECONOMY } from './config/economy.js';
 import { DEFAULT_LEVEL } from './config/levels.js';
+import { POWERS } from './config/powers.js';
 import { puzzleNumber, addDays, isDailyKey } from './engine/daily.js';
 import * as ledger from './ledger.js';
 
@@ -63,7 +66,7 @@ export function fresh() {
   ledger.add(start, 'start', { pts: ECONOMY.startingPoints });
   return {
     v: VERSION,
-    settings: { ...DEFAULT_LOOK, scheme: null, lang: null, level: DEFAULT_LEVEL, debug: false, installLater: null },
+    settings: { ...DEFAULT_LOOK, scheme: null, lang: null, level: DEFAULT_LEVEL, debug: false, installLater: null, confirmHintBuy: true },
     ledger: start,
     unlocked: {},
     achievements: {},
@@ -203,8 +206,11 @@ export function points(save = get()) {
   return ledger.balance(save.ledger).points;
 }
 
+// Hints of a retired power count as the one it became (powers.js becomes).
+const BECOMES = ledger.becomesOf(POWERS);
+
 export function held(save = get()) {
-  return ledger.balance(save.ledger).hints;
+  return ledger.balance(save.ledger, BECOMES).hints;
 }
 
 // Adds a ledger entry to a save, inside update():

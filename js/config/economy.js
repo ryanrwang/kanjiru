@@ -39,7 +39,7 @@ export const ECONOMY = {
   streakRewards: [
     { days: 3,   points: 30 },
     { days: 7,   points: 100, power: 'extra-guess' },
-    { days: 30,  points: 500, power: 'head-start' },
+    { days: 30,  points: 500, power: 'reveal-part' },
     { days: 100, points: 2000 }
   ],
 

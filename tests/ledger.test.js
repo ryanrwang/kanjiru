@@ -24,6 +24,27 @@ test('balance: points and hints are the sum of the entries, never below 0', () =
   assert.deepEqual(ledger.balance({}), { points: 0, hints: {} });
 });
 
+test('balance: a retired power\'s hints count as the one it became', () => {
+  const becomes = { 'head-start': { id: 'reveal-part', n: 2 }, reading: { id: 'meaning', n: 1 } };
+  const book = {};
+  ledger.add(book, 'buy', { hints: { 'head-start': 1 } });
+  ledger.add(book, 'drop', { hints: { reading: 1, meaning: 1 } });
+  assert.deepEqual(ledger.balance(book, becomes).hints, { 'reveal-part': 2, meaning: 2 });
+  // Spending the new one uses up what the old ones were worth.
+  ledger.add(book, 'use', { hints: { 'reveal-part': -1 } });
+  assert.deepEqual(ledger.balance(book, becomes).hints, { 'reveal-part': 1, meaning: 2 });
+  ledger.add(book, 'use', { hints: { 'reveal-part': -1 } });
+  assert.deepEqual(ledger.balance(book, becomes).hints, { meaning: 2 });
+  // Without the map, the raw counts.
+  assert.deepEqual(ledger.balance(book).hints, { 'head-start': 1, reading: 1, meaning: 1 });
+});
+
+test('held: the real catalogue folds Head start and Reading', () => {
+  const save = fresh();
+  ledger.add(save.ledger, 'buy', { hints: { 'head-start': 1, reading: 2 } });
+  assert.deepEqual(held(save), { 'reveal-part': 2, meaning: 2 });
+});
+
 test('add: empty fields stay out, ids differ', () => {
   const book = {};
   const a = ledger.add(book, 'game', { pts: 0, hints: { sweep: 0 }, game: 'main/1', at: '2026-11-08' });

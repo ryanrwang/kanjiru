@@ -298,7 +298,10 @@
       // The play card's hanko seal, and a switch's track (its knob is
       // spacing.md, inset by spacing.xs).
       seal:      s[56],
-      switch:    s[40]
+      switch:    s[40],
+      // A hint's card over the board (js/play/reveal.js): the square a
+      // kanji's layout splits, and the width of a meaning.
+      hintBox:   s[80]
     },
 
     radius: {

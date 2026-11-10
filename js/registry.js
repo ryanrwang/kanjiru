@@ -34,6 +34,10 @@ export const LEVEL = byId(LEVELS);
 export const POWER = byId(POWERS);
 export const ACHIEVEMENT = byId(ACHIEVEMENTS);
 
+// The hints a player can see, hold, buy and use: every power but the
+// retired ones (powers.js), in catalogue order.
+export const OFFERED_POWERS = POWERS.filter((p) => !p.retired);
+
 export function skin(slot, id) {
   return (SKINS[slot] || []).find((item) => item.id === id) || null;
 }
@@ -156,7 +160,13 @@ export function validate() {
     if (p.cost !== null && !(p.cost > 0)) say(`power "${p.id}" needs a cost or null`);
     if (!(p.hold >= 1)) say(`power "${p.id}" needs hold of 1 or more`);
     if (!(p.drop >= 0)) say(`power "${p.id}" needs a drop weight of 0 or more`);
+    if ('retired' in p && typeof p.retired !== 'boolean') say(`power "${p.id}" needs retired: true or false`);
+    if (p.retired && (p.drop || p.cost !== null)) say(`retired power "${p.id}" can't drop or be bought: drop 0, cost null`);
+    if (p.becomes && (!p.retired || !POWER[p.becomes.id] || POWER[p.becomes.id].retired || !(p.becomes.n >= 1))) {
+      say(`power "${p.id}" becomes: only a retired power becomes n (1 or more) of a power still offered`);
+    }
   });
+  const retired = (id) => !!(POWER[id] && POWER[id].retired);
 
   // Achievements and rewards
   checkIds(ACHIEVEMENTS, 'achievement');
@@ -165,6 +175,7 @@ export function validate() {
     if (a.reward && a.reward.power && !POWER[a.reward.power]) {
       say(`achievement "${a.id}" rewards unknown power "${a.reward.power}"`);
     }
+    if (a.reward && retired(a.reward.power)) say(`achievement "${a.id}" rewards retired power "${a.reward.power}"`);
     if (a.reward && a.reward.points !== undefined && !(a.reward.points > 0)) say(`achievement "${a.id}" needs reward points above 0`);
     if ('retired' in a && typeof a.retired !== 'boolean') say(`achievement "${a.id}" needs retired: true or false`);
   });
@@ -174,6 +185,7 @@ export function validate() {
   });
   ECONOMY.streakRewards.forEach((r) => {
     if (r.power && !POWER[r.power]) say(`streak reward at ${r.days} days gives unknown power "${r.power}"`);
+    if (retired(r.power)) say(`streak reward at ${r.days} days gives retired power "${r.power}"`);
   });
 
   // Text: every catalogue entry needs its English text, and every other

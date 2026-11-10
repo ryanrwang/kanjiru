@@ -8,8 +8,9 @@ import { MODES, POWERS, ECONOMY, RULES, LEVELS, DEFAULT_LEVEL } from '../js/regi
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 // answers: { [length]: [...] }, words: { [word]: { reading, meanings } }
-export function fixtureData({ answers = {}, words = {}, epoch = '2026-01-01' } = {}) {
-  return { kanji: clone(KANJI), tiles: clone(TILES), answers, words, epoch };
+// localMeanings: { [lang]: { [answer]: meaning } }
+export function fixtureData({ answers = {}, words = {}, epoch = '2026-01-01', localMeanings = {} } = {}) {
+  return { kanji: clone(KANJI), tiles: clone(TILES), answers, words, epoch, localMeanings };
 }
 
 // The real config with test numbers. Overrides merge in at the top level.

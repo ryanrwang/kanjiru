@@ -1,20 +1,23 @@
 /*
  * Hints on the game screen: what the player knows about the answer (clues),
- * the powers they hold, and the sheet that uses one, or buys one when they
- * hold none (js/shop.js).
+ * and the hints modal, opened from the hints pill in the header: every hint
+ * with what it does, how many you hold and Use, which asks once more before
+ * it spends one. A hint you hold none of has Buy instead (js/shop.js), with
+ * the same confirm the Points page has, unless the player turned it off.
  *
  * Clue icons are the icons of the powers that reveal them (js/config/powers.js),
  * so nothing here names a power.
  */
-import { POWERS, ECONOMY } from '../registry.js';
-import { t } from '../i18n.js';
+import { POWERS, OFFERED_POWERS, ECONOMY } from '../registry.js';
+import { t, lang } from '../i18n.js';
 import { el } from '../dom.js';
 import { bump } from '../toast.js';
 
 const pts = (n) => t('currency.amount', { n });
 
 const iconOf = (effect) => (POWERS.find((p) => p.effect === effect) || {}).icon || '';
-const list = (items) => items.filter(Boolean).join(t('game.listSep'));
+
+const CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>';
 
 // Kun readings: 'あか.るい' → あか + るい (okurigana muted), '-' kept.
 function kun(reading) {
@@ -50,6 +53,16 @@ export function readingNodes(reading) {
   return out;
 }
 
+// The meaning in the interface's language: a hand-written one where the
+// answer has it (engine clues().meaningIn), else the dictionary's English.
+// { text, lang } or null.
+export function meaningText(clues) {
+  if (!clues.meaning) return null;
+  const local = clues.meaningIn && clues.meaningIn[lang()];
+  if (local) return { text: local, lang: lang() };
+  return { text: clues.meaning.join(t('game.meaningSep')), lang: 'en' };
+}
+
 // A part as a tile with its position underneath.
 export function partTile(part, glyph, mark = '') {
   return el('span', { class: 'part-chip' },
@@ -57,71 +70,87 @@ export function partTile(part, glyph, mark = '') {
     el('span', { class: 'part-pos' }, t(`pos.${part.pos}`)));
 }
 
-function clue(effect, label, body, tag) {
-  return el('div', { class: 'clue' },
-    el('span', { class: 'clue-icon', 'aria-hidden': 'true' }, iconOf(effect)),
-    el('span', { class: 'clue-label' }, label, tag ? el('span', { class: 'clue-tag' }, tag) : null),
-    el('span', { class: 'clue-body' }, body));
-}
-
-// The clues known so far, or null when there are none.
-export function renderClues({ engine, state, mode, glyph }) {
-  const c = engine.clues(state);
-  const many = [...state.answer].length > 1;
-  const perSlot = (values, show) => values.map((v, i) => (many ? `${i + 1}: ${show(v)}` : show(v)));
+// A kanji's places as a grid: top and bottom span it, the middle places
+// share a row, and an outer part frames the rest (styles.css). Used by the
+// clue boxes here and the Layout card (js/play/reveal.js).
+//   { order, outer, rest, style }   style: the grid's, when there's no outer
+export function layoutGrid(positions) {
+  const order = [...new Set(positions)];
+  if (order.includes('outer')) return { order, outer: true, rest: order.filter((pos) => pos !== 'outer'), style: null };
+  const mid = ['left', 'none', 'inner', 'whole', 'right'].filter((pos) => order.includes(pos));
+  const cols = Math.max(mid.length, 1);
   const rows = [];
-
-  if (c.meaning) {
-    rows.push(clue('revealMeaning', t('game.clue.meaning'), c.meaning.join(t('game.meaningSep')), c.meaningFree ? t('game.clue.free') : null));
-  } else if (c.meaningFreeAt !== null && state.status === 'playing') {
-    rows.push(el('div', { class: 'clue is-soon' },
-      el('span', { class: 'clue-icon', 'aria-hidden': 'true' }, iconOf('revealMeaning')),
-      el('span', { class: 'clue-body' }, t('game.clue.meaningSoon', { n: c.meaningFreeAt }))));
-  }
-  if (c.reading) rows.push(clue('revealReading', t('game.clue.reading'), readingNodes(c.reading)));
-  if (c.strokes) rows.push(clue('revealStrokes', t('game.clue.strokes'), list(perSlot(c.strokes, String))));
-  if (c.layout) {
-    rows.push(clue('revealLayout', t('game.clue.layout'),
-      perSlot(c.layout, (positions) => positions.map((p) => t(`pos.${p}`)).join(t('game.layoutSep'))).join(' / ')));
-  }
-  if (c.parts.length) {
-    rows.push(clue('revealParts', t('game.clue.parts'),
-      el('span', { class: 'part-chips' }, c.parts.map((p) => partTile(p, glyph, 'hit')))));
-  }
-  if (c.kanji.length) {
-    rows.push(clue('revealKanji', t('game.clue.kanji'),
-      el('span', { lang: 'ja' }, c.kanji.map((k) => `${k.slot + 1}: ${k.kanji}`).join(t('game.listSep')))));
-  }
-  if (c.eliminated.length) {
-    rows.push(clue('eliminateParts', t('game.clue.eliminated'), t('game.clue.eliminatedCount', { n: c.eliminated.length })));
-  }
-  return rows.length ? el('div', { class: 'clues', 'aria-live': 'polite' }, rows) : null;
+  if (order.includes('top')) rows.push(Array(cols).fill('top'));
+  if (mid.length) rows.push(mid);
+  if (order.includes('bottom')) rows.push(Array(cols).fill('bottom'));
+  return {
+    order,
+    outer: false,
+    rest: order,
+    style: {
+      gridTemplateAreas: rows.map((r) => `"${r.join(' ')}"`).join(' '),
+      gridTemplateColumns: `repeat(${cols}, 1fr)`,
+      gridTemplateRows: `repeat(${rows.length}, 1fr)`
+    }
+  };
 }
 
-// The powers this answer's length allows, as buttons with the count held,
-// and the points to buy more. A power that can't be used now is dimmed; one
-// you hold none of has a muted count (its sheet sells one).
-export function renderPowerBar({ engine, state, held, points, onPick }) {
-  const offered = POWERS.filter((p) => (p.minLength || 1) <= [...state.answer].length);
-  if (!offered.length || state.status !== 'playing') return null;
-  return el('div', { class: 'power-bar', role: 'group', 'aria-labelledby': 'power-bar-title' },
-    el('span', { class: 'power-bar-title', id: 'power-bar-title' },
-      el('span', {}, t('game.powers.title')),
-      el('span', { class: 'power-bar-points' }, `${ECONOMY.currency.icon} ${pts(points)}`)),
-    el('div', { class: 'power-chips' }, offered.map((p) => {
-      const n = held[p.id] || 0;
-      const off = !!engine.canUse(state, p.id);
-      const name = t(`power.${p.id}.name`);
-      return el('button', {
-        class: `power-chip${off ? ' is-off' : ''}${n ? '' : ' is-none'}`,
-        type: 'button',
-        title: name,
-        'aria-label': `${name} · ${t('powers.have', { n })}`,
-        onclick: () => onPick(p.id)
-      },
-        el('span', { 'aria-hidden': 'true' }, p.icon),
-        el('span', { class: 'power-chip-count', 'aria-hidden': 'true' }, String(n)));
-    })));
+// A kanji's places drawn as solid lines (styles.css .clue-layout: the
+// accent shows through the gaps between them); an outer part is the whole
+// box and its inner an inset one. For the kanji guide's frames.
+export function layoutDrawing(positions) {
+  const g = layoutGrid(positions);
+  const zone = (pos) => el('span', { class: `clue-zone is-${pos}`, style: g.outer ? null : { gridArea: pos } });
+  return g.outer
+    ? el('span', { class: 'clue-layout has-outer', 'aria-hidden': 'true' }, el('span', { class: 'clue-inner' }, g.rest.map(zone)))
+    : el('span', { class: 'clue-layout', style: g.style, 'aria-hidden': 'true' }, g.order.map(zone));
+}
+
+// A clue as a chip: the hint's icon, then what it found. With onOpen, a
+// button that opens the clue's card again (js/play/reveal.js); `card` is
+// that card's effect.
+function chip({ effects, card = effects, body, extra = '', icon = true, onOpen = null }) {
+  const attrs = { class: `${extra}`, 'data-effects': effects };
+  if (onOpen) Object.assign(attrs, { type: 'button', 'data-id': `clue-${card}`, title: t('game.clue.again'), onclick: () => onOpen(card) });
+  return el(onOpen ? 'button' : 'span', attrs,
+    icon ? el('span', { class: 'clue-chip-icon', 'aria-hidden': 'true' }, iconOf(effects)) : null,
+    icon ? el('span', { class: 'visually-hidden' }, t(TITLES[effects] || 'game.clue.meaning')) : null,
+    body,
+    onOpen ? el('span', { class: 'visually-hidden' }, t('game.clue.again')) : null);
+}
+const TITLES = { revealMeaning: 'game.clue.meaning', revealReading: 'game.clue.reading' };
+
+// What the hints found that isn't about one kanji, above the keyboard, or
+// null when nothing yet: the meaning, in the interface's language, which a
+// tap opens on its card again. Everything about one kanji (strokes, layout,
+// a revealed kanji) is in the kanji guide above the board (js/play/screen.js),
+// parts a hint showed are in their cells and green on their keys, and swept
+// parts are grey on the keys. (Reading, retired, still shows for a game
+// that used it.)
+//   onOpen(card)  a tap on the meaning opens its card again
+export function renderClues({ engine, state, onOpen = null }) {
+  const c = engine.clues(state);
+  const items = [];
+  const meaning = meaningText(c);
+  if (meaning) {
+    items.push(chip({
+      effects: 'revealMeaning', extra: 'clue-chip is-meaning', onOpen,
+      body: el('span', { class: 'clue-chip-body' }, el('span', { lang: meaning.lang }, meaning.text),
+        c.meaningFree ? el('span', { class: 'clue-tag' }, t('game.clue.free')) : null)
+    }));
+  } else if (c.meaningFreeAt !== null && state.status === 'playing') {
+    items.push(chip({
+      effects: 'revealMeaning', extra: 'clue-chip is-meaning is-soon',
+      body: el('span', { class: 'clue-chip-body' }, t('game.clue.meaningSoon', { n: c.meaningFreeAt }))
+    }));
+  }
+  if (c.reading) items.push(chip({ effects: 'revealReading', extra: 'clue-chip', body: el('span', { class: 'clue-chip-body' }, readingNodes(c.reading)) }));
+  return items.length ? el('div', { class: 'clues', 'aria-live': 'polite' }, items) : null;
+}
+
+// The hints this answer allows: every offered power long enough for it.
+export function hintsFor(state) {
+  return OFFERED_POWERS.filter((p) => (p.minLength || 1) <= [...state.answer].length);
 }
 
 // Why a power can't be used now, as text, or ''. The rules come first, so
@@ -133,94 +162,167 @@ export function whyNot(engine, state, power, held) {
   return held ? '' : t('game.powers.why.none');
 }
 
-// The sheet for one power: what it does, how many you hold, and Use. When
-// you hold none and could use one now, Buy takes Use's place, in two taps
-// (Buy, then the confirm that names the price), and Use comes back after.
-//   read()   the latest { held, points, why, offer }; offer is js/shop.js
-//            powerOffer(), or null when it can't be bought here
-//   onBuy()  buys one; true when it did
+// One hint as a row (styles.css .hint-row), in the hints modal and on the
+// Points page: its icon, name, how many you hold and a button on the first
+// line, what it does under them, then a line (why not, or what happened).
+export function hintRow({ power, held, off = false, action = null, line = null, key = power.id }) {
+  return el('li', { class: `hint-row${off ? ' is-off' : ''}`, 'data-key': key },
+    el('span', { class: 'hint-icon', 'aria-hidden': 'true' }, power.icon),
+    el('p', { class: 'hint-name' }, t(`power.${power.id}.name`)),
+    el('span', {
+      class: `hint-held${held ? ' is-held' : ''}`, title: t('game.powers.held', { n: held }),
+      'aria-label': t('game.powers.held', { n: held })
+    }, t('game.powers.count', { n: held })),
+    action,
+    el('p', { class: 'hint-desc' }, t(`power.${power.id}.desc`)),
+    line);
+}
+
+// ── The hints modal ──────────────────────────────────────────────────
+//
+// openHints({ powers, read, ask, onBuy, onUse })
+//   powers      the hints to list (hintsFor)
+//   read(id)    the latest { held, points, why, offer } for one: why is
+//               whyNot() ('' when it can be used now); offer is js/shop.js
+//               powerOffer(), or null when it isn't sold here (it can't be
+//               used now, or you hold one)
+//   ask()       true when buying needs a confirm (settings.confirmHintBuy)
+//   onBuy(id, { never })  buys one; true when it did. never: the player
+//               ticked Don't ask again
+//   onUse(id)   called after the confirm, once the modal has closed
+//
+// Three views in one dialog: the list, Use's confirm, Buy's confirm. Escape
+// or Back from a confirm goes back to the list.
+
 let sheet = null;
-export function openPowerSheet({ power, read, onBuy, onUse }) {
+let view = null;   // { name: 'list' | 'use' | 'buy', id, focus }
+
+export function openHints({ powers, read, ask, onBuy, onUse }) {
   if (!sheet) {
-    sheet = el('dialog', { class: 'sheet power-sheet', 'aria-labelledby': 'power-sheet-title' });
+    sheet = el('dialog', { class: 'sheet hints-sheet', 'aria-labelledby': 'hints-title' });
     sheet.addEventListener('click', (event) => { if (event.target === sheet) sheet.close(); });
     document.body.append(sheet);
   }
-  const name = t(`power.${power.id}.name`);
-  let confirming = false;
-  let bought = false;
+  const power = (id) => powers.find((p) => p.id === id);
+  const name = (p) => t(`power.${p.id}.name`);
+  let note = null;   // { id, text }: a line under a row after buying
+  let spent = 0;     // points to show falling, once
 
-  const draw = (spent = 0) => {
-    const { held, points, why, offer } = read();
-    const selling = !!offer && offer.why !== 'not-for-sale' && (!held || bought);
-    const buyFirst = selling && !bought && !held;
-    const pointsNode = el('span', { class: 'power-sheet-points' }, `${ECONOMY.currency.icon} ${pts(points)}`);
-    const use = el('button', {
-      class: 'btn btn-primary', type: 'button', disabled: !!why,
-      onclick: () => { sheet.close(); onUse(); }
-    }, t('game.powers.use'));
-    const yes = el('button', {
-      class: 'btn btn-primary btn-small', type: 'button',
-      onclick: () => {
-        if (!onBuy()) return;
-        confirming = false;
-        bought = true;
-        draw(power.cost);
-      }
-    }, t('shop.confirmYes', { cost: power.cost }));
-    const buy = el('button', {
-      class: 'btn btn-primary', type: 'button', disabled: !!(offer && offer.why),
-      onclick: () => { confirming = true; draw(); }
-    }, t('game.powers.buy', { cost: power.cost }));
-
-    let buyRow = null;
-    if (selling && bought) {
-      buyRow = el('p', { class: 'status-line is-ok', role: 'status' }, t('game.powers.bought', { n: held }));
-    } else if (selling && confirming && !offer.why) {
-      buyRow = el('div', { class: 'shop-confirm' },
-        el('p', {}, t('shop.confirm', { cost: power.cost, have: points, left: points - power.cost, name })),
-        el('div', { class: 'btn-row' }, yes,
-          el('button', {
-            class: 'btn btn-ghost btn-small', type: 'button',
-            onclick: () => { confirming = false; draw(); }
-          }, t('shop.cancel'))));
-    } else if (buyFirst && offer.why) {
-      buyRow = el('p', { class: 'status-line is-error' },
-        offer.why === 'short' ? t('shop.short', { n: offer.need }) : t('shop.full', { hold: power.hold }));
-    }
-
-    sheet.replaceChildren(el('div', { class: 'sheet-body' },
-      el('header', { class: 'power-sheet-head' },
-        el('span', { class: 'power-icon', 'aria-hidden': 'true' }, power.icon),
-        el('h2', { class: 'sheet-title', id: 'power-sheet-title' }, name)),
-      el('p', {}, t(`power.${power.id}.desc`)),
-      el('p', { class: 'sheet-note' }, t('powers.have', { n: held }), t('reward.sep'), pointsNode),
-      // Holding none needs no warning when Buy is right there.
-      why && !confirming && !buyFirst ? el('p', { class: 'status-line is-error' }, why) : null,
-      buyRow,
-      // While the confirm shows, its own buttons are the only ones.
-      confirming ? null : el('div', { class: 'btn-row' },
-        buyFirst ? buy : use,
-        el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => sheet.close() }, t('game.powers.cancel')))
-    ));
-    if (spent) bump(pointsNode, -spent);
-    return { use, buy, buyFirst, why };
+  sheet.oncancel = (event) => {
+    if (view && view.name !== 'list') { event.preventDefault(); show('list', view.id); }
   };
 
-  const first = draw();
-  sheet.showModal();
-  if (first.buyFirst) { if (!first.buy.disabled) first.buy.focus(); }
-  else if (!first.why) first.use.focus();
-  // Focus follows the step: the confirm, then Use once it's bought.
-  sheet.onclick = (event) => {
-    if (event.target === sheet) return;
-    queueMicrotask(() => {
-      const next = sheet.querySelector('.shop-confirm .btn-primary') || sheet.querySelector('.btn-row > .btn-primary:not(:disabled)');
-      if (next && sheet.open && !sheet.contains(document.activeElement)) next.focus();
+  function head(title, points) {
+    const close = el('button', {
+      class: 'icon-btn', type: 'button', 'data-id': 'hints-close',
+      'aria-label': t('game.powers.close'), title: t('game.powers.close'),
+      onclick: () => sheet.close()
     });
-  };
+    close.innerHTML = CLOSE;
+    const pointsNode = el('span', { class: 'hints-points' }, `${ECONOMY.currency.icon} ${pts(points)}`);
+    if (spent) { bump(pointsNode, -spent); spent = 0; }
+    return el('header', { class: 'sheet-head hints-head' },
+      el('h2', { class: 'sheet-title', id: 'hints-title' }, title), pointsNode, close);
+  }
+
+  // One row per hint: its icon, name and what it does, how many you hold,
+  // and Use (or Buy when you hold none and could use one now).
+  function row(p) {
+    const { held, why, offer } = read(p.id);
+    const selling = !held && !!offer && offer.why !== 'not-for-sale';
+    const off = !!why && !selling;
+    let action;
+    if (selling) {
+      action = el('button', {
+        class: 'btn btn-secondary btn-small', type: 'button', 'data-id': `buy-${p.id}`,
+        disabled: !!offer.why,
+        onclick: () => (ask() ? show('buy', p.id) : buy(p.id, false))
+      }, t('shop.buyFor', { cost: p.cost }));
+    } else {
+      action = el('button', {
+        class: 'btn btn-primary btn-small', type: 'button', 'data-id': `use-${p.id}`,
+        disabled: !!why, 'aria-describedby': why ? `why-${p.id}` : null,
+        onclick: () => show('use', p.id)
+      }, t('game.powers.use'));
+    }
+    let line = null;
+    if (note && note.id === p.id) line = el('p', { class: 'hint-note is-ok', role: 'status' }, note.text);
+    else if (selling && offer.why) {
+      line = el('p', { class: 'hint-why' }, offer.why === 'short' ? t('shop.short', { n: offer.need }) : t('shop.full', { hold: p.hold }));
+    } else if (why && !selling) line = el('p', { class: 'hint-why', id: `why-${p.id}` }, why);
+    return hintRow({ power: p, held, off, action, line });
+  }
+
+  function listView() {
+    const points = read(powers[0].id).points;
+    return [head(t('game.powers.title'), points),
+      el('ul', { class: 'hint-list' }, powers.map(row))];
+  }
+
+  // Use's confirm: what it does, and how many are left after.
+  function useView(p) {
+    const { held, points } = read(p.id);
+    return [head(t('game.powers.title'), points),
+      el('div', { class: 'hint-confirm' },
+        el('span', { class: 'hint-confirm-icon', 'aria-hidden': 'true' }, p.icon),
+        el('h3', { class: 'hint-confirm-title' }, t('game.powers.confirmUse', { name: name(p) })),
+        el('p', { class: 'hint-desc' }, t(`power.${p.id}.desc`)),
+        el('p', { class: 'sheet-note' }, t('game.powers.left', { n: held, left: held - 1 }))),
+      el('div', { class: 'btn-row' },
+        el('button', {
+          class: 'btn btn-primary', type: 'button', 'data-id': 'confirm-use',
+          onclick: () => { sheet.close(); onUse(p.id); }
+        }, t('game.powers.confirmUseYes')),
+        el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => show('list', p.id) }, t('game.powers.back')))];
+  }
+
+  // Buy's confirm: the price and what's left, and Don't ask again.
+  function buyView(p) {
+    const { points } = read(p.id);
+    const never = el('input', { type: 'checkbox', id: 'hints-never', 'data-id': 'never' });
+    return [head(t('game.powers.title'), points),
+      el('div', { class: 'hint-confirm' },
+        el('span', { class: 'hint-confirm-icon', 'aria-hidden': 'true' }, p.icon),
+        el('h3', { class: 'hint-confirm-title' }, t('shop.confirmTitle', { name: name(p) })),
+        el('p', {}, t('shop.confirm', { cost: p.cost, have: points, left: points - p.cost, name: name(p) })),
+        el('label', { class: 'check-row', for: 'hints-never' }, never, el('span', {}, t('shop.dontAsk')))),
+      el('div', { class: 'btn-row' },
+        el('button', {
+          class: 'btn btn-primary', type: 'button', 'data-id': 'confirm-buy',
+          onclick: () => buy(p.id, never.checked)
+        }, t('shop.confirmYes', { cost: p.cost })),
+        el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => show('list', p.id) }, t('shop.cancel')))];
+  }
+
+  function buy(id, never) {
+    if (!onBuy(id, { never })) return;
+    const p = power(id);
+    spent = p.cost;
+    note = { id, text: t('game.powers.bought', { n: read(id).held }) };
+    show('list', id, `use-${id}`);
+  }
+
+  // Draws a view; the focus goes to its first button, or back to the row
+  // it came from.
+  function show(name, id = null, focus = null) {
+    view = { name, id };
+    const p = id ? power(id) : null;
+    const body = name === 'use' ? useView(p) : name === 'buy' ? buyView(p) : listView();
+    sheet.replaceChildren(el('div', { class: 'sheet-body' }, body));
+    const target = (focus && sheet.querySelector(`[data-id="${focus}"]:not(:disabled)`))
+      || (name === 'list' && id && sheet.querySelector(`[data-key="${id}"] button:not(:disabled)`))
+      || (name !== 'list' && sheet.querySelector('.btn-row .btn-primary'))
+      || sheet.querySelector('.hint-row button:not(:disabled)')
+      || sheet.querySelector('[data-id="hints-close"]');
+    if (target && sheet.open) target.focus();
+    return target;
+  }
+
+  show('list');
+  sheet.showModal();
+  show('list');   // again, so the focus lands now that it's open
 }
 
-export function closePowerSheet() {
+export function closeHints() {
   if (sheet && sheet.open) sheet.close();
 }

@@ -57,4 +57,5 @@ jobs:
             package.json
             data/candidates.json
             data/review.json
+            data/meanings-ja.json
             **/*.md

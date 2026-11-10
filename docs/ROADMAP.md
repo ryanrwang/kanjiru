@@ -2,7 +2,7 @@
 
 The big steps from here to launch, in order, each with a prompt to start its own thread in `D:\Dropbox\Clearful\apps\kanjiru`. Tick a step off here when it merges.
 
-Last updated: 2026-11-08.
+Last updated: 2026-11-10.
 
 ## Done
 
@@ -16,6 +16,7 @@ Last updated: 2026-11-08.
 - [x] **Loose strokes and hints:** answers with a loose single stroke (丨 丶 丿 乙 亅) leave the daily (`LISTS` `without`); 10 kanji fixed in `data/parts-overrides.json` bring back 25 words, so the daily has 453 answers. Parts a power shows (Reveal a part, Head start, Reveal a kanji) fill their cells, green, on each new row, and stay put at Hard. No page scroll while playing (step 4b)
 - [x] **Points, shop & achievements:** points and hints held are a ledger (save v2), so merging devices adds them up exactly. A finished game pays its points, streak rewards, a bonus hint and achievements, shown on the result card and as toasts. The shop opens from the points in the header: hints and locked looks, two taps to buy. The power bar floats above the keyboard, open before the first guess. Hard win replaces Full set (step 5)
 - [x] **Launch prep, off screen:** home-screen install (manifest, icons, iOS tags) and a network-first service worker for offline play; share previews with a 1200 × 630 image; first load on a phone from 2.9 s to 1.6 s to the daily (scripts and data fetched at once, gzipped data, a smaller font stylesheet); and dailies from an earlier epoch become keep-playing games, so launch day is one line and a recompile (step 8a)
+- [x] **Hint overhaul:** a hints pill in the header (漢 › Play in a game) opens a modal: each hint, how many you hold and Use, with one more confirm. Every hint plays its own animation (正 tally strokes, a splitting layout, a brush-written meaning, parts dropping into cells, a sweep across the keys). Meaning in Japanese for all 453 daily answers. Reading retired, Head start folded into Reveal a part (any time). The Points page lists hints one per row with Buy and Don't ask again (2026-11-10)
 - [x] **Screens and menus:** the header holds only Points and Settings. The play page is home: a play card with the Hard and Guided switches, then How to play. The Points page holds the wallet, Looks with previews, Hints & powers and Achievements, and replaces the shop sheet. Settings gains Language, Appearance and a Debug mode (answer dots on the keys, add points) (2026-11-08)
 
 ## Order

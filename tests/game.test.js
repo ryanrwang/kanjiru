@@ -135,7 +135,8 @@ test('points: an extra row never adds to the win bonus', () => {
 test('powers: when they can be used', () => {
   const engine = setup();
   const fresh = engine.newGame(start('k1', '明'));
-  assert.equal(engine.canUse(fresh, 'reveal-part'), 'when', 'during only');
+  assert.equal(engine.canUse(fresh, 'reveal-part'), null, 'any time');
+  // Head start is retired, but the engine still plays it (old games replay).
   assert.equal(engine.canUse(fresh, 'head-start'), null);
   assert.equal(engine.canUse(fresh, 'reveal-kanji'), 'mode', 'needs 2+ kanji');
   assert.equal(engine.canUse(fresh, 'nope'), 'unknown');
@@ -179,6 +180,7 @@ test('powers: the meaning is free after the mode\'s guess count', () => {
   const bought = play(engine, engine.newGame(start('k1', '明')), '!meaning');
   assert.equal(engine.clues(bought).meaningFree, false);
   assert.deepEqual(engine.clues(bought).meaning, engine.answerInfo('明').meanings);
+  assert.deepEqual(engine.clues(bought).meaningIn, {}, 'no meaning in other languages');
 });
 
 test('powers: reveal parts picks hidden parts, the same way on every replay', () => {
@@ -475,4 +477,15 @@ test('main mode: each game takes its answer\'s length, at every level', () => {
   assert.equal(engine.guess(parts, [['日', '木']]).error, 'slots', 'the picks come per kanji');
   assert.equal(play(engine, parts, [['日'], ['木', '一']]).status, 'won');
   assert.throws(() => engine.newGame(start('main', '')));
+});
+
+test('powers: the meaning comes in other languages where the answer has one', () => {
+  const data = fixtureData({ words, localMeanings: { ja: { '日本': '日の出る国' } } });
+  const engine = createEngine(data, bigPalette());
+  const game = engine.newGame(start('k2', '日本'));
+  assert.equal(engine.clues(game).meaningIn, null, 'not before the hint');
+  const used = engine.usePower(game, 'meaning').state;
+  assert.deepEqual(engine.clues(used).meaningIn, { ja: '日の出る国' });
+  assert.deepEqual(engine.clues(used).meaning, ['Japan'], 'English stays');
+  assert.deepEqual(engine.answerInfo('明').local, {});
 });

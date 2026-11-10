@@ -8,8 +8,10 @@
  * Adding a language: copy en.js to <lang>.js, translate it, and add an entry
  * to LANGUAGES. validate() in js/registry.js lists any missing keys.
  *
- * Game content (the kanji meanings from the dictionary) is English only
- * for now; this covers the interface.
+ * This covers the interface. Game content comes from the dictionaries in
+ * English; the answers' meanings in other languages are written by hand
+ * (data/meanings-ja.json, compiled by tools/compile_game.py), and the
+ * Meaning hint shows them in the interface's language.
  */
 import en from './i18n/en.js';
 import ja from './i18n/ja.js';

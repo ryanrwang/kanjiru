@@ -10,7 +10,9 @@ export default {
   header: {
     home: 'プレイ',
     points: 'ポイント',
-    wallet: '所持ポイント {amount}。ポイントを開く'
+    wallet: '所持ポイント {amount}。ポイントを開く',
+    game: 'プレイ',
+    hints: 'ヒント（所持 {n}）。ヒントを開く'
   },
 
   currency: {
@@ -75,6 +77,7 @@ export default {
     cellEmpty: '{cell}（空）',
     cellFilled: '{cell}：{part}',
     cellShown: '{cell}：{part}（ヒントで表示）',
+    cellGhost: '{cell}（空）：ヒントで{part}が表示されました。もう一度タップで入れます',
     cellNumber: '{n}マス目',
     cellPlace: '{n}マス目（{place}）',
     shape: 'マス：{places}',
@@ -86,6 +89,7 @@ export default {
     frameLabel: 'ここまでの漢字：{parts}',
     framePart: '{place}に{part}',
     frameEmpty: 'まだパーツなし',
+    frameUnknown: 'まだ何もわかっていません',
     frameSolved: '正解：{kanji}',
     guess: '回答',
     delete: '消す',
@@ -113,20 +117,23 @@ export default {
       meaningSoon: '{n}回目の回答のあと、意味が無料で表示されます。',
       reading: '読み',
       strokes: '画数',
-      layout: '構成',
-      parts: 'パーツ',
-      kanji: '漢字',
-      eliminated: 'おそうじ',
-      eliminatedCount: '下のパーツを{n}個グレーにしました'
+      strokesN: '{n}画',
+      again: 'タップでもう一度見る',
+      guide: '漢字',
+      layout: '構成'
     },
     powers: {
       title: 'ヒント',
-      titleHeld: 'ヒント（所持 {n}）',
-      buy: '1つ買う・{cost}pt',
-      bought: '買いました。所持数 {n}。',
       use: '使う',
-      cancel: 'キャンセル',
+      back: '戻る',
+      close: '閉じる',
+      count: '×{n}',
+      held: '所持数 {n}',
+      confirmUse: '{name}を使いますか？',
+      confirmUseYes: '使う',
+      left: '所持{n}。使うと残り{left}になります。',
       used: '{name}を使いました。',
+      bought: '買いました。所持数 {n}。',
       why: {
         none: '持っていません。ここで買うか、クリアするとボーナスでもらえることがあります。',
         before: '最初の回答の前だけ使えます。',
@@ -137,10 +144,16 @@ export default {
         unknown: 'このモードでは使えません。'
       }
     },
+    // ヒントを使ったときの表示（js/play/reveal.js）
+    reveal: {
+      kanji: '{n}字目',
+      strokesUnit: '画',
+      tap: 'タップで閉じる'
+    },
     errors: {
       slots: '{cells}マスすべてを埋めてください。',
       'not-real': 'その順番のパーツでは実在する漢字になりません。別の組み合わせを試してください。',
-      'keep-shown': '{part}は{cell}マス目のままです。ヒントでそこに表示されました。',
+      'keep-shown': '{part}は{cell}マス目に入ります。ヒントでそこに表示されました。',
       'keep-hit': '{part}は{cell}マス目のままです。そこで見つけました。',
       'use-near': '{part}を使ってください。ことばの中にあります。',
       level: 'このレベルではその答え方はできません。',
@@ -240,6 +253,7 @@ export default {
     confirmTitle: '{name}を買いますか？',
     confirmYes: '{cost}ptで買う',
     cancel: 'キャンセル',
+    dontAsk: '次からヒントを買うときに確認しない',
     have: '所持 {n}/{hold}',
     full: '持てるのは{hold}つまでです',
     short: 'あと{n}pt必要',
@@ -287,6 +301,11 @@ export default {
       light: 'ライト',
       dark: 'ダーク',
       fixed: '{name}は配色が1つだけです。'
+    },
+    hints: {
+      title: 'ヒント',
+      name: '買う前に確認する',
+      body: 'ヒントを買うとき、値段と残りのポイントを表示して確認します。'
     },
     debug: {
       title: 'デバッグ',
@@ -466,7 +485,7 @@ export default {
   power: {
     strokes: {
       name: '画数',
-      desc: '答えの画数がわかります。'
+      desc: '漢字ごとの画数がわかります。'
     },
     layout: {
       name: '構成',
@@ -474,7 +493,7 @@ export default {
     },
     meaning: {
       name: '意味',
-      desc: '英語の意味がわかります。'
+      desc: '答えの意味がわかります。'
     },
     reading: {
       name: '読み',
@@ -486,7 +505,7 @@ export default {
     },
     'reveal-part': {
       name: 'パーツ公開',
-      desc: '答えのパーツを1つ、そのマスに緑で入れます。'
+      desc: '答えのパーツを1つ、そのマスに緑で入れます。いつでも使えます。'
     },
     'head-start': {
       name: 'スタートダッシュ',

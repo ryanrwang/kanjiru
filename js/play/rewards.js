@@ -10,7 +10,7 @@
  *   earnAchievements(save, { date })    // at start-up and after a merge
  *   describe(entry)                     // { icon, title, body } for a toast
  */
-import { ACHIEVEMENT, SKINS, POWER, ECONOMY } from '../registry.js';
+import { ACHIEVEMENT, SKINS, POWER, POWERS, ECONOMY } from '../registry.js';
 import { t } from '../i18n.js';
 import { stats, newAchievements, streakRewards } from '../engine/stats.js';
 import * as ledger from '../ledger.js';
@@ -43,7 +43,7 @@ export function payGame(save, { engine, state, game, date, points, streakBefore 
       out.push(ledger.add(save.ledger, 'streak', { pts: r.points || 0, hints: oneOf(r.power), game, what: r.days, at: date }));
     });
   }
-  const drop = engine.rollDrop(state, ledger.balance(save.ledger).hints, rng);
+  const drop = engine.rollDrop(state, ledger.balance(save.ledger, ledger.becomesOf(POWERS)).hints, rng);
   if (drop) out.push(ledger.add(save.ledger, 'drop', { hints: oneOf(drop), game, at: date }));
   out.push(...earnAchievements(save, { date, game }));
   return out;

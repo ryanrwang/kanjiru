@@ -13,7 +13,9 @@ export default {
   header: {
     home: 'Play',
     points: 'Points',
-    wallet: 'Your points: {amount}. Open Points'
+    wallet: 'Your points: {amount}. Open Points',
+    game: 'Play',
+    hints: 'Hints: you have {n}. Open hints'
   },
 
   currency: {
@@ -77,6 +79,7 @@ export default {
     cellEmpty: '{cell}, empty',
     cellFilled: '{cell}: {part}',
     cellShown: '{cell}: {part}, shown by a hint',
+    cellGhost: '{cell}, empty: a hint showed {part} here. Tap again to put it in',
     cellNumber: 'Cell {n}',
     cellPlace: 'Cell {n}, {place}',
     shape: 'Cells: {places}',
@@ -88,6 +91,7 @@ export default {
     frameLabel: 'The kanji so far: {parts}',
     framePart: '{part} {place}',
     frameEmpty: 'no parts found yet',
+    frameUnknown: 'nothing known yet',
     frameSolved: 'Solved: {kanji}',
     guess: 'Guess',
     delete: 'Delete',
@@ -115,19 +119,22 @@ export default {
       meaningSoon: 'The meaning shows for free after guess {n}.',
       reading: 'Reading',
       strokes: 'Strokes',
-      layout: 'Layout',
-      parts: 'Parts',
-      kanji: 'Kanji',
-      eliminated: 'Swept',
-      eliminatedCount: '{n} parts greyed out below'
+      strokesN: '{n} strokes',
+      again: 'Tap to see it again',
+      guide: 'Kanji',
+      layout: 'Layout'
     },
     powers: {
       title: 'Hints',
-      titleHeld: 'Hints: you have {n}',
       use: 'Use',
-      cancel: 'Cancel',
+      back: 'Back',
+      close: 'Close',
+      count: '×{n}',
+      held: 'You have {n}',
+      confirmUse: 'Use {name}?',
+      confirmUseYes: 'Use it',
+      left: 'You have {n}. {left} left after this.',
       used: '{name} used.',
-      buy: 'Buy 1 · {cost} pts',
       bought: 'Bought. You have {n}.',
       why: {
         none: 'You have none. Buy one, or win for a chance at a bonus hint.',
@@ -139,10 +146,16 @@ export default {
         unknown: 'Not in this mode.'
       }
     },
+    // What a hint shows when it's used (js/play/reveal.js).
+    reveal: {
+      kanji: 'Kanji {n}',
+      strokesUnit: 'strokes',
+      tap: 'Tap to close'
+    },
     errors: {
       slots: 'Fill all {cells} cells first.',
       'not-real': 'Those parts don’t make real kanji in that order. Try another mix.',
-      'keep-shown': '{part} stays in cell {cell}: a hint showed it there.',
+      'keep-shown': '{part} goes in cell {cell}: a hint showed it there.',
       'keep-hit': '{part} stays in cell {cell}: you found it there.',
       'use-near': 'Use {part}: you found it in the word.',
       level: 'That kind of guess isn’t used at this level.',
@@ -242,6 +255,7 @@ export default {
     confirmTitle: 'Buy {name}?',
     confirmYes: 'Buy for {cost} pts',
     cancel: 'Cancel',
+    dontAsk: 'Don’t ask again before buying hints',
     have: 'Held {n}/{hold}',
     full: 'The most you can hold is {hold}',
     short: '{n} more pts needed',
@@ -289,6 +303,11 @@ export default {
       light: 'Light',
       dark: 'Dark',
       fixed: '{name} has one colour scheme only.'
+    },
+    hints: {
+      title: 'Hints',
+      name: 'Ask before buying',
+      body: 'Buying a hint asks first, with its price and the points left.'
     },
     debug: {
       title: 'Debug',
@@ -470,7 +489,7 @@ export default {
   power: {
     strokes: {
       name: 'Stroke count',
-      desc: 'Shows how many strokes the answer has.'
+      desc: 'Shows how many strokes each kanji has.'
     },
     layout: {
       name: 'Layout',
@@ -478,7 +497,7 @@ export default {
     },
     meaning: {
       name: 'Meaning',
-      desc: 'Shows the English meaning.'
+      desc: 'Shows what the answer means.'
     },
     reading: {
       name: 'Reading',
@@ -490,7 +509,7 @@ export default {
     },
     'reveal-part': {
       name: 'Reveal a part',
-      desc: 'Puts one part of the answer in its cell, green.'
+      desc: 'Puts one part of the answer in its cell, green. Use it any time.'
     },
     'head-start': {
       name: 'Head start',

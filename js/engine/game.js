@@ -327,6 +327,8 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
       strokes: state.revealed.strokes ? answer.map((slot) => data.kanji[slot.kanji].strokes) : null,
       layout: state.revealed.layout ? answer.map((slot) => layoutOf(slot.parts)) : null,
       meaning: meaningShown(state) ? word.meanings : null,
+      // The meaning in other interface languages, where the answer has one.
+      meaningIn: meaningShown(state) ? word.local : null,
       meaningFree: meaningShown(state) && !state.revealed.meaning,
       meaningFreeAt: meaningFreeAt(state),
       reading: state.revealed.reading ? word.reading : null,
@@ -401,15 +403,18 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   }
 
   // The answer's dictionary info. One kanji: its meanings and on/kun
-  // readings; a word: its reading and meanings.
+  // readings; a word: its reading and meanings. local: its meaning in other
+  // languages, { [lang]: text }, where it has one (data.localMeanings).
   function answerInfo(word) {
     const chars = [...word];
+    const local = {};
+    Object.entries(data.localMeanings || {}).forEach(([lang, list]) => { if (list && list[word]) local[lang] = list[word]; });
     if (chars.length === 1) {
       const k = data.kanji[word];
-      return { word, meanings: k.meanings || [], reading: { on: k.on || [], kun: k.kun || [] } };
+      return { word, meanings: k.meanings || [], reading: { on: k.on || [], kun: k.kun || [] }, local };
     }
     const w = (data.words && data.words[word]) || {};
-    return { word, meanings: w.meanings || [], reading: w.reading || '' };
+    return { word, meanings: w.meanings || [], reading: w.reading || '', local };
   }
 
   // ── Powers ─────────────────────────────────────────────────────────
