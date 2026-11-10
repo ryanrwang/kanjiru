@@ -1,13 +1,14 @@
 /*
  * The result card at the end of a game: the answer with its meanings,
- * readings and parts, the points it paid and the points you have now, its
- * rewards (streak, bonus hint, achievements: js/play/rewards.js describe()),
- * the streak (wins in a row), the share text (while rules.js share.show is
- * on), a countdown to the next daily (in a mode with dailies), and what to
- * play next. Just finished (fresh), the
- * points rise in.
+ * readings and parts; then the points, in a box of their own: what the
+ * game paid, the streak (wins in a row), its rewards (streak, bonus hint,
+ * achievements: js/play/rewards.js describe()) and the points you have
+ * now; the share text (while rules.js share.show is on), a countdown to
+ * the next daily (in a mode with dailies), and Done and New game. The
+ * dictionary credit sits under the card. Just finished (fresh), the points
+ * rise in.
  *
- *   const card = renderResult({ ... });   // card.node, card.tick()
+ *   const card = renderResult({ ... });   // card.node (the card and its credit), card.tick()
  */
 import { RULES, LEVEL, ECONOMY } from '../registry.js';
 import { t, lang } from '../i18n.js';
@@ -83,7 +84,12 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
     [...state.answer].length > 1 ? el('span', { class: 'kanji', lang: 'ja' }, ch) : null,
     el('span', { class: 'part-chips' }, data.kanji[ch].parts.map((p) => partTile(p, glyph)))));
 
-  const node = el('section', { class: 'card result', 'aria-labelledby': 'result-title' },
+  const earned = game.exact ? el('div', { class: 'result-earned' },
+    el('p', { class: 'result-label' }, t('result.points')),
+    el('p', { class: `result-big result-points${fresh ? ' is-new' : ''}` }, t('result.pointsEarned', { n: points.total })),
+    el('p', { class: 'result-why' }, t('result.pointsWhy', { parts: points.parts, solve: points.solve, mult: points.multiplier }))) : null;
+
+  const card = el('section', { class: 'card result', 'aria-labelledby': 'result-title' },
     el('header', { class: 'result-head' },
       el('h2', { class: `result-title${won ? ' is-won' : ''}`, id: 'result-title' },
         won ? t('result.won', { n: state.guesses.length }) : state.gaveUp ? t('result.gaveUp') : t('result.lost')),
@@ -99,29 +105,27 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
         el('p', { class: 'answer-readings' }, readingNodes(info.reading)))),
     el('div', { class: 'answer-parts' },
       el('span', { class: 'answer-label' }, t('result.parts')), answerParts),
-    // EDRDG asks for its credit where its words show.
-    el('p', { class: 'result-source' }, t('result.source'), ' ',
-      el('a', { href: '#about' }, t('result.credits'))),
 
-    el('dl', { class: 'result-stats' },
-      game.exact ? el('div', { class: 'result-stat' },
-        el('dt', {}, t('result.points')),
-        el('dd', {}, el('span', { class: `result-points${fresh ? ' is-new' : ''}` }, t('result.pointsEarned', { n: points.total })),
-          el('small', {}, t('result.pointsWhy', { parts: points.parts, solve: points.solve, mult: points.multiplier })))) : null,
-      el('div', { class: 'result-stat' },
-        el('dt', {}, t('result.streak')),
-        el('dd', {}, t('result.streakDays', { n: streak })))),
-
-    rewards.length ? el('ul', { class: 'result-rewards', 'aria-label': t('result.rewards') },
-      rewards.map((r) => el('li', { class: 'result-reward' },
-        el('span', { class: 'result-reward-icon', 'aria-hidden': 'true' }, r.icon),
-        el('span', { class: 'result-reward-text' },
-          el('span', { class: 'result-reward-title' }, r.title),
-          r.body ? el('span', { class: 'result-reward-body' }, r.body) : null)))) : null,
-
-    balance !== null ? el('p', { class: 'result-balance' },
-      el('span', { class: 'result-balance-amount' }, t('result.balance', { icon: ECONOMY.currency.icon, n: balance })),
-      el('a', { class: 'result-balance-link', href: '#points' }, t('result.spend'))) : null,
+    // The points, a box of their own (2026-11-10): paid and the streak on
+    // top, the rewards, then what you have now.
+    el('section', { class: 'result-box', 'aria-label': t('result.points') },
+      el('div', { class: 'result-box-top' },
+        earned,
+        el('div', { class: 'result-streak' },
+          el('p', { class: 'result-label' }, t('result.streak')),
+          el('p', { class: 'result-big' }, t('result.streakDays', { n: streak })))),
+      // Laid out like the points above: a label, then each reward.
+      rewards.length ? el('div', { class: 'result-rewards-part' },
+        el('p', { class: 'result-label', id: 'result-rewards-label' }, t('result.rewards')),
+        el('ul', { class: 'result-rewards', 'aria-labelledby': 'result-rewards-label' },
+          rewards.map((r) => el('li', { class: 'result-reward' },
+            el('span', { class: 'result-reward-icon', 'aria-hidden': 'true' }, r.icon),
+            el('span', { class: 'result-reward-text' },
+              el('span', { class: 'result-reward-title' }, r.title),
+              r.body ? el('span', { class: 'result-reward-body' }, r.body) : null))))) : null,
+      balance !== null ? el('p', { class: 'result-balance' },
+        el('span', { class: 'result-balance-amount' }, t('result.balance', { icon: ECONOMY.currency.icon, n: balance })),
+        el('a', { class: 'result-balance-link', href: '#points' }, t('result.spend'))) : null),
 
     RULES.share.show ? el('div', { class: 'share' },
       preview,
@@ -130,11 +134,17 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
 
     mode.daily ? el('p', { class: 'countdown' }, t('result.nextDaily'), ' ', countdown) : null,
 
+    // Done on the left, New game on the right, on top when they stack.
     el('div', { class: 'btn-row result-actions' },
-      el('button', { class: 'btn btn-secondary', type: 'button', onclick: onPractice },
-        state.daily ? t('result.practice') : t('result.again')),
-      el('button', { class: 'btn btn-ghost', type: 'button', onclick: onHome }, t('game.home')))
+      el('button', { class: 'btn btn-ghost', type: 'button', 'data-id': 'result-done', onclick: onHome }, t('result.done')),
+      el('button', { class: 'btn btn-primary', type: 'button', 'data-id': 'result-again', onclick: onPractice },
+        state.daily ? t('result.practice') : t('result.again')))
   );
+
+  // EDRDG asks for its credit where its words show: under the card.
+  const node = el('div', { class: 'result-wrap' }, card,
+    el('p', { class: 'result-source' }, t('result.source'), ' ',
+      el('a', { href: '#about' }, t('result.credits'))));
 
   // The points just paid rise from the total, once the card is on screen.
   if (fresh && game.exact && points.total) {

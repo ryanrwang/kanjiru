@@ -47,12 +47,20 @@ export default {
 
   // Every game played, under the play card (js/history.js).
   history: {
-    title: 'Your games',
+    // Kanjita: kanjiru in the past tense (2026-11-10, the user's name for it).
+    title: 'Kanjita',
     count: '{n} played · {won} solved',
     won: 'Solved in {n}',
     lost: 'Not solved',
     gaveUp: 'Gave up',
-    more: 'Show {n} more'
+    more: 'Show {n} more',
+    delete: 'Delete',
+    deleteLabel: 'Delete {answer}',
+    deleteTitle: 'Delete this game?',
+    deleteBody: '{answer} leaves your games and your stats, for good.',
+    deleteYes: 'Delete game',
+    deleteDesc: 'Points, hints and achievements it earned stay yours.',
+    deleted: 'Deleted {answer}.'
   },
 
   // The play card: the game (or today's daily, in a mode with one), the Hard
@@ -66,10 +74,11 @@ export default {
     ready: 'Guess today’s word from its parts in {rows} tries.',
     readyAny: 'Guess a word from its parts in {rows} tries.',
     going: '{n} of {rows} guesses used · {level}',
+    // The flag beside Continue, after giving up (app.js endFromCard).
+    gaveUp: 'You gave up. The answer was {answer}.',
     won: 'Solved in {n} ✓ · {level}',
     lost: 'Not solved today · {level}',
     level: 'Level',
-    levelNext: 'Level for your next puzzle',
     mult: '×{mult} pts',
     hard: {
       name: 'Hard',
@@ -88,16 +97,12 @@ export default {
 
   game: {
     home: 'Back to start',
-    daily: 'Daily #{n}',
-    practice: 'Keep playing',
-    kindLevel: '{kind} · {level}',
     listSep: ', ',
     meaningSep: ', ',
     layoutSep: ' · ',
     board: 'Your guesses',
     rowLabel: 'Guess {n}: {word}. {parts}',
     rowLabelParts: 'Guess {n}: {parts}',
-    rowLabelFit: '{label}. {fit}',
     cells: 'Next guess: {n} of {cells} cells filled',
     cellEmpty: '{cell}, empty',
     cellFilled: '{cell}: {part}',
@@ -106,9 +111,6 @@ export default {
     cellNumber: 'Cell {n}',
     cellPlace: 'Cell {n}, {place}',
     shape: 'Cells: {places}',
-    fit: 'Kanji that fit: {n}',
-    fitTitle: 'How many kanji still fit',
-    fitCount: '{n} fit',
     placeOfSlot: '{n}: {place}',
     palettePlace: 'Parts for {place}',
     frameLabel: 'The kanji so far: {parts}',
@@ -130,6 +132,11 @@ export default {
       near: 'wrong spot',
       other: 'in another kanji',
       miss: 'not in the answer'
+    },
+    // The Arrows hint, after a yellow tile's mark: which way its part lies.
+    way: {
+      left: 'its part is to the left',
+      right: 'its part is to the right'
     },
     markParts: {
       hit: 'in this kanji',
@@ -153,11 +160,18 @@ export default {
       back: 'Back',
       close: 'Close',
       count: '×{n}',
+      // Debug mode: every hint free.
+      free: 'Free',
+      freeLabel: 'Free in debug mode',
+      freeNote: 'Free in debug mode: none are used up.',
       held: 'You have {n}',
       confirmUse: 'Use {name}?',
       confirmUseYes: 'Use it',
       left: 'You have {n}. {left} left after this.',
       used: '{name} used.',
+      swept: 'Swept away {n} parts that aren’t in the answer.',
+      pointed: '{n} yellow tiles now point the way to their part.',
+      pointLater: 'From now on, yellow tiles point the way to their part.',
       bought: 'Bought. You have {n}.',
       why: {
         none: 'You have none. Buy one, or win for a chance at a bonus hint.',
@@ -172,8 +186,7 @@ export default {
     // What a hint shows when it's used (js/play/reveal.js).
     reveal: {
       kanji: 'Kanji {n}',
-      strokesUnit: 'strokes',
-      tap: 'Tap to close'
+      done: 'Done'
     },
     // Ending early: the flag in the header during a game (js/play/screen.js endGame).
     end: {
@@ -244,7 +257,8 @@ export default {
     copyManually: 'Select the text above and copy it.',
     nextDaily: 'Next daily in',
     practice: 'Play again',
-    again: 'Next puzzle',
+    again: 'New game',
+    done: 'Done',
     source: 'Meanings and readings from JMdict and KANJIDIC (EDRDG).',
     credits: 'Credits'
   },
@@ -258,7 +272,6 @@ export default {
   points: {
     title: 'Points',
     wallet: 'Your points',
-    how: 'Each part you find pays up to {part}, a win {win} or more, and win streaks and achievements pay extra.',
     hints: 'Hints held',
     streak: 'Win streak',
     achievements: 'Achievements',
@@ -287,6 +300,8 @@ export default {
   // Buying, on the Points page and in a game's hint sheet.
   shop: {
     buyFor: 'Buy · {cost} pts',
+    // A hint's Buy button shows its price alone; this is what it's called.
+    buyLabel: 'Buy {name} for {cost} pts',
     confirm: 'Spend {cost} of your {have} pts on {name}? You’ll have {left} left.',
     confirmTitle: 'Buy {name}?',
     confirmYes: 'Buy for {cost} pts',
@@ -353,7 +368,7 @@ export default {
     debug: {
       title: 'Debug',
       name: 'Debug mode',
-      body: 'For testing: numbered dots on the game’s keys show the answer in writing order, and you can add points.',
+      body: 'For testing: numbered dots on the game’s keys show the answer in writing order, every hint in a game is free, and you can add points.',
       add: 'Add {n} pts',
       added: 'Added {n} pts. You have {total} pts.'
     }
@@ -533,7 +548,7 @@ export default {
     easy: { name: 'Easy', desc: 'Guess kanji from a list the parts make, with meanings. (Retired.)' },
     normal: { name: 'Normal', desc: 'The word’s parts in writing order, one per cell. You work out where each kanji starts.' },
     hard: { name: 'Hard', desc: 'Every guess must make real kanji, and use what you’ve found: greens stay put, and parts found are used again.' },
-    guided: { name: 'Guided', desc: 'Shows each kanji’s cells and places, a frame per kanji with how many still fit, and dims the parts that can’t go in the cell.' },
+    guided: { name: 'Guided', desc: 'Shows each kanji’s cells and places, a frame per kanji with the parts found, and dims the parts that can’t go in the cell.' },
     'guided-hard': { name: 'Guided · Hard', desc: 'Guided and Hard together.' }
   },
 
@@ -592,6 +607,10 @@ export default {
     reading: {
       name: 'Reading',
       desc: 'Shows how it is read.'
+    },
+    arrows: {
+      name: 'Arrows',
+      desc: 'Each yellow tile shows an arrow: move it left or right. Lasts the whole game.'
     },
     sweep: {
       name: 'Sweep',

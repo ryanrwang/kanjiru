@@ -43,16 +43,24 @@ export default {
 
   // 遊んだゲームの一覧（プレイカードの下）
   history: {
-    title: 'あなたのゲーム',
+    title: '漢じた',
     count: '{n}回プレイ・{won}回クリア',
     won: '{n}回でクリア',
     lost: 'クリアならず',
     gaveUp: 'ギブアップ',
-    more: 'さらに{n}件表示'
+    more: 'さらに{n}件表示',
+    delete: '削除',
+    deleteLabel: '{answer}を削除',
+    deleteTitle: 'このゲームを削除しますか？',
+    deleteBody: '{answer}が記録と成績から消えます。元には戻せません。',
+    deleteYes: 'ゲームを削除',
+    deleteDesc: 'もらったポイント・ヒント・実績はそのままです。',
+    deleted: '{answer}を削除しました。'
   },
 
   // プレイカード：ゲーム（デイリーのあるモードでは今日のデイリー）、むずかしい・ガイドのスイッチ、遊ぶ
   play: {
+    gaveUp: 'あきらめました。答えは「{answer}」でした。',
     soon: '近日公開',
     loading: '読み込み中…',
     loadFailed: 'ゲームを読み込めませんでした。通信状況を確認して、再読み込みしてください。',
@@ -64,7 +72,6 @@ export default {
     won: '{n}回でクリア ✓・{level}',
     lost: '今日はクリアならず・{level}',
     level: 'レベル',
-    levelNext: '次の問題のレベル',
     mult: 'ポイント×{mult}',
     hard: {
       name: 'むずかしい',
@@ -83,9 +90,6 @@ export default {
 
   game: {
     home: 'スタートに戻る',
-    daily: 'デイリー #{n}',
-    practice: 'もっと遊ぶ',
-    kindLevel: '{kind}・{level}',
     listSep: '、',
     // 意味は辞書の英語なので、英語の区切り
     meaningSep: ', ',
@@ -93,7 +97,6 @@ export default {
     board: 'あなたの回答',
     rowLabel: '{n}回目：{word}。{parts}',
     rowLabelParts: '{n}回目：{parts}',
-    rowLabelFit: '{label}。{fit}',
     cells: '次の回答：{cells}マス中{n}マス',
     cellEmpty: '{cell}（空）',
     cellFilled: '{cell}：{part}',
@@ -102,9 +105,6 @@ export default {
     cellNumber: '{n}マス目',
     cellPlace: '{n}マス目（{place}）',
     shape: 'マス：{places}',
-    fit: '当てはまる漢字：{n}',
-    fitTitle: '当てはまる漢字の数',
-    fitCount: '候補{n}',
     placeOfSlot: '{n}字目の{place}',
     palettePlace: '{place}のパーツ',
     frameLabel: 'ここまでの漢字：{parts}',
@@ -126,6 +126,10 @@ export default {
       near: '位置がちがう',
       other: '別の字にある',
       miss: '答えにない'
+    },
+    way: {
+      left: 'もっと左',
+      right: 'もっと右'
     },
     markParts: {
       hit: 'この字にある',
@@ -149,11 +153,17 @@ export default {
       back: '戻る',
       close: '閉じる',
       count: '×{n}',
+      free: '無料',
+      freeLabel: 'デバッグモードでは無料',
+      freeNote: 'デバッグモードでは無料。ヒントは減りません。',
       held: '所持数 {n}',
       confirmUse: '{name}を使いますか？',
       confirmUseYes: '使う',
       left: '所持{n}。使うと残り{left}になります。',
       used: '{name}を使いました。',
+      swept: '答えにないパーツを{n}個おそうじしました。',
+      pointed: '黄色のマス{n}個に、パーツのある方向の矢印が出ました。',
+      pointLater: 'これから黄色のマスに、パーツのある方向の矢印が出ます。',
       bought: '買いました。所持数 {n}。',
       why: {
         none: '持っていません。ここで買うか、クリアするとボーナスでもらえることがあります。',
@@ -168,8 +178,7 @@ export default {
     // ヒントを使ったときの表示（js/play/reveal.js）
     reveal: {
       kanji: '{n}字目',
-      strokesUnit: '画',
-      tap: 'タップで閉じる'
+      done: 'OK'
     },
     // 途中で終える：ゲーム中のヘッダーの旗
     end: {
@@ -240,7 +249,8 @@ export default {
     copyManually: '上のテキストを選択して、コピーしてください。',
     nextDaily: '次のデイリーまで',
     practice: 'もう一度遊ぶ',
-    again: '次の問題',
+    again: '新しいゲーム',
+    done: '閉じる',
     source: '意味と読みはJMdictとKANJIDIC（EDRDG）より。',
     credits: 'クレジット'
   },
@@ -254,7 +264,6 @@ export default {
   points: {
     title: 'ポイント',
     wallet: '所持ポイント',
-    how: '見つけたパーツは1つ最大{part}pt、クリアで{win}pt以上。連勝と実績でさらにもらえます。',
     hints: '所持ヒント',
     streak: '連勝',
     achievements: '実績',
@@ -283,6 +292,8 @@ export default {
   // 購入（ポイントページと、ゲーム中のヒントシート）
   shop: {
     buyFor: '買う・{cost}pt',
+    // ヒントの購入ボタンは値段だけ。読み上げではこう呼ぶ
+    buyLabel: '{name}を{cost}ptで買う',
     confirm: '{name}に{cost}ptを使いますか？　所持{have}pt、残りは{left}ptになります。',
     confirmTitle: '{name}を買いますか？',
     confirmYes: '{cost}ptで買う',
@@ -349,7 +360,7 @@ export default {
     debug: {
       title: 'デバッグ',
       name: 'デバッグモード',
-      body: 'テスト用：ゲームのキーに番号付きの点で答えを書き順に表示し、ポイントを追加できます。',
+      body: 'テスト用：ゲームのキーに番号付きの点で答えを書き順に表示し、ゲーム中のヒントはすべて無料、ポイントも追加できます。',
       add: '{n}ptを追加',
       added: '{n}ptを追加しました。所持{total}pt。'
     }
@@ -526,7 +537,7 @@ export default {
     easy: { name: 'かんたん', desc: 'パーツで作れる漢字の一覧から、漢字で答えます。（終了）' },
     normal: { name: 'ふつう', desc: 'ことばのパーツを書き順にマスへ。どこで漢字が切れるかも考えます。' },
     hard: { name: 'むずかしい', desc: '毎回実在する漢字を作り、見つけたヒントを使います。緑はそのまま、見つけたパーツはまた使います。' },
-    guided: { name: 'ガイド', desc: '漢字ごとのマスと位置、漢字ごとの枠と当てはまる数を表示し、そのマスに入らないパーツを薄くします。' },
+    guided: { name: 'ガイド', desc: '漢字ごとのマスと位置、見つけたパーツが入る漢字ごとの枠を表示し、そのマスに入らないパーツを薄くします。' },
     'guided-hard': { name: 'ガイド・むずかしい', desc: 'ガイドとむずかしいの両方。' }
   },
 
@@ -585,6 +596,10 @@ export default {
     reading: {
       name: '読み',
       desc: '読み方がわかります。'
+    },
+    arrows: {
+      name: '矢印',
+      desc: '黄色のマスに矢印が出ます：左か右か。ゲーム中ずっと続きます。'
     },
     sweep: {
       name: 'おそうじ',

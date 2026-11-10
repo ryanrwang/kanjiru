@@ -40,12 +40,13 @@ import { openPoints } from './js/points.js';
 import { openAbout } from './js/about.js';
 import { tipDue, platform, canPrompt, promptInstall, onInstallChange, installSteps } from './js/install.js';
 import { toast, bump } from './js/toast.js';
+import { ask } from './js/confirm.js';
 import { loadData } from './js/engine/data.js';
 import { createEngine } from './js/engine/game.js';
 import { answersFor, localDate, msToNextDaily } from './js/engine/daily.js';
 import { glyphMaker } from './js/play/glyph.js';
-import { openGame } from './js/play/screen.js';
-import { dailyStatus, practiceStatus, currentLevel } from './js/play/session.js';
+import { openGame, askEnd, forgetEnded } from './js/play/screen.js';
+import { dailyStatus, practiceStatus, currentLevel, openPractice, skipPractice, finish } from './js/play/session.js';
 import { earnAchievements, describe } from './js/play/rewards.js';
 import { howTo } from './js/howto.js';
 import { historyCard, PAGE } from './js/history.js';
@@ -83,6 +84,8 @@ const hintsBtn = byId('hints-open');
 const walletBtn = byId('wallet');
 const settingsBtn = byId('settings-open');
 const closeBtn = byId('page-close');
+const dockBtn = byId('head-points');
+let dockShown = null;   // the points the docked total last showed
 endBtn.innerHTML = FLAG;
 settingsBtn.innerHTML = GEAR;
 closeBtn.innerHTML = CLOSE;
@@ -103,14 +106,12 @@ function renderHeader() {
   else brand.removeAttribute('aria-label');
   brand.parentElement.querySelectorAll('.crumb').forEach((node) => node.remove());
   document.querySelector('.app-header').classList.toggle('is-crumb', !!crumb);
-  // In a game: the kind and level under 漢 › Play (js/play/screen.js head()).
+  // In a game: whether it's on and the hints held (js/play/screen.js head()).
   const game = p.name === 'game' && view && view.head ? view.head() : null;
   if (crumb) {
     brand.after(
       el('span', { class: 'crumb crumb-sep', 'aria-hidden': 'true' }, '›'),
-      el('span', { class: `crumb crumb-page${game ? ' has-sub' : ''}`, id: `${p.name}-title` },
-        el('span', {}, crumb),
-        game ? el('span', { class: 'crumb-sub' }, game.sub) : null));
+      el('span', { class: 'crumb crumb-page', id: `${p.name}-title` }, crumb));
   }
 
   // A page of its own: Close alone.
@@ -150,6 +151,17 @@ function renderHeader() {
     if (shownPoints !== null && now !== shownPoints) bump(amount, now - shownPoints);
     shownPoints = now;
   }
+
+  // On the Points page, the points dock beside Close as the wallet scrolls
+  // under the header (js/points.js sets how far, --dock). The page says
+  // the total itself, so screen readers skip this one.
+  const docked = p.name === 'points';
+  dockBtn.hidden = !docked;
+  const dockAmount = el('span', { class: 'wallet-amount' },
+    el('span', { class: 'wallet-icon' }, ECONOMY.currency.icon), pts(now));
+  dockBtn.replaceChildren(dockAmount);
+  if (docked && dockShown !== null && now !== dockShown) bump(dockAmount, now - dockShown);
+  dockShown = docked ? now : null;
 }
 
 endBtn.addEventListener('click', () => view && view.endGame && view.endGame());
@@ -232,8 +244,9 @@ function clock(ms) {
 }
 
 // The Hard and Guided switches, right on the card: they pick the level of
-// the next game, and of one with no moves yet (js/play/session.js).
-function levelSwitches(title) {
+// the next game, and of one with no moves yet (js/play/session.js). No title
+// over them (2026-11-10, the user asked); screen readers hear "Level".
+function levelSwitches() {
   const level = LEVEL[currentLevel()];
   const set = (key, on) => {
     const hard = key === 'hard' ? on : level.hard;
@@ -241,8 +254,7 @@ function levelSwitches(title) {
     store.update((s) => { s.settings.level = settingsLevel(hard, guided); });
     renderCards(`level-${key}`);
   };
-  return el('div', { class: 'play-level', role: 'group', 'aria-labelledby': 'play-level-title' },
-    el('p', { class: 'play-level-title', id: 'play-level-title' }, title),
+  return el('div', { class: 'play-level', role: 'group', 'aria-label': t('play.level') },
     ['hard', 'guided'].map((key) => switchRow({
       id: `level-${key}`,
       name: t(`play.${key}.name`),
@@ -251,6 +263,46 @@ function levelSwitches(title) {
       on: level[key],
       onChange: (on) => set(key, on)
     })));
+}
+
+// The flag beside Continue (2026-11-10, the user asked): ends the game on
+// the go without opening it, with the game's own ask (give up, or a new
+// puzzle). Either way the card starts afresh; giving up records the loss,
+// pays its parts and names the answer.
+async function endFromCard(mode) {
+  const on = openPractice(game.engine, game.data, mode);
+  if (!on || on.state.status !== 'playing') return;
+  const pick = await askEnd(on.state);
+  if (!pick || page().name !== 'play') return;
+  if (pick === 'new') {
+    skipPractice(mode);
+    // The next game is drawn now, so it skips this answer.
+    openPractice(game.engine, game.data, mode, { skip: on.state.answer });
+    toast({ icon: '🏳️', title: t('game.end.skipped') });
+  } else {
+    const r = game.engine.giveUp(on.state);
+    if (r.error) return;
+    const done = finish(game.engine, mode, { ...on, state: r.state });
+    toast({
+      icon: '🏳️', title: t('play.gaveUp', { answer: r.state.answer }),
+      body: done.paid && done.points.total > 0 ? t('reward.points', { n: done.points.total }) : ''
+    });
+    done.rewards.forEach((entry) => toast(describe(entry)));
+  }
+  renderCards();
+  renderHistory();
+  renderHeader();
+  const next = cards && cards.querySelector('.play-actions .btn-primary');
+  if (next) next.focus();
+}
+
+function endButton(mode) {
+  const node = el('button', {
+    class: 'btn btn-secondary btn-large play-end', type: 'button', 'data-id': `end-${mode.id}`,
+    title: t('game.end.open'), 'aria-label': t('game.end.open'), onclick: () => endFromCard(mode)
+  });
+  node.innerHTML = FLAG;
+  return node;
 }
 
 // One card per listed mode. A mode with a daily offers it first, then keep
@@ -279,7 +331,9 @@ function playCard(mode) {
   }, text);
   let actions = [];
   if (random) {
-    actions = [button('btn-primary btn-large', going ? t('play.continue') : t('play.start'), mode.id)];
+    // A game on the go can be ended from here: the flag, beside Continue.
+    actions = [going ? endButton(mode) : null,
+      button('btn-primary btn-large', going ? t('play.continue') : t('play.start'), mode.id)];
   } else if (can && (!status || done)) {
     actions = [button('btn-primary btn-large', t('play.more'), `${mode.id}/practice`),
       status ? button('btn-secondary btn-large', t('play.result'), mode.id) : null];
@@ -299,8 +353,8 @@ function playCard(mode) {
           done ? el('p', { class: 'play-countdown' },
             el('span', {}, t('play.nextDaily')),
             el('span', { class: 'countdown-time', 'data-countdown': '' }, clock(msToNextDaily()))) : null))),
-    can && !going ? levelSwitches(done || !status ? t('play.levelNext') : t('play.level')) : null,
-    actions.length ? el('div', { class: 'play-actions' }, actions) : null);
+    can && !going ? levelSwitches() : null,
+    actions.some(Boolean) ? el('div', { class: 'play-actions' }, actions) : null);
 }
 
 // Every game played, under the card (js/history.js), PAGE more at a time.
@@ -308,9 +362,31 @@ function playCard(mode) {
 let played = null;
 let playedShown = PAGE;
 
+// Deleting a game from history (2026-11-10, the user asked for any game):
+// one ask, then it's gone from the list and the stats (store.deleteGame);
+// what it paid stays. The focus goes to the game that took its place.
+async function deleteFromHistory(g) {
+  const pick = await ask({
+    icon: '🗑️',
+    title: t('history.deleteTitle'),
+    body: t('history.deleteBody', { answer: g.answer }),
+    options: [{ id: 'delete', name: t('history.deleteYes'), desc: t('history.deleteDesc'), danger: true }]
+  });
+  if (pick !== 'delete' || page().name !== 'play') return;
+  const items = played ? [...played.querySelectorAll('.history-item')] : [];
+  const at = items.findIndex((node) => node.dataset.game === `${g.modeId}/${g.key}`);
+  store.deleteGame(g.modeId, g.key);
+  renderHistory();
+  toast({ icon: '🗑️', title: t('history.deleted', { answer: g.answer }) });
+  const left = played ? [...played.querySelectorAll('.history-summary')] : [];
+  const next = left[Math.min(Math.max(at, 0), left.length - 1)] || (cards && cards.querySelector('.play-actions .btn-primary'));
+  if (next) next.focus();
+}
+
 function renderHistory() {
   const fresh = historyCard({
-    save: store.get(), data: game.data, engine: game.engine, shown: playedShown,
+    save: store.get(), data: game.data, engine: game.engine, glyph: game.glyph, shown: playedShown,
+    onDelete: deleteFromHistory,
     onMore: () => {
       const from = playedShown;
       playedShown += PAGE;
@@ -455,6 +531,7 @@ function route() {
   routed = location.hash;
   renderAll();
   window.scrollTo(0, 0);
+  glass();   // at the top now, before the scroll event's frame
 }
 
 async function renderGame({ mode, kind }) {
@@ -482,14 +559,33 @@ async function renderGame({ mode, kind }) {
   renderHeader();
 }
 
+// Every page: the header sticks to the top and turns to glass as the page
+// slides under it (--glass, 0 to 1, following the scroll; styles.css
+// .app-header). The user liked it on the Points page, asked for it on
+// Settings, then everywhere, a game too (2026-11-10).
+const appHeader = document.querySelector('.app-header');
+let glassFrame = 0;
+function glass() {
+  glassFrame = 0;
+  const lead = parseFloat(TOKENS.active().spacing.lg) || 1;
+  appHeader.style.setProperty('--glass', Math.min(1, Math.max(0, window.scrollY / lead)).toFixed(3));
+}
+const onGlassScroll = () => { if (!glassFrame) glassFrame = requestAnimationFrame(glass); };
+window.addEventListener('scroll', onGlassScroll, { passive: true });
+window.addEventListener('resize', onGlassScroll);
+
 function renderAll() {
-  if (view) { view.destroy(); view = null; }
+  const p = page();
+  // A game closing for a page of its own keeps a game just over, so Close
+  // comes back to its result; the play page forgets it (js/play/screen.js).
+  if (view) { view.destroy({ keep: PAGES.has(p.name) }); view = null; }
+  if (p.name === 'play') forgetEnded();
   if (guide) { guide.stop(); guide = null; }
   clearInterval(playTimer);
-  const p = page();
   // Before the header, which shows the hints in a game on the go.
   document.body.classList.toggle('is-game', p.name === 'game');
   document.body.dataset.page = p.name;
+  glass();
   renderHeader();
   if (p.name === 'game') renderGame(p);
   else if (p.name === 'points') {

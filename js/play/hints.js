@@ -2,8 +2,9 @@
  * Hints on the game screen: what the player knows about the answer (clues),
  * and the hints modal, opened from the hints pill in the header: every hint
  * with what it does, how many you hold and Use, which asks once more before
- * it spends one. A hint you hold none of has Buy instead (js/shop.js), with
- * the same confirm the Points page has, unless the player turned it off.
+ * it spends one. A hint you hold none of shows its price instead
+ * (priceButton(), shared with the Points page), which buys it (js/shop.js)
+ * after the same confirm the Points page has, unless the player turned it off.
  *
  * Clue icons are the icons of the powers that reveal them (js/config/powers.js),
  * so nothing here names a power.
@@ -70,42 +71,6 @@ export function partTile(part, glyph, mark = '') {
     el('span', { class: 'part-pos' }, t(`pos.${part.pos}`)));
 }
 
-// A kanji's places as a grid: top and bottom span it, the middle places
-// share a row, and an outer part frames the rest (styles.css). Used by the
-// clue boxes here and the Layout card (js/play/reveal.js).
-//   { order, outer, rest, style }   style: the grid's, when there's no outer
-export function layoutGrid(positions) {
-  const order = [...new Set(positions)];
-  if (order.includes('outer')) return { order, outer: true, rest: order.filter((pos) => pos !== 'outer'), style: null };
-  const mid = ['left', 'none', 'inner', 'whole', 'right'].filter((pos) => order.includes(pos));
-  const cols = Math.max(mid.length, 1);
-  const rows = [];
-  if (order.includes('top')) rows.push(Array(cols).fill('top'));
-  if (mid.length) rows.push(mid);
-  if (order.includes('bottom')) rows.push(Array(cols).fill('bottom'));
-  return {
-    order,
-    outer: false,
-    rest: order,
-    style: {
-      gridTemplateAreas: rows.map((r) => `"${r.join(' ')}"`).join(' '),
-      gridTemplateColumns: `repeat(${cols}, 1fr)`,
-      gridTemplateRows: `repeat(${rows.length}, 1fr)`
-    }
-  };
-}
-
-// A kanji's places drawn as solid lines (styles.css .clue-layout: the
-// accent shows through the gaps between them); an outer part is the whole
-// box and its inner an inset one. For the kanji guide's frames.
-export function layoutDrawing(positions) {
-  const g = layoutGrid(positions);
-  const zone = (pos) => el('span', { class: `clue-zone is-${pos}`, style: g.outer ? null : { gridArea: pos } });
-  return g.outer
-    ? el('span', { class: 'clue-layout has-outer', 'aria-hidden': 'true' }, el('span', { class: 'clue-inner' }, g.rest.map(zone)))
-    : el('span', { class: 'clue-layout', style: g.style, 'aria-hidden': 'true' }, g.order.map(zone));
-}
-
 // A clue as a chip: the hint's icon, then what it found. With onOpen, a
 // button that opens the clue's card again (js/play/reveal.js); `card` is
 // that card's effect.
@@ -165,17 +130,30 @@ export function whyNot(engine, state, power, held) {
 // One hint as a row (styles.css .hint-row), in the hints modal and on the
 // Points page: its icon, name, how many you hold and a button on the first
 // line, what it does under them, then a line (why not, or what happened).
-export function hintRow({ power, held, off = false, action = null, line = null, key = power.id }) {
+//   free  debug mode: every hint free, so "Free" in place of how many
+export function hintRow({ power, held, free = false, off = false, action = null, line = null, key = power.id }) {
+  const heldText = free ? t('game.powers.freeLabel') : t('game.powers.held', { n: held });
   return el('li', { class: `hint-row${off ? ' is-off' : ''}`, 'data-key': key },
     el('span', { class: 'hint-icon', 'aria-hidden': 'true' }, power.icon),
     el('p', { class: 'hint-name' }, t(`power.${power.id}.name`)),
     el('span', {
-      class: `hint-held${held ? ' is-held' : ''}`, title: t('game.powers.held', { n: held }),
-      'aria-label': t('game.powers.held', { n: held })
-    }, t('game.powers.count', { n: held })),
+      class: `hint-held${held || free ? ' is-held' : ''}`, title: heldText, 'aria-label': heldText
+    }, free ? t('game.powers.free') : t('game.powers.count', { n: held })),
     action,
     el('p', { class: 'hint-desc' }, t(`power.${power.id}.desc`)),
     line);
+}
+
+// A hint's Buy button, in a hint row: just its price (the user asked for
+// the number alone, 2026-11-10); screen readers hear what it buys.
+export function priceButton({ power, disabled = false, onclick, id = null }) {
+  return el('button', {
+    class: 'btn btn-secondary btn-small hint-price', type: 'button', 'data-id': id, disabled,
+    'aria-label': t('shop.buyLabel', { name: t(`power.${power.id}.name`), cost: power.cost }),
+    onclick
+  },
+    el('span', { class: 'hint-price-coin', 'aria-hidden': 'true' }, ECONOMY.currency.icon),
+    el('span', { 'aria-hidden': 'true' }, pts(power.cost)));
 }
 
 // ── The hints modal ──────────────────────────────────────────────────
@@ -228,16 +206,15 @@ export function openHints({ powers, read, ask, onBuy, onUse }) {
   // One row per hint: its icon, name and what it does, how many you hold,
   // and Use (or Buy when you hold none and could use one now).
   function row(p) {
-    const { held, why, offer } = read(p.id);
-    const selling = !held && !!offer && offer.why !== 'not-for-sale';
+    const { held, free, why, offer } = read(p.id);
+    const selling = !free && !held && !!offer && offer.why !== 'not-for-sale';
     const off = !!why && !selling;
     let action;
     if (selling) {
-      action = el('button', {
-        class: 'btn btn-secondary btn-small', type: 'button', 'data-id': `buy-${p.id}`,
-        disabled: !!offer.why,
+      action = priceButton({
+        power: p, id: `buy-${p.id}`, disabled: !!offer.why,
         onclick: () => (ask() ? show('buy', p.id) : buy(p.id, false))
-      }, t('shop.buyFor', { cost: p.cost }));
+      });
     } else {
       action = el('button', {
         class: 'btn btn-primary btn-small', type: 'button', 'data-id': `use-${p.id}`,
@@ -250,7 +227,7 @@ export function openHints({ powers, read, ask, onBuy, onUse }) {
     else if (selling && offer.why) {
       line = el('p', { class: 'hint-why' }, offer.why === 'short' ? t('shop.short', { n: offer.need }) : t('shop.full', { hold: p.hold }));
     } else if (why && !selling) line = el('p', { class: 'hint-why', id: `why-${p.id}` }, why);
-    return hintRow({ power: p, held, off, action, line });
+    return hintRow({ power: p, held, free, off, action, line });
   }
 
   function listView() {
@@ -261,13 +238,13 @@ export function openHints({ powers, read, ask, onBuy, onUse }) {
 
   // Use's confirm: what it does, and how many are left after.
   function useView(p) {
-    const { held, points } = read(p.id);
+    const { held, free, points } = read(p.id);
     return [head(t('game.powers.title'), points),
       el('div', { class: 'hint-confirm' },
         el('span', { class: 'hint-confirm-icon', 'aria-hidden': 'true' }, p.icon),
         el('h3', { class: 'hint-confirm-title' }, t('game.powers.confirmUse', { name: name(p) })),
         el('p', { class: 'hint-desc' }, t(`power.${p.id}.desc`)),
-        el('p', { class: 'sheet-note' }, t('game.powers.left', { n: held, left: held - 1 }))),
+        el('p', { class: 'sheet-note' }, free ? t('game.powers.freeNote') : t('game.powers.left', { n: held, left: held - 1 }))),
       el('div', { class: 'btn-row' },
         el('button', {
           class: 'btn btn-primary', type: 'button', 'data-id': 'confirm-use',

@@ -299,9 +299,11 @@
       cellMd:    s[48],
       cellLg:    s[56],
       cellXl:    s[64],
-      // Guided: the kanji built from found parts, above each kanji's cells.
+      // The kanji guide's frames (js/play/frame.js): above the cells, and
+      // bigger on a hint's card.
       frameSm:   s[56],
       frame:     s[64],
+      frameLg:   s[96],
       // The keyboard's keys: their height, and their least width. The game
       // screen drops to the small height only to keep cells at 32 px or more.
       keySm:     s[32],
@@ -345,7 +347,14 @@
       toast:  primitives.duration[5000],    // how long a toast stays up
       ease:   primitives.easing.standard,
       bounce: primitives.easing.emphasized,
-      ink:    primitives.easing.ink
+      ink:    primitives.easing.ink,
+      linear: primitives.easing.linear   // an even pace (the sweep's broom)
+    },
+
+    // Glass (the Points page's header once the page slides under it): how
+    // much it blurs what's behind.
+    blur: {
+      glass: s[16]
     },
 
     opacity: {

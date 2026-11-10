@@ -389,15 +389,38 @@ test('hard: a part a power showed stays in its cell, like a green', () => {
   assert.equal(engine.guess(easy, [['木', '寸', '日']]).error, undefined);
 });
 
+test('arrows: once used, every yellow tile of every guess points the way, and only once', () => {
+  const engine = setup();
+  let game = play(engine, engine.newGame(normal('時')), ['土', '日', '寸']);   // 日 土 寸
+  assert.equal(engine.arrows(game, 0), null, 'nothing before the hint');
+  assert.equal(engine.clues(game).arrows, false);
+  const r = engine.usePower(game, 'arrows');
+  assert.equal(r.result.arrows, 2);
+  game = r.state;
+  assert.deepEqual(engine.arrows(game, 0), [['right', 'left', null]]);
+  assert.equal(engine.clues(game).arrows, true);
+  assert.equal(engine.canUse(game, 'arrows'), 'useless');
+  game = play(engine, game, ['寸', '土', '月']);
+  assert.deepEqual(engine.arrows(game, 1), [['right', null, null]], 'later guesses too');
+  // Before the first guess it points nothing yet, and replays the same.
+  const early = engine.usePower(engine.newGame(normal('時')), 'arrows');
+  assert.deepEqual(engine.replay(normal('時'), early.state.log), early.state);
+  assert.equal(early.result.arrows, 0);
+});
+
 test('guided: the board shows the split, so the Layout hint has nothing new', () => {
   const engine = setup();
   assert.equal(engine.canUse(engine.newGame(guided('明')), 'layout'), 'useless');
   assert.equal(engine.canUse(engine.newGame(normal('明')), 'layout'), null);
 });
 
-test('guided: the kanji that still fit each slot, after every guess', () => {
-  const engine = setup();
-  let game = engine.newGame(guided('明'));
+test('countLeft: the kanji that still fit each slot, after every guess', () => {
+  // No offered level keeps the count since 2026-11-10; a test level does.
+  const config = bigPalette();
+  const base = config.levels.find((l) => l.id === 'guided');
+  config.levels.push({ ...base, id: 'counting', offered: false, countLeft: true });
+  const engine = setup(config);
+  let game = engine.newGame(start('k1', '明', { level: 'counting' }));
   // Every fixture kanji of two parts.
   const all = engine.fits(game)[0];
   ['明', '林', '休', '好', '唄', '村', '本', '間'].forEach((ch) => assert.ok(all.includes(ch), ch));
@@ -420,6 +443,7 @@ test('guided: what powers show narrows the kanji that fit too', () => {
 
 test('levels: only a countLeft level keeps the count on each guess', () => {
   const engine = setup();
+  assert.equal(play(engine, engine.newGame(guided('明')), ['木', '木']).guesses[0].left, undefined);
   assert.equal(play(engine, engine.newGame(hard('明')), ['木', '木']).guesses[0].left, undefined);
   assert.equal(play(engine, engine.newGame(normal('明')), ['木', '木']).guesses[0].left, undefined);
   assert.equal(play(engine, engine.newGame(start('k1', '明')), '林').guesses[0].left, undefined);

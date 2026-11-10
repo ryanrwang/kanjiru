@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { scoreGuess, scoreParts, scoreOrder, allHit, layoutOf, MARKS } from '../js/engine/score.js';
+import { scoreGuess, scoreParts, scoreOrder, allHit, layoutOf, nearWays, MARKS } from '../js/engine/score.js';
 import { KANJI } from './fixture-kanji.js';
 import { slots, marks } from './helpers.js';
 
@@ -179,6 +179,15 @@ test('in order: each cell takes its answer cell\'s place, and greens use up part
   assert.deepEqual(scored[0].tiles.map((t) => t.pos), ['left', 'right', 'right']);
   assert.equal(scored[1].solved, true);
   assert.equal(scored[1].kanji, '間');
+});
+
+test('arrows: each yellow tile points across the word to the part its mark used', () => {
+  // 時間: 日 土 寸 | 門 日. 寸 and 門 sit left of theirs, 土 right of its own.
+  const scored = scoreOrder([['日', '寸', '門'], ['土', '口']], answerOf('時間'));
+  assert.deepEqual(nearWays(scored, answerOf('時間')), [[null, 'right', 'right'], ['left', null]]);
+  // 日本: 日 | 木 一. 木 is one cell early, 日 one cell late.
+  const swapped = scoreOrder([['木'], ['日', '一']], answerOf('日本'));
+  assert.deepEqual(nearWays(swapped, answerOf('日本')), [['right'], ['left', null]]);
 });
 
 test('in order: the kanji a cell sits in doesn\'t change its mark', () => {

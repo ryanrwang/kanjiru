@@ -6,7 +6,8 @@
  *   Appearance  light, dark, or the device's (a skin with one scheme fixes it)
  *   Hints       whether buying a hint asks first (Don't ask again turns it off)
  *   Home screen how to add Kanjiru to it (js/install.js), with the browser's
- *               own Install button where it offers one; gone once installed
+ *               own Install button where it offers one; folded to its title
+ *               until opened (2026-11-10); gone once installed
  *   Move your progress to another device:
  *     Send       a one-time code from api/transfer.php, with a countdown
  *     Receive    enter a code from the other device
@@ -53,6 +54,7 @@ const ui = {
   receive: { code: '', busy: false },
   text: { mode: null, value: '' },   // mode: 'copy' or 'paste'
   ask: null,                         // { section, run(how) } while Merge / Replace shows
+  installOpen: false,                // the home-screen steps unfolded
   status: {}                         // section → { kind: 'ok' | 'error', text }
 };
 
@@ -167,8 +169,15 @@ function renderInstall() {
   if (installed()) return null;
   const p = platform();
   const both = p === 'other';
-  return el('section', { class: 'sheet-section', 'aria-labelledby': 'install-title' },
+  // Folded to its title until opened; it stays as it was across redraws.
+  return el('details', {
+    class: 'sheet-section sheet-fold', open: ui.installOpen,
+    ontoggle: (event) => { ui.installOpen = event.currentTarget.open; }
+  },
+  el('summary', { class: 'fold-summary', 'data-id': 'install-fold' },
     el('h3', { class: 'sheet-section-title', id: 'install-title' }, t('install.title')),
+    el('span', { class: 'fold-chevron', 'aria-hidden': 'true' })),
+  el('div', { class: 'sheet-fold-body' },
     el('p', { class: 'sheet-note' }, t(`install.why.${p}`)),
     (both ? ['ios', 'android'] : [p]).map((q) => (both
       ? el('div', { class: 'sheet-sub', role: 'group', 'aria-labelledby': `install-${q}-title` },
@@ -180,7 +189,7 @@ function renderInstall() {
         class: 'btn btn-primary', type: 'button', 'data-id': 'install',
         onclick: async () => { await promptInstall(); render(); }
       }, t('install.button'))) : null,
-    el('p', { class: 'sheet-note' }, t('install.backup')));
+    el('p', { class: 'sheet-note' }, t('install.backup'))));
 }
 
 // ── About ────────────────────────────────────────────────────────────

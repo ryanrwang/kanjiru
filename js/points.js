@@ -1,10 +1,15 @@
 /*
  * The Points page (#points, opened by the points in the header; the header
- * shows 漢 › Points, and Close, which goes back): the wallet, the looks with examples, the hints and
- * powers (one per row: what it does, how many you hold, Buy), and the
- * achievements. Buying takes two taps: Buy, then a modal that names the
- * price and what's left (rules in js/shop.js). A hint's modal has Don't
- * ask again (settings.confirmHintBuy; Settings turns it back on).
+ * shows 漢 › Points, and Close, which goes back): the wallet, the looks with
+ * examples, the hints and powers (one per row: what it does, how many you
+ * hold, its price), and the achievements. Buying takes two taps: the price
+ * (or a look's Buy), then a modal that names the price and what's left
+ * (rules in js/shop.js). A hint's modal has Don't ask again
+ * (settings.confirmHintBuy; Settings turns it back on).
+ *
+ * As the page scrolls, the header sticks with a glass look (app.js glass(),
+ * on every page) and the wallet's total moves into it (dock():
+ * --dock, 0 to 1, follows the scroll), so the points stay in sight.
  *
  *   const page = openPoints(root, { onLook, onWallet });
  *   page.refresh();   // the scheme changed
@@ -27,7 +32,7 @@ import { stats, progress } from './engine/stats.js';
 import { localDate } from './engine/daily.js';
 import { amounts, skinsFor, achievementStats } from './play/rewards.js';
 import { bump } from './toast.js';
-import { hintRow } from './play/hints.js';
+import { hintRow, priceButton } from './play/hints.js';
 import { example as effectExample } from './play/effects.js';
 
 const pts = (n) => t('currency.amount', { n });
@@ -120,12 +125,37 @@ export function openPoints(root, ctx) {
     });
   }, { threshold: 1 }) : null;
 
+  // The points dock in the header as the page scrolls (2026-11-10): the
+  // header sticks to the top on glass (app.js glass()), and as the wallet's
+  // total goes under it, the total fades and the header's own (app.js,
+  // beside Close) comes in. It follows the scroll (--dock, 0 to 1, in
+  // styles.css), so it moves only as you do.
+  const header = document.querySelector('.app-header');
+  let dockFrame = 0;
+  function dock() {
+    dockFrame = 0;
+    const total = page.querySelector('.wallet-total');
+    if (!header || !total) return;
+    const lead = parseFloat(window.TOKENS.active().spacing.lg) || 1;
+    const edge = header.getBoundingClientRect().bottom;
+    const box = total.getBoundingClientRect();
+    // From when the total's foot is `lead` below the header to when it's
+    // a total's height further up.
+    const docked = Math.min(1, Math.max(0, (edge + lead - box.bottom) / (box.height || 1)));
+    header.style.setProperty('--dock', docked.toFixed(3));
+    total.style.setProperty('--dock', docked.toFixed(3));
+  }
+  const onScroll = () => { if (!dockFrame) dockFrame = requestAnimationFrame(dock); };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+
   function render(focusKey = null) {
     const save = store.get();
     const values = stats(save.history, { today: localDate() });
     // Achievements count the games since their last reset (Settings).
     const earning = achievementStats(save);
     page.replaceChildren(wallet(save, values), looks(save, earning), powers(save), achievements(save, earning));
+    dock();
     ui.playing = null;
     if (watcher) {
       watcher.disconnect();
@@ -157,7 +187,6 @@ export function openPoints(root, ctx) {
         el('span', { class: 'wallet-coin', 'aria-hidden': 'true' }, ECONOMY.currency.icon),
         el('span', { class: 'wallet-number' }, String(store.points(save))),
         el('span', { class: 'wallet-unit' }, t('currency.unit'))),
-      el('p', { class: 'wallet-how' }, t('points.how', { part: ECONOMY.perPart.hit, win: ECONOMY.solve.base })),
       el('dl', { class: 'wallet-stats' },
         stat(t('points.hints'), String(held)),
         stat(t('points.streak'), t('result.streakDays', { n: values.currentStreak })),
@@ -349,9 +378,12 @@ export function openPoints(root, ctx) {
     const line = done || ((why || when) ? el('p', { class: 'hint-why' }, [why, when].filter(Boolean).join(sep())) : null);
     return hintRow({
       power: p, held: offer.held, key,
-      action: p.cost === null ? null : buyButton(p.cost, offer.why, () => (ask
-        ? confirmBuy({ icon: p.icon, name, cost: p.cost, have: offer.have, onYes: pay, never: true })
-        : pay(false))),
+      action: p.cost === null ? null : priceButton({
+        power: p, disabled: !!offer.why,
+        onclick: () => (ask
+          ? confirmBuy({ icon: p.icon, name, cost: p.cost, have: offer.have, onYes: pay, never: true })
+          : pay(false))
+      }),
       line
     });
   }
@@ -404,6 +436,10 @@ export function openPoints(root, ctx) {
     destroy() {
       if (watcher) watcher.disconnect();
       if (confirmSheet && confirmSheet.open) confirmSheet.close();
+      cancelAnimationFrame(dockFrame);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (header) header.style.removeProperty('--dock');
     }
   };
 }
