@@ -99,3 +99,18 @@ test('a merge keeps the later reset and drops achievements from before it', () =
   assert.equal(back.resets.achievements, reset);
   assert.deepEqual(back.achievements, { unaided: '2026-11-07' });
 });
+
+test('a game deleted on one device stays deleted when the saves merge', () => {
+  const mine = fresh();
+  const theirs = fresh();
+  theirs.history.main = { [at(1)]: win('2026-11-01'), [at(2)]: win('2026-11-02') };
+  mine.history.main = { [at(2)]: win('2026-11-02') };
+  mine.deleted.main = { [at(1)]: 5 };
+  const merged = mergeSaves(mine, theirs);
+  assert.deepEqual(Object.keys(merged.history.main), [at(2)]);
+  assert.deepEqual(merged.deleted, { main: { [at(1)]: 5 } });
+  // The other way round, and again: the same.
+  const back = mergeSaves(theirs, mine);
+  assert.deepEqual(Object.keys(back.history.main), [at(2)]);
+  assert.deepEqual(Object.keys(mergeSaves(back, theirs).history.main), [at(2)]);
+});

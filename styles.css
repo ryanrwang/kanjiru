@@ -121,22 +121,6 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .crumb-page { min-width: 0; }
 
-/* In a game, the kind and level sit under the page's name (漢 › Play). */
-.crumb-page.has-sub {
-  display: inline-flex;
-  flex-direction: column;
-}
-
-.crumb-sub {
-  overflow: hidden;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-regular);
-  line-height: var(--font-lineHeight-snug);
-  color: var(--color-text-muted);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 .header-actions {
   display: flex;
   flex: 0 0 auto;
@@ -192,6 +176,44 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .head-icon { display: inline-flex; }
 .head-icon.is-accent { color: var(--color-text-accent); }
+
+/* On every page (app.js glass()): the header sticks to the top and turns
+   to glass as the page slides under it (--glass): a floating bar, inset
+   from the edges, blurring what passes beneath. On the Points page, as the
+   wallet's total goes under it, the total fades (.wallet-total) and the
+   header's points come in beside Close (--dock, js/points.js). Both follow
+   the scroll, 0 to 1. */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-header::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: var(--spacing-xs);
+  border: var(--stroke-thin) solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-bg-surface) calc(var(--opacity-strong) * 100%), transparent);
+  box-shadow: var(--shadow-md);
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(var(--blur-glass));
+  opacity: var(--glass, 0);
+  pointer-events: none;
+}
+
+.head-points {
+  cursor: default;
+  opacity: var(--dock, 0);
+  transform: translateY(calc((1 - var(--dock, 0)) * var(--spacing-sm)));
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .head-points { transform: none; }
+}
 
 /* On phones there's room for one name only: the one in the page's language. */
 @media (max-width: 419px) {
@@ -361,7 +383,6 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   border-top: var(--stroke-thin) solid var(--color-border-subtle);
 }
 
-.play-level-title,
 .sheet-section-title,
 .fold-title,
 .history-title {
@@ -386,6 +407,17 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 .play-actions .btn {
   flex: 1 1 var(--layout-cardMin);
   white-space: nowrap;
+}
+
+/* The flag that ends the game on the go: square, beside Continue. */
+.play-actions .play-end {
+  flex: 0 0 auto;
+  width: var(--spacing-2xl);
+  padding: 0;
+}
+.play-end svg {
+  width: var(--layout-headIcon);
+  height: var(--layout-headIcon);
 }
 
 .play-countdown {
@@ -418,7 +450,14 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   padding: var(--spacing-md) var(--spacing-lg);
   cursor: pointer;
   list-style: none;
-  border-radius: inherit;
+  /* The card's corners, inside its border. Not `inherit`: a <details>
+     slots its summary, so it would inherit the slot's square corners
+     (the hover showed them, 2026-11-10). Open, the foot is square. */
+  border-radius: calc(var(--radius-xl) - var(--stroke-thin));
+}
+.fold[open] > .fold-summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .fold-summary::-webkit-details-marker { display: none; }
@@ -434,7 +473,8 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   transition: transform var(--transition-fast) var(--transition-ease);
 }
 
-.fold[open] .fold-chevron { transform: rotate(-135deg); }
+.fold[open] .fold-chevron,
+.sheet-fold[open] > .fold-summary .fold-chevron { transform: rotate(-135deg); }
 
 .fold-body {
   display: flex;
@@ -564,19 +604,97 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   list-style: none;
 }
 
-/* The answer, what it means and how it went, then the guesses' squares. */
+/* The answer, what it means and how it went, then the guesses' squares;
+   a tap opens the final board under it. */
 .history-item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-sm) 0;
   border-top: var(--stroke-thin) solid var(--color-border-subtle);
 }
 
-.history-item:first-child {
-  padding-top: 0;
-  border-top: none;
+.history-item:first-child { border-top: none; }
+
+.history-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin: 0 calc(var(--spacing-sm) * -1);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  list-style: none;
+}
+
+div.history-summary { grid-template-columns: auto minmax(0, 1fr) auto; }
+
+summary.history-summary { cursor: pointer; }
+summary.history-summary::-webkit-details-marker { display: none; }
+summary.history-summary:hover { background: var(--color-interactive-hover); }
+
+/* Opened: the final board, then Delete at the foot, on the right. */
+.history-body {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--spacing-sm);
+}
+.history-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.history-fold[open] .fold-chevron { transform: rotate(-135deg); }
+
+/* The final board (js/history.js): the kanji guide's frames as the game
+   ended (js/play/frame.js), over every guess's tiles. */
+.history-board {
+  --board-frame: var(--layout-cellMd);
+  --frame-1: var(--font-size-md);
+  --frame-2: var(--font-size-xs);
+  --frame-3: var(--font-size-xs);
+  --frame-4: var(--font-size-xs);
+  --frame-cover: var(--font-size-xl);
+  --frame-inner: var(--font-size-xs);
+  --frame-inset: var(--spacing-sm);
+  --frame-solved: var(--font-size-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) 0 var(--spacing-md);
+}
+
+.history-frames {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-md);
+}
+
+.history-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.history-rows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-row,
+.history-slot { display: flex; }
+.history-row { gap: var(--spacing-md); }
+.history-slot { gap: var(--spacing-xs); }
+
+.history-board .tile.is-cell {
+  width: var(--layout-cellSm);
+  height: var(--layout-cellSm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
 }
 
 .history-word {
@@ -779,6 +897,22 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
 }
 
 .sheet-row-note { flex-basis: 100%; }
+
+/* A section that folds to its title (Add Kanjiru to your home screen):
+   the title is the fold's summary, its hover the width of the card's
+   content. */
+.sheet-fold { gap: 0; }
+.sheet-fold > .fold-summary {
+  margin: calc(var(--spacing-sm) * -1);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-lg);
+}
+.sheet-fold-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-md);
+}
 
 /* Parts of a section (send, receive, save text). */
 .sheet-sub {
@@ -1149,6 +1283,40 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
   font-size: var(--font-size-lg);
 }
 
+/* The Arrows hint: a chevron at a yellow tile's left or right edge, in
+   the tile's text colour (so it keeps the text's contrast), pointing the
+   way to where its part lies. */
+.tile.has-way { position: relative; }
+.tile-way {
+  position: absolute;
+  top: 50%;
+  width: var(--spacing-sm);
+  height: var(--spacing-sm);
+  border: 0 solid currentColor;
+  pointer-events: none;
+}
+.tile-way.is-left {
+  --way-dir: -1;
+  left: var(--spacing-xs);
+  border-width: 0 0 var(--stroke-thick) var(--stroke-thick);
+  transform: translateY(-50%) rotate(45deg);
+}
+.tile-way.is-right {
+  --way-dir: 1;
+  right: var(--spacing-xs);
+  border-width: var(--stroke-thick) var(--stroke-thick) 0 0;
+  transform: translateY(-50%) rotate(45deg);
+}
+/* Used: each arrow slides out from the middle toward its edge and nudges. */
+.tile-way.is-pointed {
+  animation: way-point var(--transition-reveal) var(--transition-bounce) var(--at, 0ms) both;
+}
+@keyframes way-point {
+  0%   { opacity: 0; translate: calc(var(--way-dir) * -1 * var(--spacing-md)) 0; }
+  60%  { opacity: 1; translate: calc(var(--way-dir) * var(--spacing-xs)) 0; }
+  100% { opacity: 1; translate: 0 0; }
+}
+
 /* Each mark's colour as a variable too, for the reveal below. */
 .tile.is-hit  { --mark-bg: var(--color-feedback-hit); }
 .tile.is-near { --mark-bg: var(--color-feedback-near); }
@@ -1369,18 +1537,27 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
   color: var(--color-text-secondary);
 }
 
-/* The kanji guide above the rows (renderFrame() in js/play/screen.js): a
-   frame per kanji with everything known about it. Guided lays them out
-   like a row, so each centres over its kanji's cells: the answer's shape,
-   filled in with the parts found green. Top and bottom span it; left,
-   inner and right share the middle; an outer part covers it all, with the
-   inner inset. Otherwise (.is-centred) they sit in a centred row: a solved
-   kanji, Layout's places as lines, or the stroke count. Stroke count is a
-   badge on the frame. */
+/* The kanji guide above the rows (renderFrame() in js/play/screen.js),
+   drawn by js/play/frame.js: a frame per kanji with everything known about
+   it. The same frame shows on a hint's card and in history, sized by its
+   host (--board-frame and the --frame-* font sizes). Guided lays the frames
+   out like a row, so each centres over its kanji's cells: the answer's
+   shape, filled in with the parts found green. Top and bottom span it;
+   left, inner and right share the middle; an outer part covers it all,
+   with the inner inset. Otherwise (.is-centred) they sit in a centred row.
+   Stroke count is a line under each frame. */
 .board-frames:empty,
 .board.is-parts .board-frames:empty { display: none; }
 
 .board.is-parts .board-frames { display: flex; }
+
+/* Room between the guide and the rows, more where the screen is wider
+   (fitBoard() reads it, so the cells still fit). */
+.board-frames { margin-bottom: var(--spacing-sm); }
+
+@media (min-width: 420px) {
+  .board-frames { margin-bottom: var(--spacing-md); }
+}
 
 .board-frames.is-centred {
   align-self: stretch;
@@ -1390,36 +1567,13 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
 .frame-row {
   display: flex;
   justify-content: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
 }
 
 .frame-row .frame-slot { width: auto; }
 
 /* A frame opens the kanji card (js/play/reveal.js). */
 button.frame-slot { cursor: pointer; }
-
-.frame-wrap {
-  position: relative;
-  display: inline-flex;
-}
-
-.frame-strokes {
-  position: absolute;
-  z-index: 2;
-  top: calc(var(--spacing-xs) * -1);
-  right: calc(var(--spacing-xs) * -1);
-  min-width: var(--spacing-md);
-  height: var(--spacing-md);
-  padding: 0 var(--spacing-xs);
-  border-radius: var(--radius-full);
-  background: var(--color-action-primary-bg);
-  color: var(--color-action-primary-text);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--spacing-md);
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
 
 .frame-slot {
   flex: 0 0 auto;
@@ -1431,15 +1585,20 @@ button.frame-slot { cursor: pointer; }
   width: calc(var(--board-cell) * var(--n, 1) + var(--spacing-xs) * (var(--n, 1) - 1) + var(--spacing-sm) * var(--g, 0));
 }
 
-/* How many kanji still fit, under each kanji's frame: one line, the height
-   fitBoard() counts. */
-.frame-count {
+/* A kanji's stroke count, under its frame: one line, the height fitBoard()
+   counts. Plain text, never a badge (a red dot reads as a notification). */
+.frame-strokes {
   height: var(--spacing-md);
   font-size: var(--font-size-xs);
-  line-height: var(--font-lineHeight-snug);
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
+  line-height: var(--spacing-md);
+  color: var(--color-text-secondary);
   white-space: nowrap;
+}
+
+.frame-strokes-n {
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
 }
 
 .kanji-frame {
@@ -1453,6 +1612,8 @@ button.frame-slot { cursor: pointer; }
   background: var(--color-bg-surface);
 }
 
+/* A place: a dashed box, strong enough to read (3:1) since on Layout's
+   frames the places are the whole clue. */
 .frame-zone {
   z-index: 1;
   display: flex;
@@ -1461,7 +1622,7 @@ button.frame-slot { cursor: pointer; }
   justify-content: center;
   min-width: 0;
   min-height: 0;
-  border: var(--stroke-thin) dashed var(--color-border-subtle);
+  border: var(--stroke-thin) dashed var(--color-border-strong);
   border-radius: var(--radius-sm);
   font-family: var(--font-family-kanji);
   font-size: var(--frame-1);
@@ -1476,10 +1637,11 @@ button.frame-slot { cursor: pointer; }
 .frame-zone[data-n="3"] { font-size: var(--frame-3); }
 .frame-zone[data-n="4"] { font-size: var(--frame-4); }
 
+/* A place holding the kanji's only part covers the frame; an outer one's
+   inner sits inset in it, a box in a box. */
 .frame-zone.is-cover {
   z-index: 0;
   grid-area: 1 / 1 / -1 / -1;
-  border: 0;
   font-size: var(--frame-cover);
 }
 
@@ -1495,7 +1657,7 @@ button.frame-slot { cursor: pointer; }
   height: var(--spacing-sm);
   margin: var(--spacing-xs);
   border-radius: var(--radius-full);
-  background: var(--color-border-default);
+  background: var(--color-border-strong);
 }
 
 .kanji-frame.is-solved {
@@ -1509,53 +1671,18 @@ button.frame-slot { cursor: pointer; }
   line-height: var(--font-lineHeight-tight);
 }
 
-/* Without Guided: Layout's places as solid lines across the frame
-   (layoutDrawing() in js/play/hints.js: the accent shows through the gaps
-   between the places; an outer part is the frame, its inner an inset
-   box), or only the stroke count in its middle. */
-.kanji-frame.is-layout {
-  position: relative;
-  padding: 0;
-  overflow: hidden;
-}
+/* Nothing known about the kanji yet (another one is): an empty frame. */
+.kanji-frame.is-plain { border-style: dashed; }
 
-.clue-layout {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  gap: var(--stroke-thick);
-  background: var(--color-text-accent);
-}
+/* Normal and Hard (quiet, js/play/frame.js): the parts found, each where it
+   sits in the kanji; the rest keep their room unseen, and the places show
+   only once Layout has told them. */
+.kanji-frame.is-bare .frame-zone { border-color: transparent; }
+.frame-part.is-blank { visibility: hidden; }
 
-.clue-zone { background: var(--color-bg-surface); }
-
-.clue-layout.has-outer { background: var(--color-bg-surface); }
-
-.clue-inner {
-  position: absolute;
-  inset: var(--spacing-md) var(--spacing-xs) var(--spacing-xs) var(--spacing-md);
-  display: flex;
-  gap: var(--stroke-thick);
-  padding: var(--stroke-thick);
-  border-radius: var(--radius-sm);
-  background: var(--color-text-accent);
-}
-
-.clue-inner .clue-zone { flex: 1; }
-
-.kanji-frame.is-plain {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-style: dashed;
-}
-
-.frame-count-big {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-black);
-  font-variant-numeric: tabular-nums;
-  line-height: var(--font-lineHeight-tight);
-  color: var(--color-text-accent);
+/* Layout's card: the places come in one after another. */
+.kanji-frame.is-building .frame-zone {
+  animation: zone-in var(--transition-slow) var(--transition-bounce) var(--at, 0ms) both;
 }
 
 .frame-part.is-new,
@@ -1578,6 +1705,13 @@ button.frame-slot { cursor: pointer; }
 }
 
 .picker.is-keyboard .picker-choices { gap: var(--spacing-xs); }
+
+/* The game is over: the keyboard fades where it is before the result card
+   takes its place (showResult() in js/play/screen.js), so nothing jumps. */
+.picker.is-keyboard.is-leaving {
+  opacity: var(--opacity-hidden);
+  transition: opacity var(--transition-base) var(--transition-ease);
+}
 
 /* With the keyboard up, a message and the open power bar float just above
    it, over the bottom of the board (.picker-float), so they never move the
@@ -1659,6 +1793,15 @@ body.is-game:has(.picker.is-keyboard) .game { flex: 1 0 auto; }
 
 body.is-game:has(.picker.is-keyboard) .board.is-parts {
   flex: 1 0 auto;
+  align-items: center;
+}
+
+/* A game just over: the board keeps the height it had with the keyboard up
+   and the rows centred in it, so they stay put as the result card takes
+   the keyboard's place (fitBoard() and showResult() in js/play/screen.js;
+   --held-h is that height). */
+.board.is-parts.is-held {
+  min-height: var(--held-h);
   align-items: center;
 }
 
@@ -2164,11 +2307,12 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 /* ── A hint used (js/play/reveal.js) ───────────────────────────────── */
 
 /* A card over the board for a hint that tells you something: it comes in,
-   plays, and goes by itself or on a tap. */
+   plays, and stays until Done at its foot (or a tap beside it). */
 .board { position: relative; }
 
 .hint-show {
   position: absolute;
+  z-index: 3;   /* over the guide's frames, whose places stack inside them */
   inset: 0;
   display: flex;
   align-items: center;
@@ -2183,19 +2327,23 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 .hint-show.is-leaving { animation: hint-fade-out var(--transition-base) var(--transition-ease) both; }
 
 .hint-show-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-lg);
   max-width: 100%;
+  min-width: var(--layout-powerMin);
   padding: var(--spacing-lg);
   border: var(--stroke-thin) solid var(--color-border-subtle);
   border-radius: var(--radius-xl);
   background: var(--color-bg-raised);
   box-shadow: var(--shadow-lg);
+  cursor: default;
   animation: hint-card-in var(--transition-slow) var(--transition-bounce) both;
 }
 
+/* The title on top, Done the width of the card at its foot. */
 .hint-show-title {
   display: flex;
   align-items: center;
@@ -2210,23 +2358,61 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 .hint-show-icon { font-size: var(--font-size-lg); letter-spacing: normal; }
 .hint-show-icon:not(:first-child) { margin-left: var(--spacing-sm); }
 
-.hint-show-tap {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-}
+.hint-show-done { align-self: stretch; }
 
+/* The kanji guide's frames (js/play/frame.js), bigger: 96 px for one or
+   two kanji; three or four take 64 px, so they fit a phone, and four sit
+   two by two. */
 .reveal-items {
+  --board-frame: var(--layout-frameLg);
+  --frame-1: var(--font-size-2xl);
+  --frame-2: var(--font-size-xl);
+  --frame-3: var(--font-size-md);
+  --frame-4: var(--font-size-xs);
+  --frame-cover: var(--font-size-3xl);
+  --frame-inner: var(--font-size-md);
+  --frame-inset: var(--spacing-lg);
+  --frame-solved: var(--font-size-3xl);
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--spacing-lg);
 }
 
+.reveal-items[data-count="3"],
+.reveal-items[data-count="4"] {
+  --board-frame: var(--layout-frame);
+  --frame-1: var(--font-size-lg);
+  --frame-2: var(--font-size-md);
+  --frame-3: var(--font-size-xs);
+  --frame-cover: var(--font-size-2xl);
+  --frame-inner: var(--font-size-xs);
+  --frame-inset: var(--spacing-md);
+  --frame-solved: var(--font-size-2xl);
+  gap: var(--spacing-md);
+}
+
+.reveal-items[data-count="4"] {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  justify-content: center;
+  gap: var(--spacing-md) var(--spacing-xl);
+}
+
+.reveal-items[data-count="3"] .tally,
+.reveal-items[data-count="4"] .tally { max-width: var(--layout-frame); }
+
+.reveal-items .kanji-frame {
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-lg);
+}
+
 .reveal-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-sm);
 }
 
 .reveal-label {
@@ -2234,21 +2420,44 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   color: var(--color-text-muted);
 }
 
-/* Stroke count: 正 tally marks, drawn stroke by stroke, then the number. */
+/* The stroke count, as under the board's frames, a size up. */
+.reveal-item .frame-strokes {
+  height: auto;
+  font-size: var(--font-size-md);
+  line-height: var(--font-lineHeight-tight);
+}
+
+.reveal-item .frame-strokes-n {
+  display: inline-block;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-black);
+}
+
+.reveal-items[data-count="3"] .frame-strokes,
+.reveal-items[data-count="4"] .frame-strokes { font-size: var(--font-size-xs); }
+.reveal-items[data-count="3"] .frame-strokes-n,
+.reveal-items[data-count="4"] .frame-strokes-n { font-size: var(--font-size-lg); }
+
+.frame-strokes-n.is-done {
+  animation: points-pop var(--transition-reveal) var(--transition-bounce) both;
+}
+
+/* Stroke count: 正 tally marks, drawn stroke by stroke, the number
+   counting up under them. */
 .tally {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--spacing-xs);
-  max-width: var(--layout-hintBox);
-  min-height: var(--spacing-xl);
+  max-width: var(--layout-frameLg);
+  min-height: var(--spacing-lg);
 }
 
 .tally-mark {
-  width: var(--spacing-xl);
-  height: var(--spacing-xl);
+  width: var(--spacing-lg);
+  height: var(--spacing-lg);
   fill: none;
-  stroke: var(--color-text-accent);
+  stroke: var(--color-text-secondary);
   stroke-width: var(--stroke-thick);
   stroke-linecap: round;
 }
@@ -2257,89 +2466,6 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
   animation: stroke-draw var(--transition-fast) var(--transition-ink) var(--at, 0ms) forwards;
-}
-
-.reveal-figure {
-  display: flex;
-  align-items: baseline;
-  gap: var(--spacing-xs);
-}
-
-.reveal-number {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-black);
-  font-variant-numeric: tabular-nums;
-  line-height: var(--font-lineHeight-tight);
-}
-
-.reveal-number.is-done {
-  display: inline-block;
-  color: var(--color-text-accent);
-  animation: points-pop var(--transition-reveal) var(--transition-bounce) both;
-}
-
-.reveal-unit {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
-/* Layout: a square splits into its places, one after another. */
-.layout-box {
-  position: relative;
-  display: grid;
-  gap: var(--spacing-xs);
-  width: var(--layout-hintBox);
-  height: var(--layout-hintBox);
-  padding: var(--spacing-xs);
-  border: var(--stroke-thick) solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-}
-
-.layout-zone {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  overflow: hidden;
-  border: var(--stroke-thin) dashed var(--color-text-accent);
-  border-radius: var(--radius-sm);
-  background: var(--color-interactive-selected);
-  font-size: var(--font-size-xs);
-  line-height: var(--font-lineHeight-tight);
-  animation: zone-in var(--transition-slow) var(--transition-bounce) var(--at, 0ms) both;
-}
-
-/* An outer part frames the rest: its name in the corner, the inner inset. */
-.layout-box.has-outer > .is-outer {
-  position: absolute;
-  inset: var(--spacing-xs);
-  align-items: flex-start;
-  justify-content: flex-start;
-  padding: var(--stroke-thick) var(--spacing-xs);
-}
-
-.layout-inner {
-  position: absolute;
-  inset: var(--spacing-lg) var(--spacing-sm) var(--spacing-sm) var(--spacing-lg);
-  display: flex;
-  gap: var(--spacing-xs);
-}
-
-.layout-inner .layout-zone { flex: 1; }
-
-/* A solved kanji in the kanji card: whole, on green. */
-.reveal-kanji {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--layout-hintBox);
-  height: var(--layout-hintBox);
-  border-radius: var(--radius-md);
-  background: var(--color-feedback-hit);
-  color: var(--color-feedback-text);
-  font-size: var(--font-size-3xl);
-  line-height: var(--font-lineHeight-tight);
-  animation: zone-in var(--transition-slow) var(--transition-bounce) both;
 }
 
 /* Meaning: written in from the left, like a brush. */
@@ -2353,8 +2479,8 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 }
 
 /* Hints that change the board: a part drops into its cell (its key
-   flashes), a kanji's cells drop in one by one, a sweep crosses the
-   keyboard greying what it clears, and an added row grows in. */
+   flashes), a kanji's cells drop in one by one, a broom sweeps the
+   keyboard (below), and an added row grows in. */
 .tile.is-dropped {
   animation: cell-drop var(--transition-reveal) var(--transition-bounce) var(--at, 0ms) both;
 }
@@ -2365,20 +2491,48 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 
 .picker.is-keyboard .palette { position: relative; }
 
+/* Sweep (2026-11-10, made easier to see): a broom rides a band of the
+   accent colour across the keyboard, at an even pace (--sweep-time, after
+   --sweep-lead), so it reaches each key when js/play/reveal.js says (--at).
+   Each key it clears lights up and shakes off its dust, then greys, and
+   its cross-off line is drawn in. A message above the keyboard says how
+   many went. */
 .palette-tile.is-swept {
-  animation: key-sweep var(--transition-slow) var(--transition-ease) var(--at, 0ms) backwards;
+  animation: key-sweep var(--transition-reveal) var(--transition-ease) var(--at, 0ms) backwards;
+}
+
+.palette-tile.is-swept::after {
+  animation: cross-draw var(--transition-slow) var(--transition-ease) calc(var(--at, 0ms) + var(--transition-base)) backwards;
 }
 
 .sweep-streak {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  z-index: 1;
+  top: calc(var(--spacing-xs) * -1);
+  bottom: calc(var(--spacing-xs) * -1);
   width: var(--layout-hintBox);
-  border-radius: var(--radius-md);
-  background: linear-gradient(90deg, transparent, var(--color-text-accent), transparent);
-  opacity: var(--opacity-faint);
   pointer-events: none;
-  animation: sweep-across var(--transition-long) var(--transition-ease) both;
+  animation: sweep-across var(--sweep-time, var(--transition-long)) var(--transition-linear) var(--sweep-lead, 0ms) both;
+}
+
+/* The band trails the broom, brightest where the broom is. */
+.sweep-streak::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, transparent, var(--color-text-accent));
+  opacity: var(--opacity-disabled);
+}
+
+.sweep-broom {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  font-size: var(--font-size-2xl);
+  line-height: var(--font-lineHeight-tight);
+  translate: 50% -50%;
+  animation: broom-brush var(--transition-slow) var(--transition-ease) infinite alternate;
 }
 
 .board-row.is-added {
@@ -2428,19 +2582,40 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 }
 
 @keyframes key-sweep {
-  0%, 45% {
+  0% {
     background-color: var(--color-tile-bg);
     border-color: var(--color-tile-border);
     color: var(--color-tile-text);
     transform: none;
   }
-  60%  { transform: translateX(var(--spacing-xs)) rotate(-8deg); }
+  25% {
+    background-color: var(--color-tile-bg);
+    border-color: var(--color-border-focus);
+    color: var(--color-tile-text);
+    box-shadow: 0 0 0 var(--spacing-xs) var(--color-border-focus);
+    transform: translateY(calc(var(--spacing-xs) * -1)) rotate(-10deg) scale(1.1);
+  }
+  50%  { transform: rotate(8deg); }
+  75%  { transform: rotate(-4deg); }
   100% { transform: none; }
 }
 
+@keyframes cross-draw {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+/* The broom's right edge goes from the keyboard's left edge to its right. */
 @keyframes sweep-across {
-  from { left: calc(var(--layout-hintBox) * -1); }
-  to   { left: 100%; }
+  0%   { left: calc(var(--layout-hintBox) * -1); opacity: var(--opacity-hidden); }
+  10%  { opacity: var(--opacity-full); }
+  85%  { opacity: var(--opacity-full); }
+  100% { left: calc(100% - var(--layout-hintBox)); opacity: var(--opacity-hidden); }
+}
+
+@keyframes broom-brush {
+  from { rotate: -25deg; }
+  to   { rotate: 10deg; }
 }
 
 @keyframes row-grow {
@@ -2463,11 +2638,14 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   .hint-show,
   .hint-show-card,
   .reveal-meaning,
-  .layout-zone,
-  .reveal-number.is-done { animation: none; }
+  .kanji-frame.is-building .frame-zone,
+  .frame-strokes-n.is-done { animation: none; }
   .tally-mark path { animation: none; stroke-dashoffset: 0; }
   .kanji-frame.is-glow,
   .clue-chip.is-glow { animation: none; }
+  .palette-tile.is-swept,
+  .palette-tile.is-swept::after,
+  .sweep-streak { animation: none; }
 }
 
 .hint-show.is-still .tally-mark path { animation: none; stroke-dashoffset: 0; }
@@ -2565,6 +2743,20 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 
 .game-result:empty { display: none; }
 
+/* Just finished: the card rises gently into the keyboard's place, the
+   board staying put above it (showResult() in js/play/screen.js); the
+   points pop once it's there. */
+.game-result.is-arriving > * {
+  animation: result-in var(--transition-reveal) var(--transition-ease) backwards;
+}
+
+.game-result.is-arriving .result-points.is-new { animation-delay: var(--transition-slow); }
+
+@keyframes result-in {
+  from { opacity: var(--opacity-hidden); transform: translateY(var(--spacing-lg)); }
+  to   { opacity: var(--opacity-full); transform: none; }
+}
+
 .result {
   display: flex;
   flex-direction: column;
@@ -2638,36 +2830,68 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   gap: var(--spacing-sm);
 }
 
-.result-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--layout-cardMin), 1fr));
-  gap: var(--spacing-sm);
-  margin: 0;
+/* Each kanji beside its parts, level with the tiles (as high as one, its
+   middle on theirs), not with the place names under them. */
+.answer-kanji-parts > .kanji {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: var(--layout-cell);
+  font-size: var(--font-size-lg);
+  line-height: var(--font-lineHeight-tight);
 }
 
-.result-stat {
-  padding: var(--spacing-sm) var(--spacing-md);
+/* The card and, under it, the dictionary credit. */
+.result-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+/* The points, a box of their own: paid and the streak side by side, then
+   the rewards, then the points you have now, each under a rule. */
+.result-box {
+  display: flex;
+  flex-direction: column;
   border-radius: var(--radius-lg);
   background: var(--color-bg-sunken);
 }
 
-.result-stat dt {
+.result-box > * { padding: var(--spacing-md); }
+.result-box > * + * { border-top: var(--stroke-thin) solid var(--color-border-subtle); }
+
+/* Side by side even on a phone: the why line wraps instead. */
+.result-box-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--spacing-lg);
+}
+
+.result-earned,
+.result-streak {
+  display: flex;
+  flex-direction: column;
+}
+
+.result-streak {
+  grid-column: 2;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.result-label {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-muted);
 }
 
-.result-stat dd {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
+.result-big {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
 
-.result-stat small {
+.result-why {
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-regular);
   color: var(--color-text-secondary);
 }
 
@@ -2680,6 +2904,14 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 @keyframes points-pop {
   0%   { transform: scale(0.8); opacity: var(--opacity-hidden); }
   100% { transform: scale(1); opacity: var(--opacity-full); }
+}
+
+/* The rewards, a part of the box like the points: its label, then each
+   reward (the list itself sits inside the part's padding). */
+.result-rewards-part {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
 }
 
 .result-rewards {
@@ -2695,9 +2927,6 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   display: flex;
   align-items: flex-start;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-sunken);
 }
 
 .result-reward-icon,
@@ -2744,13 +2973,18 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   color: var(--color-text-accent);
 }
 
-/* The dictionary credit, small, under the answer (EDRDG's terms). */
+/* The dictionary credit, small, under the card (EDRDG's terms). */
 .result-source {
+  padding: 0 var(--spacing-md);
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+  text-align: center;
 }
 
-/* Like the play card: the buttons share the width, and stack when narrow. */
+/* Like the play card: the buttons share the width, and stack when narrow,
+   New game (the second) on top. */
+.result-actions { flex-wrap: wrap-reverse; }
+
 .result-actions .btn {
   flex: 1 1 var(--layout-cardMin);
   white-space: nowrap;
@@ -2908,6 +3142,13 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   align-items: baseline;
   gap: var(--spacing-sm);
   line-height: var(--font-lineHeight-tight);
+  /* Fades and shrinks as it docks in the header (js/points.js). */
+  opacity: calc(1 - var(--dock, 0));
+  transform: scale(calc(1 - var(--dock, 0) / 4));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallet-total { transform: none; }
 }
 
 .wallet-coin {
@@ -2924,13 +3165,6 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 .wallet-unit {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text-secondary);
-}
-
-.wallet-how {
-  max-width: var(--layout-container);
-  font-size: var(--font-size-xs);
-  line-height: var(--font-lineHeight-snug);
   color: var(--color-text-secondary);
 }
 

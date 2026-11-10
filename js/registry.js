@@ -46,7 +46,7 @@ export function skin(slot, id) {
 // names anything else is a typo or needs code first.
 export const KNOWN_EFFECTS = [
   'revealStrokes', 'revealLayout', 'revealMeaning', 'revealReading',
-  'revealParts', 'eliminateParts', 'addGuesses', 'revealKanji'
+  'revealParts', 'eliminateParts', 'addGuesses', 'revealKanji', 'pointNear'
 ];
 export const KNOWN_STATS = [
   'wins', 'bestStreak', 'fastestWin', 'cleanWins', 'collected', 'hardWins', 'fullSetDays'

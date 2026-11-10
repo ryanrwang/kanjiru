@@ -161,6 +161,25 @@ export function allHit(scored) {
   return scored.every((slot) => slot.tiles.every((tile) => tile.mark === 'hit'));
 }
 
+// Which way each yellow tile's part lies in the answer, in writing order
+// across the word (the Arrows hint): 'left', 'right', or null for a tile
+// that isn't yellow. The part is the one its mark used up (`of`), so the
+// arrow and the mark always agree.
+//   scored: one guess's slots ({ tiles }); answer: the answer's slots
+//   ({ parts }). Returns, per slot, one entry per tile.
+export function nearWays(scored, answer) {
+  const first = [];
+  answer.reduce((n, slot) => { first.push(n); return n + slot.parts.length; }, 0);
+  let cell = 0;
+  return scored.map((slot) => slot.tiles.map((tile) => {
+    const at = cell;
+    cell += 1;
+    if (tile.mark !== 'near' || !tile.of || first[tile.of.slot] === undefined) return null;
+    const to = first[tile.of.slot] + tile.of.part;
+    return to < at ? 'left' : to > at ? 'right' : null;
+  }));
+}
+
 // The kanji's shape: its distinct positions in stroke order, such as
 // ['left', 'right'] or ['outer', 'inner']. Used by the layout hint.
 export function layoutOf(parts) {

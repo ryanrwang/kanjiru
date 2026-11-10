@@ -27,6 +27,9 @@
  *                 kept as a keep-playing game (settleDailies). guesses: the words
  *                 guessed, or for parts guesses the tile ids per kanji;
  *                 powers: power ids used (js/engine/game.js record)
+ *   deleted       { [modeId]: { [key]: ms } }   games deleted from history
+ *                 (the play page), and when, so merging a save that still
+ *                 has one doesn't bring it back
  *   resets        { achievements }   when achievements were last reset (ms,
  *                 Settings): only games after it count toward them
  *   playing       { [modeId]: { daily, practice } }   games on the go, each
@@ -73,6 +76,7 @@ export function fresh() {
     unlocked: {},
     achievements: {},
     history: {},
+    deleted: {},
     resets: {},
     playing: {}
   };
@@ -202,6 +206,17 @@ export function update(change) {
   change(s);
   persist();
   return s;
+}
+
+// Deletes a game from history (the play page's Your games). Its stats go
+// with it; what it paid stays in the ledger, and achievements stay earned.
+// Remembered in `deleted`, so a merge doesn't bring it back.
+export function deleteGame(modeId, key) {
+  update((s) => {
+    if (isObject(s.history[modeId])) delete s.history[modeId][key];
+    s.deleted[modeId] = isObject(s.deleted[modeId]) ? s.deleted[modeId] : {};
+    s.deleted[modeId][key] = Date.now();
+  });
 }
 
 // Points and hints held, summed from the ledger (js/ledger.js).
@@ -388,6 +403,8 @@ export const MERGE = {
   achievements: eachKey((a, b) => (String(b) < String(a) ? b : a)),
   // Games from both; streaks and stats are worked out again from these.
   history: eachKey((mineMode, theirMode) => eachKey(betterGame)(mineMode, theirMode)),
+  // Games deleted on either device stay deleted (dropDeleted, below).
+  deleted: eachKey((mineMode, theirMode) => eachKey((a, b) => Math.max(Number(a) || 0, Number(b) || 0))(mineMode, theirMode)),
   // The later reset wins, and achievements from before it go (mergeSaves).
   resets: eachKey((a, b) => Math.max(Number(a) || 0, Number(b) || 0)),
   // Games on the go belong to the device in your hand. A daily the other
@@ -401,7 +418,16 @@ export function mergeSaves(mine, theirs) {
     merged[key] = JSON.parse(JSON.stringify(rule(mine[key], theirs[key])));
   });
   merged.v = VERSION;
-  return dropReset(fillDefaults(merged, fresh()));
+  return dropDeleted(dropReset(fillDefaults(merged, fresh())));
+}
+
+// Games deleted on either device leave the merged history.
+function dropDeleted(save) {
+  Object.entries(isObject(save.deleted) ? save.deleted : {}).forEach(([modeId, keys]) => {
+    if (!isObject(keys) || !isObject(save.history[modeId])) return;
+    Object.keys(keys).forEach((key) => { delete save.history[modeId][key]; });
+  });
+  return save;
 }
 
 // Keys of the save that MERGE has no rule for (validate() reports them).

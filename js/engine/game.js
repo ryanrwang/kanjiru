@@ -18,7 +18,7 @@
  * name in KNOWN_EFFECTS, below in EFFECTS.
  */
 import { MODES, POWERS, ECONOMY, RULES, LEVELS, DEFAULT_LEVEL } from '../registry.js';
-import { scoreGuess, scoreParts, scoreOrder, layoutOf, MARKS } from './score.js';
+import { scoreGuess, scoreParts, scoreOrder, layoutOf, nearWays, MARKS } from './score.js';
 import { buildPalette, buildable, easiestFirst } from './palette.js';
 import { seeded, shuffle, weightedIndex } from './random.js';
 
@@ -125,7 +125,7 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
       status: 'playing',
       guesses: [],
       powers: [],
-      revealed: { strokes: false, layout: false, meaning: false, reading: false, parts: [], kanji: [], eliminated: [] },
+      revealed: { strokes: false, layout: false, meaning: false, reading: false, parts: [], kanji: [], eliminated: [], arrows: false },
       found: {},        // best mark per answer part, "slot:part" → mark
       partPoints: 0,    // before multipliers
       log: []
@@ -336,8 +336,18 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
       parts: state.revealed.parts.map((ref) => ({ ...ref, ...answer[ref.slot].parts[ref.part] })),
       kanji: state.revealed.kanji.map((slot) => ({ slot, kanji: answer[slot].kanji })),
       eliminated: state.revealed.eliminated.slice(),
+      arrows: !!state.revealed.arrows,
       solved: [...solvedSlots(state)].sort((a, b) => a - b)
     };
+  }
+
+  // The Arrows hint: for guess `g`, which way each yellow tile's part lies
+  // (score.js nearWays), per slot per tile; null until the hint is used, or
+  // at a level whose cells aren't in writing order.
+  function arrows(state, g) {
+    const guessed = state.guesses[g];
+    if (!state.revealed.arrows || !levelOf(state).order || !guessed || !guessed.parts) return null;
+    return nearWays(guessed.slots, answerSlots(state));
   }
 
   // The kanji that still fit everything the player has seen, per slot of
@@ -463,6 +473,17 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
       useful: () => true,
       apply: (s, params) => { s.rows += Math.max(1, params.count || 1); return { rows: s.rows }; }
     },
+    pointNear: {
+      // Only where cells are in writing order: there "left" and "right" mean
+      // something across the word.
+      useful: (s) => !s.revealed.arrows && !!levelOf(s).order,
+      apply: (s) => {
+        s.revealed.arrows = true;
+        // How many yellow tiles point the way now.
+        const shown = s.guesses.reduce((n, g, i) => n + (arrows(s, i) || []).flat().filter(Boolean).length, 0);
+        return { arrows: shown };
+      }
+    },
     revealKanji: {
       // Never fills the last unsolved kanji: that would solve the puzzle.
       useful: (s) => answerSlots(s).length - solvedSlots(s).size > 1,
@@ -572,7 +593,7 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   }
 
   return {
-    newGame, guess, checkGuess, usePower, canUse, giveUp, clues, shownCells, answerInfo,
+    newGame, guess, checkGuess, usePower, canUse, giveUp, clues, arrows, shownCells, answerInfo,
     replay, points, record, rollDrop, fits, effects: Object.keys(EFFECTS)
   };
 }
