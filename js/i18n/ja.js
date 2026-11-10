@@ -4,7 +4,7 @@
  */
 export default {
   meta: {
-    description: 'パーツからことばを当てる、毎日の漢字パズル。'
+    description: 'パーツからことばを当てる漢字パズル。'
   },
 
   header: {
@@ -29,7 +29,7 @@ export default {
     miss: '答えにないパーツ'
   },
 
-  // プレイカード：今日のデイリー、むずかしい・ガイドのスイッチ、もう一度遊ぶ
+  // プレイカード：ゲーム（デイリーのあるモードでは今日のデイリー）、むずかしい・ガイドのスイッチ、遊ぶ
   play: {
     soon: '近日公開',
     loading: '読み込み中…',
@@ -37,6 +37,7 @@ export default {
     practiceOnly: 'デイリーはまだありません。もっと遊んでポイントを貯めよう。',
     daily: 'デイリー #{n}',
     ready: '今日のことばをパーツから当てよう。チャンスは{rows}回。',
+    readyAny: 'ことばをパーツから当てよう。チャンスは{rows}回。',
     going: '{rows}回中{n}回回答・{level}',
     won: '{n}回でクリア ✓・{level}',
     lost: '今日はクリアならず・{level}',
@@ -186,8 +187,8 @@ export default {
     rewards: 'ごほうび',
     balance: '所持 {icon} {n}pt',
     spend: 'ポイントを使う',
-    streak: 'デイリー連続記録',
-    streakDays: '{n}日連続',
+    streak: '連勝',
+    streakDays: '{n}回連続',
     share: 'シェア',
     copied: 'コピーしました。好きな場所に貼り付けてください。',
     copyManually: '上のテキストを選択して、コピーしてください。',
@@ -207,9 +208,9 @@ export default {
   points: {
     title: 'ポイント',
     wallet: '所持ポイント',
-    how: '見つけたパーツは1つ最大{part}pt、クリアで{win}pt以上。連続記録と実績でさらにもらえます。',
+    how: '見つけたパーツは1つ最大{part}pt、クリアで{win}pt以上。連勝と実績でさらにもらえます。',
     hints: '所持ヒント',
-    streak: 'デイリー連続',
+    streak: '連勝',
     achievements: '実績',
     of: '{total}個中{n}個'
   },
@@ -258,7 +259,7 @@ export default {
     hint: '{icon} {name}',
     hints: '{icon} {name} ×{n}',
     sep: '・',
-    streak: '{n}日連続！',
+    streak: '{n}連勝！',
     drop: 'ボーナスヒント',
     achievement: '実績：{name}',
     unlocks: '{name}を解放'
@@ -326,7 +327,7 @@ export default {
   about: {
     title: 'アプリ情報',
     open: 'アプリ情報・クレジット',
-    lead: 'パーツからことばを当てる、毎日の漢字パズル。Wordleのように遊べます。',
+    lead: 'パーツからことばを当てる漢字パズル。Wordleのように遊べます。',
     name: '名前は「感じる」の「感」を、漢字の「漢」にしたものです。',
     by: '制作：Ryan Wang',
     privacy: {
@@ -506,6 +507,8 @@ export default {
     'first-win': { name: 'はじめの一字', desc: '初めてパズルを解く。' },
     'streak-7': { name: '一週間', desc: 'デイリーを7日連続で解く。' },
     'streak-30': { name: '一か月', desc: 'デイリーを30日連続で解く。' },
+    'win-run-5': { name: '好調', desc: '5問続けて解く。' },
+    'win-run-10': { name: '快進撃', desc: '10問続けて解く。' },
     'sharp-eye': { name: '慧眼', desc: '2回以内で解く。' },
     unaided: { name: '独力', desc: 'ヒントなしでクリアする。' },
     'hard-win': { name: '難関突破', desc: 'ハードをオンにしてパズルを解く。' },

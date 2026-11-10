@@ -208,10 +208,12 @@ export function openGame(root, ctx) {
       back,
       el('h2', { class: 'game-title', id: 'game-title' },
         el('span', {}, t(`mode.${mode.id}.name`)),
-        el('span', { class: 'game-kind' }, t('game.kindLevel', {
+        // The daily's number, or Keep playing after it; in a mode without
+        // dailies, just the level.
+        el('span', { class: 'game-kind' }, s.daily || mode.daily ? t('game.kindLevel', {
           kind: s.daily ? t('game.daily', { n: s.puzzle }) : t('game.practice'),
           level: t(`level.${s.level}.name`)
-        }))),
+        }) : t(`level.${s.level}.name`))),
       playing() ? hintsButton() : null));
   }
 

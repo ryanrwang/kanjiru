@@ -14,8 +14,9 @@
  *                     hints and achievements, and buying
  *   #about            the About page (js/about.js): the game, your progress
  *                     and the credits; opened from Settings
- *   #main             a mode's daily (js/play/screen.js)
- *   #main/practice    another puzzle after it ("keep playing")
+ *   #main             a mode's daily (js/play/screen.js), or in a mode
+ *                     without dailies (main, now), a random puzzle
+ *   #main/practice    another puzzle after the daily ("keep playing")
  */
 import { MODES, MODE, LEVEL, ECONOMY, settingsLevel, validate } from './js/registry.js';
 import { t, setLang } from './js/i18n.js';
@@ -31,7 +32,7 @@ import { createEngine } from './js/engine/game.js';
 import { answersFor, localDate, msToNextDaily } from './js/engine/daily.js';
 import { glyphMaker } from './js/play/glyph.js';
 import { openGame } from './js/play/screen.js';
-import { dailyStatus, currentLevel } from './js/play/session.js';
+import { dailyStatus, practiceStatus, currentLevel } from './js/play/session.js';
 import { earnAchievements, describe } from './js/play/rewards.js';
 
 const TOKENS = window.TOKENS;
@@ -191,17 +192,21 @@ function levelSwitches(title) {
     })));
 }
 
-// One card per listed mode: today's daily first, then keep playing. The
-// switches show whenever the next game can still take them.
+// One card per listed mode. A mode with a daily offers it first, then keep
+// playing; one without (main, since 2026-11-09) starts a random puzzle each
+// time, or carries on the one on the go. The switches show whenever the
+// next game can still take them.
 function playCard(mode) {
   const can = playable(mode);
-  const status = can ? dailyStatus(game.data, mode) : null;
+  const random = can && !mode.daily ? practiceStatus(mode) : null;
+  const status = can && !random ? dailyStatus(game.data, mode) : null;
   const done = !!(status && status.entry);
-  const going = !!(status && status.started && status.guesses > 0);
-  const level = status ? t(`level.${status.level}.name`) : null;
+  const going = random ? random.guesses > 0 : !!(status && status.started && status.guesses > 0);
+  const level = random || status ? t(`level.${(random || status).level}.name`) : null;
 
   let line;
   if (!can) line = !mode.playable || game.data ? t('play.soon') : game.error ? t('play.loadFailed') : t('play.loading');
+  else if (random) line = going ? t('play.going', { n: random.guesses, rows: mode.guesses, level }) : t('play.readyAny', { rows: mode.guesses });
   else if (!status) line = t('play.practiceOnly');
   else if (done && status.entry.won) line = t('play.won', { n: status.entry.guesses.length, level });
   else if (done) line = t('play.lost', { level });
@@ -212,7 +217,9 @@ function playCard(mode) {
     class: `btn ${cls}`, type: 'button', onclick: () => go(path)
   }, text);
   let actions = [];
-  if (can && (!status || done)) {
+  if (random) {
+    actions = [button('btn-primary btn-large', going ? t('play.continue') : t('play.start'), mode.id)];
+  } else if (can && (!status || done)) {
     actions = [button('btn-primary btn-large', t('play.more'), `${mode.id}/practice`),
       status ? button('btn-secondary btn-large', t('play.result'), mode.id) : null];
   } else if (can) {
@@ -333,7 +340,8 @@ function page() {
   const [first, kind] = location.hash.replace(/^#/, '').split('/');
   if (first === 'points' || first === 'about') return { name: first };
   const mode = MODE[first];
-  return mode ? { name: 'game', mode, kind: kind === 'practice' ? 'practice' : 'daily' } : { name: 'play' };
+  // A mode without dailies plays a random puzzle at #<mode> too.
+  return mode ? { name: 'game', mode, kind: kind === 'practice' || !mode.daily ? 'practice' : 'daily' } : { name: 'play' };
 }
 
 function go(path) {

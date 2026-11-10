@@ -56,7 +56,7 @@ SUPERSAMPLE = 4
 
 # The share image's text and example rows: the start screen's worked
 # example (answer 時間, parts 日 土 寸 門 日), its first and last rows.
-SHARE_TAGLINE = "A daily kanji puzzle · 毎日の漢字パズル"
+SHARE_TAGLINE = "A kanji word puzzle · 漢字のことばパズル"
 SHARE_ROWS = [
     [("口", "miss"), ("日", "near"), ("寸", "hit"), ("木", "miss"), ("月", "miss")],
     [("日", "hit"), ("土", "hit"), ("寸", "hit"), ("門", "hit"), ("日", "hit")],

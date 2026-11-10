@@ -2,8 +2,9 @@
  * The result card at the end of a game: the answer with its meanings,
  * readings and parts, the points it paid and the points you have now, its
  * rewards (streak, bonus hint, achievements: js/play/rewards.js describe()),
- * the streak, the share text (while rules.js share.show is on), a countdown
- * to the next daily, and what to play next. Just finished (fresh), the
+ * the streak (wins in a row), the share text (while rules.js share.show is
+ * on), a countdown to the next daily (in a mode with dailies), and what to
+ * play next. Just finished (fresh), the
  * points rise in.
  *
  *   const card = renderResult({ ... });   // card.node, card.tick()
@@ -123,7 +124,7 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
       el('div', { class: 'btn-row result-actions' }, shareButton),
       status) : null,
 
-    el('p', { class: 'countdown' }, t('result.nextDaily'), ' ', countdown),
+    mode.daily ? el('p', { class: 'countdown' }, t('result.nextDaily'), ' ', countdown) : null,
 
     el('div', { class: 'btn-row result-actions' },
       el('button', { class: 'btn btn-secondary', type: 'button', onclick: onPractice },
