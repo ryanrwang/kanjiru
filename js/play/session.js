@@ -13,6 +13,10 @@
  * and its points, streak rewards, bonus hint and achievements into the
  * ledger (js/play/rewards.js), once.
  *
+ * Ending early (the flag in the game's head): giving up is a loss like any
+ * other (engine.giveUp, then finish); New puzzle drops the game on the go
+ * without recording it (skipPractice).
+ *
  * Each function returns a game: { start, state, done, exact }
  *   done   finished and recorded
  *   exact  rebuilt from this device's own log; false when only the history
@@ -49,7 +53,7 @@ function fromHistory(engine, start, entry) {
     if (r.error) break;
     state = r.state;
   }
-  return { ...state, status: entry.won ? 'won' : 'lost', powers: (entry.powers || []).slice() };
+  return { ...state, status: entry.won ? 'won' : 'lost', powers: (entry.powers || []).slice(), ...(entry.gaveUp ? { gaveUp: true } : {}) };
 }
 
 // The level new games start at: the player's Settings (an offered level),
@@ -102,7 +106,8 @@ export function openDaily(engine, data, mode, today = localDate()) {
 }
 
 // The practice game on the go, or a new one; null with no answers.
-export function openPractice(engine, data, mode) {
+// skip: an answer the new one mustn't be (a puzzle just skipped).
+export function openPractice(engine, data, mode, { skip = null } = {}) {
   const save = store.get();
   const saved = atLevel((save.playing[mode.id] || {}).practice);
   const state = rebuild(engine, saved);
@@ -114,6 +119,7 @@ export function openPractice(engine, data, mode) {
 
   // Skip recent answers and today's daily, so practice never spoils it.
   const avoid = recentAnswers(save.history, mode, RULES.practice.avoidRecent);
+  if (skip) avoid.push(skip);
   const today = daily(data, mode);
   if (today) avoid.push(today.answer);
   const base = practice(data, mode, { avoid });
@@ -122,6 +128,14 @@ export function openPractice(engine, data, mode) {
   const game = { start, state: engine.newGame(start), done: false, exact: true };
   keep(mode.id, 'practice', game);
   return game;
+}
+
+// New puzzle: the game on the go is dropped, not recorded. Hints used on
+// it stay used (their ledger entries stay).
+export function skipPractice(mode) {
+  store.update((s) => {
+    if (s.playing[mode.id]) delete s.playing[mode.id].practice;
+  });
 }
 
 // After every guess or power: save the game on the go.

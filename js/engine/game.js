@@ -8,6 +8,7 @@
  *                                                // (error: { state, error, detail })
  *   r = engine.usePower(r.state, 'strokes');     // { state, result } or { state, error }
  *   engine.points(r.state);                      // { parts, solve, multiplier, total }
+ *   engine.giveUp(r.state);                      // { state } lost now, or { state, error: 'over' }
  *
  * Every call returns a new state and leaves the old one alone. The state is
  * plain JSON, and `log` replays it: engine.replay(start, state.log).
@@ -499,13 +500,28 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
     return { state: next, result };
   }
 
+  // ── Giving up ──────────────────────────────────────────────────────
+
+  // Ends a game on the go as lost, at any point: the player gave up. It pays
+  // like any loss (the parts found so far), and its history entry says so.
+  function giveUp(state) {
+    if (state.status !== 'playing') return { state, error: 'over' };
+    const next = clone(state);
+    next.status = 'lost';
+    next.gaveUp = true;
+    next.log.push({ giveUp: true });
+    return { state: next };
+  }
+
   // ── Replaying, points, results ─────────────────────────────────────
 
-  // Rebuilds a game from its start and log ([{ guess }, { power }, …]).
+  // Rebuilds a game from its start and log ([{ guess }, { power }, { giveUp }, …]).
   function replay(start, log = []) {
     let state = newGame(start);
     log.forEach((step) => {
-      const r = 'guess' in step ? guess(state, step.guess) : usePower(state, step.power);
+      const r = 'guess' in step ? guess(state, step.guess)
+        : 'giveUp' in step ? giveUp(state)
+          : usePower(state, step.power);
       if (r.error) throw new Error(`replay failed at ${JSON.stringify(step)}: ${r.error}`);
       state = r.state;
     });
@@ -532,7 +548,8 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
       won: state.status === 'won',
       powers: state.powers.slice(),
       answer: state.answer,
-      level: state.level
+      level: state.level,
+      ...(state.gaveUp ? { gaveUp: true } : {})
     };
   }
 
@@ -550,7 +567,7 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   }
 
   return {
-    newGame, guess, checkGuess, usePower, canUse, clues, shownCells, answerInfo,
+    newGame, guess, checkGuess, usePower, canUse, giveUp, clues, shownCells, answerInfo,
     replay, points, record, rollDrop, fits, effects: Object.keys(EFFECTS)
   };
 }

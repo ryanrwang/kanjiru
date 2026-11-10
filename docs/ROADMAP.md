@@ -2,7 +2,7 @@
 
 The big steps from here to launch, in order, each with a prompt to start its own thread in `D:\Dropbox\Clearful\apps\kanjiru`. Tick a step off here when it merges.
 
-Last updated: 2026-11-08.
+Last updated: 2026-11-10.
 
 ## Done
 
@@ -16,6 +16,7 @@ Last updated: 2026-11-08.
 - [x] **Loose strokes and hints:** answers with a loose single stroke (丨 丶 丿 乙 亅) leave the daily (`LISTS` `without`); 10 kanji fixed in `data/parts-overrides.json` bring back 25 words, so the daily has 453 answers. Parts a power shows (Reveal a part, Head start, Reveal a kanji) fill their cells, green, on each new row, and stay put at Hard. No page scroll while playing (step 4b)
 - [x] **Points, shop & achievements:** points and hints held are a ledger (save v2), so merging devices adds them up exactly. A finished game pays its points, streak rewards, a bonus hint and achievements, shown on the result card and as toasts. The shop opens from the points in the header: hints and locked looks, two taps to buy. The power bar floats above the keyboard, open before the first guess. Hard win replaces Full set (step 5)
 - [x] **Launch prep, off screen:** home-screen install (manifest, icons, iOS tags) and a network-first service worker for offline play; share previews with a 1200 × 630 image; first load on a phone from 2.9 s to 1.6 s to the daily (scripts and data fetched at once, gzipped data, a smaller font stylesheet); and dailies from an earlier epoch become keep-playing games, so launch day is one line and a recompile (step 8a)
+- [x] **Players' feedback, round 1 (2026-11-10):** end a game at any time (Give up, or New puzzle), reset achievements, delete all data behind three asks, a diagonal line across keys not in the answer, an animated How to play (open for a new player, folded after a game), every game played under the play card, and 8 colours, 8 tile reveals and 8 win effects, all playing in the game (this was step 6)
 - [x] **Screens and menus:** the header holds only Points and Settings. The play page is home: a play card with the Hard and Guided switches, then How to play. The Points page holds the wallet, Looks with previews, Hints & powers and Achievements, and replaces the shop sheet. Settings gains Language, Appearance and a Debug mode (answer dots on the keys, add points) (2026-11-08)
 
 ## Order
@@ -24,12 +25,12 @@ Last updated: 2026-11-08.
 1 Parts & palette ✓ ──► 2 Engine ✓ ──► 3 Game screen ✓ ──► 4 One daily ✓ ──► 4b Loose strokes & hints ✓
                                           ├──► 5 Points, shop & achievements ✓
                                           ├──► 8a Launch prep ✓ ──► 8b Launch
-                                          └──► 6 Skin effects (after launch)
+                                          └──► 6 Skin effects ✓ (2026-11-10)
 7 Device transfer  ✓ done
 You: review words  (any time; the game only uses words marked Keep)
 ```
 
-- **Next:** the rest of step 8b: the Apps page card (it needs a screenshot) and checking the install on real phones. Step 6 can wait until after launch. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
+- **Next:** the parts audit from native players' feedback (some parts shown as a look-alike, such as 人 for 𠆢, and splits that don't make sense, such as 狭 as 大 人 人 大), on its own branch; then the rest of step 8b: the Apps page card (it needs a screenshot) and checking the install on real phones. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
 - **No dailies (2026-11-09):** the user chose random puzzles only, as many as you like, so there's no launch date (docs/DESIGN.md, "No dailies").
 - **Words:** 453 daily answers from 603 Keep words are enough for launch (about 1.2 years). More can be added any time on the review page, then `tools/compile_game.py`. 146 Keep words with loose strokes come back as their kanji are fixed.
 
@@ -143,7 +144,7 @@ Done when a new player can earn, buy and use a hint and unlock a skin end to end
 
 ## 6. Skin effects
 
-**Needs:** step 3 (the board and result card exist).
+**Done** (2026-11-10), with the players' feedback: eight of each look, every tile reveal on the board and every win effect over it (docs/DESIGN.md, "Skins").
 
 ```
 Kanjiru step 6: build the fancy skins.

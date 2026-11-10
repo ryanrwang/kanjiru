@@ -12,9 +12,11 @@
  *   - Wins, fastest win, clean wins, Hard wins and kanji collected count
  *     every game.
  *   - Full-set days count dailies only.
+ *   - Achievements count only games played after their last reset
+ *     (save.resets.achievements, Settings): stats(history, { since }).
  */
 import { ACHIEVEMENTS, ECONOMY, LEVELS } from '../registry.js';
-import { isDailyKey, keyTime } from './daily.js';
+import { isDailyKey, keyTime, localDate } from './daily.js';
 
 const guessCount = (g) => (Array.isArray(g.guesses) ? g.guesses.length : Number(g.guesses) || 0);
 const powerCount = (g) => (Array.isArray(g.powers) ? g.powers.length : Number(g.powers) || 0);
@@ -24,6 +26,14 @@ const answerOf = (g) => g.answer || (g.won && Array.isArray(g.guesses) ? g.guess
 export function games(history = {}) {
   return Object.entries(history).flatMap(([modeId, byKey]) =>
     Object.entries(byKey || {}).map(([key, g]) => ({ modeId, key, daily: isDailyKey(key), ...g })));
+}
+
+// Whether a game was played after a moment (ms): a keep-playing game by
+// when it finished, a daily (only its date is known) when its day is later.
+export function playedAfter(g, since) {
+  if (!since) return true;
+  const ms = keyTime(g.key);
+  return ms ? ms > since : String(g.date) > localDate(new Date(since));
 }
 
 // Most and current wins in a row, over every game in the order played: by
@@ -43,10 +53,12 @@ export function winRuns(all) {
 
 // options.dailyModes: the mode ids that have a daily now (with answers); a
 // full-set day needs a won daily in each. options.levels: the level
-// catalogue, for Hard wins (a level's `hard`). options.today is no longer
-// needed (streaks don't hang on dates) but callers may still pass it.
-export function stats(history, { dailyModes = [], levels = LEVELS } = {}) {
-  const all = games(history);
+// catalogue, for Hard wins (a level's `hard`). options.since: count only
+// games played after this moment (ms), for achievements after a reset.
+// options.today is no longer needed (streaks don't hang on dates) but
+// callers may still pass it.
+export function stats(history, { dailyModes = [], levels = LEVELS, since = null } = {}) {
+  const all = games(history).filter((g) => playedAfter(g, since));
   const wins = all.filter((g) => g.won);
   const dailyWins = wins.filter((g) => g.daily);
   const streak = winRuns(all);

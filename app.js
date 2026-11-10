@@ -7,9 +7,11 @@
  * in js/config/ and the text in js/i18n/: add an entry and it appears.
  *
  * Pages (the URL hash, so the phone's back gesture works):
- *   (none)            the play page: how to play, then a play card per
- *                     listed mode with the Hard and Guided switches on it,
- *                     then, on a phone, a tip to add it to the home screen
+ *   (none)            the play page: a play card per listed mode with the
+ *                     Hard and Guided switches on it; on a phone, a tip to
+ *                     add it to the home screen; How to play (js/howto.js),
+ *                     open and on top for a new player, folded under the
+ *                     card after a game; then every game played (js/history.js)
  *   #points           the Points page (js/points.js): the wallet, looks,
  *                     hints and achievements, and buying
  *   #about            the About page (js/about.js): the game, your progress
@@ -34,6 +36,9 @@ import { glyphMaker } from './js/play/glyph.js';
 import { openGame } from './js/play/screen.js';
 import { dailyStatus, practiceStatus, currentLevel } from './js/play/session.js';
 import { earnAchievements, describe } from './js/play/rewards.js';
+import { howTo } from './js/howto.js';
+import { historyCard, PAGE } from './js/history.js';
+import { games } from './js/engine/stats.js';
 
 const TOKENS = window.TOKENS;
 // Reassigned when a save arrives from another device (js/settings.js).
@@ -242,31 +247,27 @@ function playCard(mode) {
     actions.length ? el('div', { class: 'play-actions' }, actions) : null);
 }
 
-// How a game reads, worked through: the answer is 時間, whose parts in
-// writing order are 日 土 寸 門 日. The cells don't show where 時 ends;
-// like Wordle's letters, a part is green in its cell and yellow in another.
-// It opens the play page, always, as its intro.
-const DEMO = {
-  rows: [
-    [['口', 'miss'], ['日', 'near'], ['寸', 'hit'], ['木', 'miss'], ['月', 'miss']],
-    [['日', 'hit'], ['土', 'hit'], ['寸', 'hit'], ['日', 'near'], ['門', 'near']],
-    [['日', 'hit'], ['土', 'hit'], ['寸', 'hit'], ['門', 'hit'], ['日', 'hit']]
-  ],
-  answer: '時間'
-};
+// Every game played, under the card (js/history.js), PAGE more at a time.
+let history = null;
+let historyShown = PAGE;
 
-function howTo() {
-  return el('section', { class: 'card howto', 'aria-labelledby': 'howto-title' },
-    el('h2', { class: 'howto-title', id: 'howto-title' }, t('howto.title')),
-    el('p', { class: 'howto-lead' }, t('howto.lead')),
-    el('p', { class: 'howto-text' }, t('howto.body')),
-    el('div', { class: 'demo', 'aria-hidden': 'true' },
-      DEMO.rows.map((row) => el('div', { class: 'demo-row' },
-        el('span', { class: 'demo-slot' }, row.map(([part, state]) => el('span', { class: `tile is-cell is-${state}`, lang: 'ja' }, part))),
-        row.every(([, state]) => state === 'hit') ? el('span', { class: 'demo-answer kanji', lang: 'ja' }, DEMO.answer) : null))),
-    el('ul', { class: 'demo-legend' },
-      ['hit', 'near', 'miss'].map((state) =>
-        el('li', {}, el('span', { class: `legend-dot is-${state}-bg` }), t(`howto.${state}`)))));
+function renderHistory() {
+  const fresh = historyCard({
+    save: store.get(), data: game.data, engine: game.engine, shown: historyShown,
+    onMore: () => {
+      const from = historyShown;
+      historyShown += PAGE;
+      renderHistory();
+      // The first game just listed takes the focus, so the keyboard carries on there.
+      const next = history && history.querySelectorAll('.history-item')[from];
+      if (next) { next.setAttribute('tabindex', '-1'); next.focus(); }
+    }
+  });
+  if (history && history.isConnected) {
+    if (fresh) history.replaceWith(fresh);
+    else history.remove();
+  } else if (fresh) app.append(fresh);
+  history = fresh;
 }
 
 // Adding Kanjiru to the home screen (js/install.js): on a phone, once there's
@@ -319,10 +320,21 @@ function renderCards(focusId = null) {
   return fresh;
 }
 
+// How to play: open on top until the first game is played, then folded
+// under the card (docs/DESIGN.md, "Screens and menus").
+let guide = null;
+
 function renderPlay() {
-  app.replaceChildren(howTo(), renderCards());
+  const save = store.get();
+  const newcomer = games(save.history).length === 0;
+  if (guide) guide.stop();
+  guide = howTo({ open: newcomer, tiles: save.settings.tiles });
+  history = null;
+  historyShown = PAGE;
+  app.replaceChildren(...(newcomer ? [guide.node, renderCards()] : [renderCards(), guide.node]));
   tip = null;
   renderTip();
+  renderHistory();
   // The countdown ticks; at midnight the new daily takes the card.
   const day = localDate();
   playTimer = setInterval(() => {
@@ -378,6 +390,7 @@ async function renderGame({ mode, kind }) {
 
 function renderAll() {
   if (view) { view.destroy(); view = null; }
+  if (guide) { guide.stop(); guide = null; }
   clearInterval(playTimer);
   const p = page();
   // Before the header, so points won in a game rise from it on the way out.
@@ -408,6 +421,6 @@ renderAll();
 // streak and stats, so it redraws too.
 ready.then(() => {
   const now = page().name;
-  if (now === 'play') renderCards();
+  if (now === 'play') { renderCards(); renderHistory(); }
   else if (now === 'points' && game.moved && view) view.refresh();
 });

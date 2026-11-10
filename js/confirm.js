@@ -1,0 +1,93 @@
+/*
+ * A modal that asks before something that can't be undone: ending a game,
+ * resetting achievements, deleting everything.
+ *
+ *   const pick = await ask({ title, body, options, cancel });
+ *   // the picked option's id, or null when cancelled (Cancel, Esc, the backdrop)
+ *
+ *   icon     optional, before the title
+ *   title    the question
+ *   body     optional text, or a list of lines
+ *   options  [{ id, name, desc, danger }]: each a big button with what it
+ *            does under its name; danger shows its name in the accent colour
+ *   typed    optional { word, also, label, hint }: then the options stay off
+ *            until the word (or one in also) is typed, any case, for the
+ *            last step of a reset
+ *   step     optional { n, of }: "Step 2 of 3", for a run of asks
+ *
+ * One dialog serves every ask, so a run of them (the reset's three steps)
+ * reads as one sheet changing.
+ */
+import { t } from './i18n.js';
+import { el } from './dom.js';
+
+let dialog = null;
+let settle = null;   // resolves the ask on show
+
+function close(value) {
+  const done = settle;
+  settle = null;
+  if (dialog && dialog.open) dialog.close();
+  if (done) done(value);
+}
+
+export function ask({ icon = null, title, body = null, options, typed = null, step = null, cancel = null }) {
+  if (!dialog) {
+    dialog = el('dialog', { class: 'sheet confirm-sheet ask-sheet', 'aria-labelledby': 'ask-sheet-title' });
+    // The backdrop and Esc cancel.
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) close(null); });
+    // The close event comes a moment later: by then the next ask of a run
+    // may have opened the dialog again, and that one stays.
+    dialog.addEventListener('close', () => { if (!dialog.open) close(null); });
+    document.body.append(dialog);
+  }
+  if (settle) settle(null);   // a new ask replaces one still open
+
+  const lines = Array.isArray(body) ? body : body ? [body] : [];
+  const field = typed ? el('input', {
+    class: 'code-input ask-typed', type: 'text', autocomplete: 'off', autocapitalize: 'characters',
+    autocorrect: 'off', spellcheck: 'false', 'aria-label': typed.label, placeholder: typed.word,
+    'aria-describedby': 'ask-typed-hint'
+  }) : null;
+  const buttons = options.map((o) => el('button', {
+    class: `ask-option${o.danger ? ' is-danger' : ''}`, type: 'button', 'data-id': `ask-${o.id}`,
+    disabled: !!typed,
+    onclick: () => close(o.id)
+  },
+    el('span', { class: 'ask-option-name' }, o.name),
+    o.desc ? el('span', { class: 'ask-option-desc' }, o.desc) : null));
+  if (field) {
+    const words = [typed.word, ...(typed.also || [])].map((w) => w.toUpperCase());
+    const match = () => words.includes(field.value.trim().toUpperCase());
+    field.addEventListener('input', () => buttons.forEach((b) => { b.disabled = !match(); }));
+    field.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.isComposing && match()) close(options[0].id);
+    });
+  }
+
+  dialog.replaceChildren(el('div', { class: 'sheet-body' },
+    el('header', { class: 'power-sheet-head' },
+      icon ? el('span', { class: 'power-icon', 'aria-hidden': 'true' }, icon) : null,
+      el('div', { class: 'ask-sheet-titles' },
+        step ? el('p', { class: 'ask-step' }, t('confirm.step', { n: step.n, of: step.of })) : null,
+        el('h2', { class: 'sheet-title', id: 'ask-sheet-title' }, title))),
+    lines.map((line) => el('p', { class: 'ask-sheet-body' }, line)),
+    field ? el('label', { class: 'ask-typed-row' },
+      el('span', { class: 'ask-typed-hint', id: 'ask-typed-hint' }, typed.hint || typed.label),
+      field) : null,
+    el('div', { class: 'ask-options' }, buttons),
+    el('div', { class: 'btn-row' },
+      el('button', { class: 'btn btn-ghost', type: 'button', 'data-id': 'ask-cancel', onclick: () => close(null) },
+        cancel || t('confirm.cancel')))));
+
+  return new Promise((resolve) => {
+    settle = resolve;
+    if (!dialog.open) dialog.showModal();
+    (field || buttons[0]).focus();
+  });
+}
+
+// Closes an ask that's open (leaving a page), as cancelled.
+export function closeAsk() {
+  close(null);
+}

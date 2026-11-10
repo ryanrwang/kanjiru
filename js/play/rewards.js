@@ -17,14 +17,22 @@ import * as ledger from '../ledger.js';
 
 const oneOf = (power) => (power ? { [power]: 1 } : null);
 
+// The stats achievements count: games since their last reset (Settings).
+export const achievementStats = (save) => stats(save.history, { since: (save.resets || {}).achievements || null });
+
+// Whether an achievement's reward has been paid before (before a reset).
+const paidBefore = (save, id) => Object.values(save.ledger || {})
+  .some((e) => e && e.why === 'achievement' && e.what === id && (e.pts > 0 || e.hints));
+
 // Marks every achievement the history has earned and the save hasn't, pays
 // its reward, and returns the new ledger entries (one per achievement, so
-// the result card can show them, reward or not).
+// the result card can show them, reward or not). A reward pays once ever:
+// earned again after a reset, it's an entry with nothing in it.
 export function earnAchievements(save, { date = ledger.today(), game = null } = {}) {
-  const values = stats(save.history, { today: date });
+  const values = achievementStats(save);
   return newAchievements(values, save.achievements).map((a) => {
+    const reward = paidBefore(save, a.id) ? {} : a.reward || {};
     save.achievements[a.id] = date;
-    const reward = a.reward || {};
     return ledger.add(save.ledger, 'achievement', { pts: reward.points || 0, hints: oneOf(reward.power), game, what: a.id, at: date });
   });
 }
