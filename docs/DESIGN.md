@@ -300,6 +300,11 @@ Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in strok
   - **Rules, not hand fixes, where a shape recurs:** `DRAWN_AS`, `ROOF_WIDTH`, `CLOSED_SELF_IN` and `COMPONENT_SPLITS` in `tools/build_data.py`, a check for misnamed KanjiVG groups (望), and stroke patterns found inside longer runs (喜's 丷). `tools/README.md` ("Parts") has the rules.
   - **Hand fixes:** 25 (was 20). The rules now cover 7 (三 重 動 種 犯 平 実); 12 are new: 内 両 画 在 存 (positions), 乗 (禾 with 廿 across it), 謄 塞 僅 謹 (as 騰 寒 勤), 衆 and 脊.
   - **Effect on the answers:** the main list went from 453 to 461. 13 words came in because their kanji lost a loose stroke (今度 今後 記念 神社 精神 神経 働 南 喜 戦 演 館 顔). 5 left because their kanji now have fewer parts: 助手 祖母 祖父 春 残 have 3. 勝 (a day already played) has 3 parts now and keeps its slot.
+  - **Decided — Look-alike tiles stay apart for now (2026-11-10):** 关 and 𠔉, and 小 ⺌ ⺍, stay five tiles. They could be merged later; the case, by how each is written (KanjiVG r20260714):
+    - **关 (送 関 咲) and 𠔉 (券 巻 拳): could be one tile.** Both are written with the same six strokes in the same order (㇔ ㇒ ㇐ ㇐ ㇒ ㇏); only whether the falling stroke pokes above the top line differs, which players won't tell apart on a key. Merged, 关 would be a form of the tile.
+    - **⺌ (光 当 常): could be a form of 小.** It's written like 小: the middle stroke first, then left, then right.
+    - **⺍ (学 単 栄): best kept apart, even if the others merge.** Unicode files it with 小 too (CJK RADICAL SMALL TWO), but it's written left to right like ツ, and a reader doesn't see 小 in it.
+    - Merging changes how those parts score (a guess with 小 would count for 光's top) and drops tile ids from saves, which the user said is fine.
   - **Why Proposed:** the user asked for the audit and for the display forms. The new tiles and each split are Claude's calls; `docs/PARTS-AUDIT.md` ("For the user to decide") lists the ones worth a second look.
 - **Decided — Depth: building blocks.** A kanji splits into the biggest pieces that are tiles, like jisho's radical search. 語 = 言 + 五 + 口, not 言 + 吾 (吾 isn't a tile).
 - **Decided — Positions:** left, right, top, bottom, outer, inner, whole or none. The kanji's first split decides, so 語's 五 and 口 are both right.

@@ -632,8 +632,8 @@ Same tiles in the same places, so scoring is unchanged.
 1. **New tiles:** 12, each a judgment call. The ones with fewest kanji: 以 (以 似), 𠂢 (派 脈), 乑 (衆, only one kanji). Dropping one brings back its old split.
 2. **三 for 春:** 春 is 三 人 日, the reading players learn. 実 follows (宀 三 人), so its step 1 hand fix (宀 一 夫) left. The other reading is 二 大 日.
 3. **今 and 以 as tiles:** "The rest stay out" (docs/DESIGN.md, "The puzzle") said a tile for 今 or 以 wouldn't bring words back. They're tiles now for accuracy. 今度 and 今後 came back; 今日 has 2 parts.
-4. **关 and 𠔉:** the inside of 送 and the top of 券 look nearly the same, but are two tiles (as KanjiVG and Unicode have them). Merging them would remove a tile id, which saves store, so it was left.
-5. **⺌ ⺍ 小:** one radical as three tiles. They look different enough that they were left apart.
+4. **关 and 𠔉:** the inside of 送 and the top of 券 look nearly the same, but are two tiles (as KanjiVG and Unicode have them). **The user's call (2026-11-10): keep them apart for now; they could be merged.** Both are written with the same six strokes in the same order (㇔ ㇒ ㇐ ㇐ ㇒ ㇏), so as keys they'd be hard to tell apart (docs/DESIGN.md, "Look-alike tiles stay apart for now").
+5. **⺌ ⺍ 小:** one radical as three tiles. **The user's call (2026-11-10): keep them apart for now; ⺌ could become a form of 小.** ⺌ is written like 小 (middle first); ⺍ is written left to right like ツ, so it would stay its own tile even then.
 6. **勝:** a day already played (8), it keeps its slot, but it has 3 parts now (月 𠔉 力). With no dailies, it can come up as a 3-part random game.
 7. **乗:** a hand fix makes it 禾 with 廿 across its middle (the old 乘 had 北 there). The other choice was 𠂉 + a 卄 shape + 木.
 8. **Display forms on phones:** 13 new glyphs aren't in JIS X 0213 and get KanjiVG drawings (丷 㔾 牜 ⻊ ⺮ 夹, and 龵, which isn't in Noto either). Check `review/parts.html` on a phone.
