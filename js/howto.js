@@ -8,9 +8,10 @@
  *   const guide = howTo({ open, tiles });   // guide.node; guide.stop()
  *
  * open: shown open (a new player) or folded to its title (after a game;
- * app.js decides). It plays only while open and on screen; under reduced
- * motion it shows the three rows at once, every line listed. The board is
- * a picture (aria-hidden): the text above it says the same for screen readers.
+ * app.js decides); either way it sits above the play card. It plays only
+ * while open and on screen; under reduced motion it shows the three rows at
+ * once, every line listed. The board is a picture (aria-hidden): the text
+ * above it says the same for screen readers.
  */
 import { t } from './i18n.js';
 import { el } from './dom.js';
@@ -38,11 +39,11 @@ export function howTo({ open = true, tiles = 'flip' } = {}) {
   const board = el('div', { class: 'demo', 'aria-hidden': 'true', 'data-tiles': tiles },
     el('div', { class: 'demo-answer-row' }, answer), rows, line);
 
-  const details = el('details', { class: 'card howto', open },
-    el('summary', { class: 'howto-summary' },
-      el('h2', { class: 'howto-title', id: 'howto-title' }, t('howto.title')),
-      el('span', { class: 'howto-chevron', 'aria-hidden': 'true' })),
-    el('div', { class: 'howto-body' },
+  const details = el('details', { class: 'card fold howto', open },
+    el('summary', { class: 'fold-summary' },
+      el('h2', { class: 'fold-title', id: 'howto-title' }, t('howto.title')),
+      el('span', { class: 'fold-chevron', 'aria-hidden': 'true' })),
+    el('div', { class: 'fold-body' },
       el('p', { class: 'howto-lead' }, t('howto.lead')),
       el('p', { class: 'howto-text' }, t('howto.body')),
       board,
@@ -88,11 +89,16 @@ export function howTo({ open = true, tiles = 'flip' } = {}) {
   }
 
   // Steps run one after another; each returns how long until the next.
+  // Quick enough to watch through (about 11 s a round): a part every 200 ms,
+  // the row's reveal at the board's own pace (styles.css --reveal-stagger),
+  // and each line held 1.2 s.
   function steps() {
     const tr = window.TOKENS.active().transition;
-    const type = ms(tr.slow);
-    const reveal = (ms(getComputedStyle(board).getPropertyValue('--reveal-time')) || ms(tr.reveal)) + ms(tr.base) * 4;
-    const hold = ms(tr.message) * 0.6;
+    const css = getComputedStyle(board);
+    const type = ms(tr.base);
+    const stagger = ms(css.getPropertyValue('--reveal-stagger')) || ms(tr.fast);
+    const reveal = (ms(css.getPropertyValue('--reveal-time')) || ms(tr.reveal)) + stagger * (ROWS[0].parts.length - 1);
+    const hold = ms(tr.message) * 0.4;
     const list = [() => { clear(); return type; }];
     ROWS.forEach((row, r) => {
       list.push(() => { say(row.typing); return type; });
@@ -114,7 +120,7 @@ export function howTo({ open = true, tiles = 'flip' } = {}) {
         return hold;
       });
     });
-    list.push(() => ms(tr.message) * 0.4);
+    list.push(() => ms(tr.message) * 0.3);
     return list;
   }
 

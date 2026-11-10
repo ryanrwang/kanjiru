@@ -1,6 +1,6 @@
 /*
  * The Points page (#points, opened by the points in the header; the header
- * shows 漢 › Points): the wallet, the looks with examples, the hints and
+ * shows 漢 › Points, and Close, which goes back): the wallet, the looks with examples, the hints and
  * powers (one per row: what it does, how many you hold, Buy), and the
  * achievements. Buying takes two taps: Buy, then a modal that names the
  * price and what's left (rules in js/shop.js). A hint's modal has Don't

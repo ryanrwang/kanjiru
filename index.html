@@ -99,9 +99,15 @@
         <span class="brand-name">Kanjiru</span>
       </a>
     </h1>
+    <!-- One look for every control here (.head-btn); app.js shows the ones
+         the page needs: the points and the gear, End game and the hints in
+         a game, Close on a page of its own. -->
     <nav class="header-actions">
-      <a class="wallet-btn" id="wallet" href="#points"></a>
-      <button class="icon-btn" id="settings-open" type="button"></button>
+      <button class="head-btn is-icon" id="end-open" type="button" hidden></button>
+      <button class="head-btn" id="hints-open" type="button" hidden></button>
+      <a class="head-btn" id="wallet" href="#points"></a>
+      <a class="head-btn is-icon" id="settings-open" href="#settings"></a>
+      <button class="head-btn is-icon" id="page-close" type="button" hidden></button>
     </nav>
   </header>
 

@@ -1,27 +1,35 @@
 /*
  * Kanjiru — the pages, and the way between them.
  *
- * The header holds two things: the points, which open the Points page, and
- * the gear, which opens Settings (js/settings.js: language, light or dark,
- * moving devices, debug). In a game on the go, the hints held take the
- * points' place and open the hints modal. Away from the play page the brand
- * is a breadcrumb: 漢 › Points, 漢 › About, 漢 › Play. Everything on a page
+ * The header: the brand on the left, and on the right one row of controls
+ * that all look alike (bordered pills): the points, which open the Points
+ * page, and the gear, which opens Settings. In a game on the go, End game's
+ * flag and the hints held take the points' place. On a page of its own
+ * (Points, Settings, About) the controls make way for Close, which goes back
+ * where you came from. Away from the play page the brand is a breadcrumb:
+ * 漢 › Points, 漢 › Settings, 漢 › Play; 漢 goes home. Everything on a page
  * is built from the catalogues in js/config/ and the text in js/i18n/: add
  * an entry and it appears.
  *
  * Pages (the URL hash, so the phone's back gesture works):
- *   (none)            the play page: a play card per listed mode with the
- *                     Hard and Guided switches on it; on a phone, a tip to
- *                     add it to the home screen; How to play (js/howto.js),
- *                     open and on top for a new player, folded under the
- *                     card after a game; then every game played (js/history.js)
+ *   (none)            the play page: How to play (js/howto.js, open for a
+ *                     new player, folded after a game), a play card per
+ *                     listed mode with the Hard and Guided switches on it,
+ *                     every game played (js/history.js), then on a phone a
+ *                     folded tip to add it to the home screen
  *   #points           the Points page (js/points.js): the wallet, looks,
  *                     hints and achievements, and buying
+ *   #settings         Settings (js/settings.js): language, light or dark,
+ *                     moving devices, starting over, debug
  *   #about            the About page (js/about.js): the game, your progress
  *                     and the credits; opened from Settings
  *   #main             a mode's daily (js/play/screen.js), or in a mode
  *                     without dailies (main, now), a random puzzle
  *   #main/practice    another puzzle after the daily ("keep playing")
+ *
+ * Each page opened from here is a history entry that knows how deep it is
+ * (history.state.depth), so 漢 goes back to the play page's own entry and
+ * Close goes back one, and the phone's Back does the same.
  */
 import { MODES, MODE, LEVEL, ECONOMY, settingsLevel, validate } from './js/registry.js';
 import { t, setLang } from './js/i18n.js';
@@ -51,11 +59,12 @@ validate();
 
 const pts = (n) => t('currency.amount', { n });
 
-// ── Header: the points and Settings ──────────────────────────────────
+// ── Header: the points, Settings, and Close ─────────────────────────
 
 const FLAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/></svg>';
 const BULB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>';
 const GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+const CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
 function applyLook() {
   TOKENS.applyLook(save.settings.theme, save.settings.scheme);
@@ -63,15 +72,29 @@ function applyLook() {
 
 let shownPoints = null;   // the points the header last showed on screen
 // Pages other than home, and their names in the breadcrumb.
-const CRUMBS = { points: 'points.title', about: 'about.title', game: 'header.game' };
+const CRUMBS = { points: 'points.title', settings: 'settings.title', about: 'about.title', game: 'header.game' };
+// Pages of their own: the header has Close in place of its controls.
+const PAGES = new Set(['points', 'settings', 'about']);
+
+const byId = (id) => document.getElementById(id);
+// The controls stay put between redraws, so the focus stays on them.
+const endBtn = byId('end-open');
+const hintsBtn = byId('hints-open');
+const walletBtn = byId('wallet');
+const settingsBtn = byId('settings-open');
+const closeBtn = byId('page-close');
+endBtn.innerHTML = FLAG;
+settingsBtn.innerHTML = GEAR;
+closeBtn.innerHTML = CLOSE;
+
+function label(node, text) {
+  node.title = text;
+  node.setAttribute('aria-label', text);
+}
 
 function renderHeader() {
-  const settingsBtn = document.getElementById('settings-open');
-  settingsBtn.innerHTML = GEAR;
-  settingsBtn.setAttribute('aria-label', t('settings.open'));
-  settingsBtn.title = t('settings.open');
   // Home names the game; another page shows where you are: 漢 › Points.
-  const brand = document.getElementById('brand');
+  const brand = byId('brand');
   const p = page();
   const crumb = CRUMBS[p.name] ? t(CRUMBS[p.name]) : null;
   brand.title = t('header.home');
@@ -90,65 +113,64 @@ function renderHeader() {
         game ? el('span', { class: 'crumb-sub' }, game.sub) : null));
   }
 
+  // A page of its own: Close alone.
+  const own = PAGES.has(p.name);
+  closeBtn.hidden = !own;
+  label(closeBtn, t('header.close'));
+  settingsBtn.hidden = own;
+  label(settingsBtn, t('settings.open'));
+
   // While a game is on, End game (a flag: give up, or a new puzzle; js/play/
   // screen.js endGame) and the hints held, which open the hints modal, take
   // the points' place.
   const hintsOn = !!(game && game.playing);
-  let end = document.getElementById('end-open');
-  if (hintsOn && !end) {
-    end = el('button', {
-      class: 'icon-btn end-btn', id: 'end-open', type: 'button', 'data-id': 'end',
-      onclick: () => view && view.endGame && view.endGame()
-    });
-    end.innerHTML = FLAG;
-    document.getElementById('wallet').before(end);
-  } else if (!hintsOn && end) end.remove();
-  if (end) {
-    end.title = t('game.end.open');
-    end.setAttribute('aria-label', t('game.end.open'));
-  }
-  let hints = document.getElementById('hints-open');
+  endBtn.hidden = !hintsOn;
+  label(endBtn, t('game.end.open'));
+  hintsBtn.hidden = !hintsOn;
   if (hintsOn) {
-    if (!hints) {
-      hints = el('button', { class: 'wallet-btn hints-pill', id: 'hints-open', type: 'button', onclick: () => view && view.openHints && view.openHints() });
-      document.getElementById('wallet').before(hints);
-    }
-    const icon = el('span', { class: 'hints-pill-icon' });
+    const icon = el('span', { class: 'head-icon is-accent' });
     icon.innerHTML = BULB;
-    hints.replaceChildren(el('span', { class: 'wallet-amount' }, icon, String(game.held)));
-    hints.title = t('game.powers.title');
-    hints.setAttribute('aria-label', t('header.hints', { n: game.held }));
-  } else if (hints) hints.remove();
+    hintsBtn.replaceChildren(icon, el('span', {}, String(game.held)));
+    hintsBtn.title = t('game.powers.title');
+    hintsBtn.setAttribute('aria-label', t('header.hints', { n: game.held }));
+  }
 
   // The points open the Points page. A change since they last showed rises
-  // from them, once they're on screen (a game on the go shows the hints).
-  const wallet = document.getElementById('wallet');
-  // (While a game loads, neither: it's about to show the hints.)
-  wallet.hidden = hintsOn || (p.name === 'game' && !game);
+  // from them, once they're on screen (a game on the go shows the hints;
+  // while a game loads, neither: it's about to show the hints).
+  const hidden = own || hintsOn || (p.name === 'game' && !game);
+  walletBtn.hidden = hidden;
   const now = store.points(save);
   const amount = el('span', { class: 'wallet-amount' },
     el('span', { class: 'wallet-icon', 'aria-hidden': 'true' }, ECONOMY.currency.icon), pts(now));
-  wallet.replaceChildren(amount);
-  wallet.title = t('header.points');
-  wallet.setAttribute('aria-label', t('header.wallet', { amount: pts(now) }));
-  if (p.name === 'points') wallet.setAttribute('aria-current', 'page');
-  else wallet.removeAttribute('aria-current');
-  if (!hintsOn && !(p.name === 'game' && !game)) {
+  walletBtn.replaceChildren(amount);
+  walletBtn.title = t('header.points');
+  walletBtn.setAttribute('aria-label', t('header.wallet', { amount: pts(now) }));
+  if (!hidden) {
     if (shownPoints !== null && now !== shownPoints) bump(amount, now - shownPoints);
     shownPoints = now;
   }
 }
 
-document.getElementById('wallet').addEventListener('click', (event) => {
-  event.preventDefault();
-  if (page().name === 'points') window.scrollTo({ top: 0, behavior: 'smooth' });
-  else go('points');
-});
+endBtn.addEventListener('click', () => view && view.endGame && view.endGame());
+hintsBtn.addEventListener('click', () => view && view.openHints && view.openHints());
+closeBtn.addEventListener('click', closePage);
 
-document.getElementById('brand').addEventListener('click', (event) => {
+byId('brand').addEventListener('click', (event) => {
   event.preventDefault();
   if (page().name === 'play') window.scrollTo({ top: 0, behavior: 'smooth' });
   else home();
+});
+
+// Links to a page (the points, the gear, About in Settings, the result
+// card's links) open it as a new entry that knows its depth (go()).
+document.addEventListener('click', (event) => {
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const link = event.target.closest && event.target.closest('a[href^="#"]');
+  const path = link ? link.getAttribute('href').slice(1) : '';
+  if (!path || link.target) return;
+  event.preventDefault();
+  go(path);
 });
 
 // Achievements the history has earned and the save hasn't yet (a save from
@@ -161,21 +183,14 @@ function catchUp() {
 }
 
 // Settings changed something (a look, the language, debug points) or a save
-// arrived from another device: redraw with it.
-function reloadSave() {
+// arrived from another device: the header takes it; Settings redraws itself.
+function settingsChanged() {
   save = store.get();
   catchUp();
   setLang(save.settings.lang);
   applyLook();
-  // The page redraws behind the panel; it stays where it was scrolled.
-  const scrolled = window.scrollY;
-  renderAll();
-  window.scrollTo(0, scrolled);
+  renderHeader();
 }
-
-document.getElementById('settings-open').addEventListener('click', () => {
-  openSettings({ onChange: reloadSave });
-});
 
 // With no saved choice, follow the device as it switches.
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
@@ -289,30 +304,36 @@ function playCard(mode) {
 }
 
 // Every game played, under the card (js/history.js), PAGE more at a time.
-let history = null;
-let historyShown = PAGE;
+// (Not named history: that's window.history, which the routes use.)
+let played = null;
+let playedShown = PAGE;
 
 function renderHistory() {
   const fresh = historyCard({
-    save: store.get(), data: game.data, engine: game.engine, shown: historyShown,
+    save: store.get(), data: game.data, engine: game.engine, shown: playedShown,
     onMore: () => {
-      const from = historyShown;
-      historyShown += PAGE;
+      const from = playedShown;
+      playedShown += PAGE;
       renderHistory();
       // The first game just listed takes the focus, so the keyboard carries on there.
-      const next = history && history.querySelectorAll('.history-item')[from];
+      const next = played && played.querySelectorAll('.history-item')[from];
       if (next) { next.setAttribute('tabindex', '-1'); next.focus(); }
     }
   });
-  if (history && history.isConnected) {
-    if (fresh) history.replaceWith(fresh);
-    else history.remove();
-  } else if (fresh) app.append(fresh);
-  history = fresh;
+  if (played && played.isConnected) {
+    if (fresh) played.replaceWith(fresh);
+    else played.remove();
+  } else if (fresh && cards && cards.isConnected) {
+    // Above the install tip, which stays at the bottom.
+    if (tip && tip.isConnected) tip.before(fresh);
+    else app.append(fresh);
+  }
+  played = fresh;
 }
 
 // Adding Kanjiru to the home screen (js/install.js): on a phone, once there's
-// progress to keep, under the play card. Not now puts it off a while.
+// progress to keep, at the bottom of the play page, folded to its title.
+// Not now puts it off a while.
 function installTip() {
   if (!tipDue(store.get())) return null;
   const p = platform();
@@ -322,23 +343,28 @@ function installTip() {
     const next = app.querySelector('.play-actions .btn');
     if (next) next.focus();
   };
-  return el('section', { class: 'card install-tip', 'aria-labelledby': 'install-tip-title' },
-    el('h2', { class: 'install-title', id: 'install-tip-title' }, t('install.title')),
-    el('p', { class: 'install-why' }, t(`install.why.${p}`)),
-    installSteps(p),
-    el('p', { class: 'install-note' }, t('install.tipBackup')),
-    el('div', { class: 'btn-row' },
-      canPrompt() ? el('button', { class: 'btn btn-primary', type: 'button', onclick: () => promptInstall() }, t('install.button')) : null,
-      el('button', { class: 'btn btn-ghost', type: 'button', onclick: later }, t('install.later'))));
+  return el('details', { class: 'card fold install-tip' },
+    el('summary', { class: 'fold-summary' },
+      el('h2', { class: 'fold-title', id: 'install-tip-title' }, t('install.title')),
+      el('span', { class: 'fold-chevron', 'aria-hidden': 'true' })),
+    el('div', { class: 'fold-body install-body' },
+      el('p', { class: 'install-why' }, t(`install.why.${p}`)),
+      installSteps(p),
+      el('p', { class: 'install-note' }, t('install.tipBackup')),
+      el('div', { class: 'btn-row' },
+        canPrompt() ? el('button', { class: 'btn btn-primary', type: 'button', onclick: () => promptInstall() }, t('install.button')) : null,
+        el('button', { class: 'btn btn-ghost', type: 'button', onclick: later }, t('install.later')))));
 }
 
 let tip = null;
 function renderTip() {
   const fresh = installTip();
+  // Opened by the player, it stays open when it redraws.
+  if (fresh && tip && tip.open) fresh.open = true;
   if (tip && tip.isConnected) {
     if (fresh) tip.replaceWith(fresh);
     else tip.remove();
-  } else if (fresh && cards && cards.isConnected) cards.after(fresh);
+  } else if (fresh && cards && cards.isConnected) app.append(fresh);
   tip = fresh;
 }
 
@@ -361,8 +387,8 @@ function renderCards(focusId = null) {
   return fresh;
 }
 
-// How to play: open on top until the first game is played, then folded
-// under the card (docs/DESIGN.md, "Screens and menus").
+// How to play, always above the card: open until the first game is
+// played, then folded to its title (docs/DESIGN.md, "Screens and menus").
 let guide = null;
 
 function renderPlay() {
@@ -370,12 +396,13 @@ function renderPlay() {
   const newcomer = games(save.history).length === 0;
   if (guide) guide.stop();
   guide = howTo({ open: newcomer, tiles: save.settings.tiles });
-  history = null;
-  historyShown = PAGE;
-  app.replaceChildren(...(newcomer ? [guide.node, renderCards()] : [renderCards(), guide.node]));
+  played = null;
+  playedShown = PAGE;
   tip = null;
-  renderTip();
+  cards = null;
+  app.replaceChildren(guide.node, renderCards());
   renderHistory();
+  renderTip();
   // The countdown ticks; at midnight the new daily takes the card.
   const day = localDate();
   playTimer = setInterval(() => {
@@ -386,26 +413,48 @@ function renderPlay() {
 
 // ── Routes ───────────────────────────────────────────────────────────
 
-let view = null;          // the game or the Points page, while one is open
-let wentIn = false;       // reached a page from the play page, so Back can go back
+let view = null;          // the game or a page, while one is open
+let routed = null;        // the hash last drawn, so one move draws once
 
 function page() {
   const [first, kind] = location.hash.replace(/^#/, '').split('/');
-  if (first === 'points' || first === 'about') return { name: first };
+  if (PAGES.has(first)) return { name: first };
   const mode = MODE[first];
   // A mode without dailies plays a random puzzle at #<mode> too.
   return mode ? { name: 'game', mode, kind: kind === 'practice' || !mode.daily ? 'practice' : 'daily' } : { name: 'play' };
 }
 
+// How many pages deep this entry is, counted from the play page's.
+const depth = () => (window.history.state && window.history.state.depth) || 0;
+
 function go(path) {
-  wentIn = true;
-  location.hash = path;
+  if (`#${path}` === location.hash) return;
+  window.history.pushState({ depth: depth() + 1 }, '', `#${path}`);
+  route();
 }
 
+// 漢: back to the play page's own entry, so Back doesn't return to the
+// page just left. Opened straight at a page, the play page takes its place.
 function home() {
-  if (wentIn) { wentIn = false; history.back(); return; }
-  history.replaceState(null, '', location.pathname + location.search);
+  const d = depth();
+  if (d > 0) { window.history.go(-d); return; }
+  window.history.replaceState(null, '', location.pathname + location.search);
+  route();
+}
+
+// Close (Points, Settings, About): back where you came from.
+function closePage() {
+  if (depth() > 0) window.history.back();
+  else home();
+}
+
+// Draws the page the URL names, once per move (Back fires both popstate
+// and hashchange).
+function route() {
+  if (routed === location.hash) return;
+  routed = location.hash;
   renderAll();
+  window.scrollTo(0, 0);
 }
 
 async function renderGame({ mode, kind }) {
@@ -423,7 +472,10 @@ async function renderGame({ mode, kind }) {
   view = openGame(app, {
     data: game.data, engine: game.engine, glyph: game.glyph, mode, kind,
     onHome: home,
-    onPractice: () => location.replace(`#${mode.id}/practice`),
+    onPractice: () => {
+      window.history.replaceState(window.history.state, '', `#${mode.id}/practice`);
+      route();
+    },
     onWallet: () => { if (view) renderHeader(); },
     onReload: renderAll
   });
@@ -445,15 +497,14 @@ function renderAll() {
       onLook: () => { save = store.get(); applyLook(); },
       onWallet: renderHeader
     });
-  } else if (p.name === 'about') view = openAbout(app);
+  } else if (p.name === 'settings') view = openSettings(app, { onChange: settingsChanged });
+  else if (p.name === 'about') view = openAbout(app);
   else renderPlay();
+  routed = location.hash;
 }
 
-window.addEventListener('hashchange', () => {
-  if (page().name === 'play') wentIn = false;
-  renderAll();
-  window.scrollTo(0, 0);
-});
+window.addEventListener('popstate', route);
+window.addEventListener('hashchange', route);
 
 catchUp();
 applyLook();

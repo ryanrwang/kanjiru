@@ -12,7 +12,8 @@ export default {
     points: 'ポイント',
     wallet: '所持ポイント {amount}。ポイントを開く',
     game: 'プレイ',
-    hints: 'ヒント（所持 {n}）。ヒントを開く'
+    hints: 'ヒント（所持 {n}）。ヒントを開く',
+    close: '閉じる'
   },
 
   currency: {
@@ -332,7 +333,6 @@ export default {
   settings: {
     open: '設定',
     title: '設定',
-    close: '閉じる',
     language: '言語',
     scheme: {
       title: '外観',
