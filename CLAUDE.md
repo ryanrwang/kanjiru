@@ -24,7 +24,7 @@ Then open `http://localhost:8095/apps/kanjiru/` on the PC, or `http://<LAN IP>:8
 
 On the Mac, work in the clone at `~/kanjiru-test/apps/kanjiru`, never the Dropbox checkout (Dropbox syncs it to the PC's). Serve it with `php -S 0.0.0.0:8099 -t ~/kanjiru-test`; `~/kanjiru-test/images` links to Dropbox's `images/`. A worktree beside it is served at `/apps/<its folder>/`.
 
-Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m unittest discover -s tools` for the compile step. Run both before committing engine or config changes.
+Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m unittest discover -s tools` for the data tools (the compile step and the part rules). Run both before committing engine, config or data-tool changes.
 
 ## Key Files
 | File | Purpose |
@@ -74,10 +74,11 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `api/transfer.php` | Device transfer: a save in, a one-time code out, and back. Settings at the top |
 | `js/i18n.js` | Interface languages: `t()`, `setLang()`, `LANGUAGES`, missing-text check |
 | `js/i18n/en.js`, `js/i18n/ja.js` | All interface text, English (the reference) and Japanese |
-| `tools/build_data.py` | Downloads the dictionaries and writes `data/candidates.json` (settings at the top; see `tools/README.md`) |
+| `tools/build_data.py` | Downloads the dictionaries and writes `data/candidates.json` (settings at the top; see `tools/README.md`). `--parts-only` redoes just the part breakdowns and `data/parts.json` |
 | `data/candidates.json` | Every candidate answer, with kanji info and part breakdowns |
-| `data/parts.json` | The parts palette: 251 tiles, their forms (氵 for 水) and drawings for glyphs fonts may lack |
+| `data/parts.json` | The parts palette: 263 tiles, their forms (氵 for 水, 𠆢 for 人) and drawings for glyphs fonts may lack |
 | `data/parts-overrides.json` | Hand-fixed part breakdowns, each with a `why`; `build_data.py` uses them instead of its own split |
+| `docs/PARTS-AUDIT.md` | The parts audit (2026-11-10): every tile's Kangxi radical, every kanji it changed, and what was left alone |
 | `tools/compile_game.py` | Writes `data/game/`: the slim kanji file and the daily schedule from the Keep words (see `tools/README.md`). `EPOCH` is the date of puzzle 1 |
 | `tools/make_images.py` | Draws `icons/` from the favicon's design (needs Pillow and the Noto JP fonts) |
 | `data/game/kanji.json` | Every guessable kanji: strokes, JLPT, frequency, meanings, readings, parts |
@@ -91,6 +92,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 - Review: open `http://localhost:8095/apps/kanjiru/review/` with the PHP server running.
 - Waller's kanji lists come from Internet Archive snapshots, because tanos.co.uk is offline.
 - Part breakdowns: the rules are in `tools/README.md` ("Parts"), hand fixes in `data/parts-overrides.json`. A rebuild needs the pinned sources in `tools/sources/`; on the Mac, copy them from the Dropbox checkout's `tools/sources/` rather than downloading again.
+- Parts only: `python -I -X utf8 tools/build_data.py --parts-only` redoes the part breakdowns and `data/parts.json` from the `data/candidates.json` already there. It needs only KanjiVG and the Noto stylesheet (GitHub and Google Fonts), so it works where edrdg.org or the Internet Archive are blocked. Then run `tools/compile_game.py`.
 - Loose strokes: answers with a stray single stroke as a part (丨 丶 丿 乙 亅) stay out of the daily until their kanji are fixed in `data/parts-overrides.json` (`LOOSE_STROKES` in `tools/compile_game.py`).
 
 ## Rules

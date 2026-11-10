@@ -5,10 +5,6 @@
       "parts": [["一", "top"], ["力", "bottom"]],
       "why": "The two strokes under the line draw 力; KanjiVG leaves them loose."
     },
-    "三": {
-      "parts": [["二", "top"], ["一", "bottom"]],
-      "why": "Three loose strokes otherwise; 二 is a tile."
-    },
     "円": {
       "parts": [["冂", "outer"], ["丨", "inner"], ["一", "inner"]],
       "why": "The stroke and line sit inside 冂; KanjiVG gives no positions, so they came out none."
@@ -16,10 +12,6 @@
     "年": {
       "parts": [["𠂉", "top"], ["干", "bottom"], ["丨", "bottom"]],
       "why": "KanjiVG splits 干 around the other strokes, which left loose strokes and an enclosure."
-    },
-    "実": {
-      "parts": [["宀", "top"], ["一", "bottom"], ["夫", "bottom"]],
-      "why": "The bottom is 夫 under one more line; KanjiVG leaves the lines loose."
     },
     "寒": {
       "parts": [["宀", "top"], ["共", "bottom"], ["一", "bottom"], ["冫", "bottom"]],
@@ -41,18 +33,6 @@
       "parts": [["𠂉", "top"], ["卌", "top"], ["一", "top"], ["夕", "bottom"], ["㐄", "bottom"]],
       "why": "Same top as 無, which KanjiVG leaves as loose strokes."
     },
-    "重": {
-      "parts": [["𠂉", "top"], ["里", "bottom"]],
-      "why": "The stroke and line over 里 draw 𠂉, as in 毎 and 海; KanjiVG leaves them loose."
-    },
-    "動": {
-      "parts": [["𠂉", "left"], ["里", "left"], ["力", "right"]],
-      "why": "Same left as 重: 𠂉 over 里."
-    },
-    "種": {
-      "parts": [["禾", "left"], ["𠂉", "right"], ["里", "right"]],
-      "why": "Same right as 重: 𠂉 over 里."
-    },
     "産": {
       "parts": [["立", "top"], ["厂", "bottom"], ["生", "bottom"]],
       "why": "立 over 厂 and 生: the stroke down the left and 立's last line draw 厂; KanjiVG leaves the stroke loose."
@@ -65,10 +45,6 @@
       "parts": [["龶", "top"], ["衣", "bottom"]],
       "why": "KanjiVG splits 衣 around 龶, which left 二 and a loose stroke on top."
     },
-    "平": {
-      "parts": [["干", "outer"], ["八", "inner"]],
-      "why": "The two strokes inside 干 are 八 (as 丷), as in 前 and 並; KanjiVG leaves them loose."
-    },
     "号": {
       "parts": [["口", "top"], ["丂", "bottom"]],
       "why": "The bottom is 丂; KanjiVG leaves it as a line and a loose stroke."
@@ -77,9 +53,53 @@
       "parts": [["毋", "whole"]],
       "why": "The shape is the 毋 tile, as in 毎 and 海; KanjiVG leaves its two dots loose."
     },
-    "犯": {
-      "parts": [["犭", "left"], ["卩", "right"]],
-      "why": "The right is 㔾, which counts as 卩, as in 危 and 範; KanjiVG leaves its two strokes loose."
+    "内": {
+      "parts": [["冂", "outer"], ["人", "inner"]],
+      "why": "人 sits inside 冂; KanjiVG gives no positions, so they came out top and bottom."
+    },
+    "両": {
+      "parts": [["一", "top"], ["冂", "outer"], ["山", "inner"]],
+      "why": "一 over 冂 holding 山; KanjiVG gives no positions, so they came out none."
+    },
+    "画": {
+      "parts": [["一", "top"], ["由", "inner"], ["凵", "outer"]],
+      "why": "一 over 由 held in 凵; KanjiVG gives no positions, so they came out none."
+    },
+    "在": {
+      "parts": [["一", "top"], ["亻", "left"], ["土", "right"]],
+      "why": "ナ's line on top, with its stroke and a vertical drawing 亻 under it and 土 to the right; KanjiVG's split put 一 and 亻 both on top."
+    },
+    "存": {
+      "parts": [["一", "top"], ["亻", "left"], ["子", "right"]],
+      "why": "Same shape as 在, with 子 for 土; KanjiVG's split made 一 and 亻 an enclosure."
+    },
+    "乗": {
+      "parts": [["禾", "none"], ["廿", "none"]],
+      "why": "禾 (the top stroke and line, the long vertical and the two legs) with 廿 across its middle, where the old 乘 had 北; KanjiVG leaves the middle as five loose strokes."
+    },
+    "謄": {
+      "parts": [["月", "left"], ["𠔉", "right"], ["言", "right"]],
+      "why": "月 beside 𠔉 over 言, as 騰 is 月 beside 𠔉 over 馬; KanjiVG splits 朕 across the two sides, which left loose strokes."
+    },
+    "塞": {
+      "parts": [["宀", "top"], ["共", "top"], ["一", "top"], ["土", "bottom"]],
+      "why": "The middle is 共 with an extra line, as in 寒; KanjiVG has it as loose strokes."
+    },
+    "僅": {
+      "parts": [["亻", "left"], ["廿", "right"], ["口", "right"], ["王", "right"]],
+      "why": "The right is 廿 over 口 over 王, as 勤 is 艹 over 口 over 王; KanjiVG leaves 口 and 王 as loose strokes."
+    },
+    "謹": {
+      "parts": [["言", "left"], ["艹", "right"], ["口", "right"], ["王", "right"]],
+      "why": "The right is 艹 over 口 over 王, as in 勤; KanjiVG leaves 口 and 王 as loose strokes."
+    },
+    "衆": {
+      "parts": [["血", "top"], ["乑", "bottom", [7, 8, 9, 10, 11, 12]]],
+      "why": "血 over 乑, as dictionaries split it; KanjiVG leaves the bottom as 亻 and four loose strokes. 乑 is only here, so its strokes are listed for its stroke count."
+    },
+    "脊": {
+      "parts": [["𠆢", "top"], ["二", "top"], ["二", "top"], ["月", "bottom"]],
+      "why": "The top is a roof with 二 on each side, over 月; KanjiVG's 人 overlaps the 二s, so the roof wasn't found."
     }
   }
 }

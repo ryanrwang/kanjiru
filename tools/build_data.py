@@ -19,6 +19,7 @@ they are only parsed, never executed.
 
 from __future__ import annotations
 
+import argparse
 import csv
 import datetime
 import gzip
@@ -63,18 +64,23 @@ REQUIRE_COMMON = True
 # What earns a place: the radicals used by 2+ joyo kanji, plus shapes in 4+
 # joyo kanji that KanjiVG can't split without leaving single strokes (业, 免,
 # 兼...), plus a few kanji that would otherwise split into single strokes
-# (不, 半, 五, 北). Shapes that split cleanly stay off (寺 = 土 + 寸,
-# 千 = 丿 + 十). ナ and マ are the katakana that look like those shapes.
+# (不, 半, 五, 北, 以). Shapes that split into pieces a reader sees stay off
+# (寺 = 土 + 寸, 千 = 丿 + 十, 主 = 丶 + 王). ナ and マ are the katakana that
+# look like those shapes. The parts audit (docs/PARTS-AUDIT.md) added shapes
+# whose split gave a wrong tile or a stroke salad: 且 (not 月 + 一), 今, 由,
+# 申, 冊 (not 冂 + 廾), 夹 (not 大 人 人 大), 及 (not 丿 + 又), 巴 (not 己),
+# 三 (for 春 奏 泰: 三 + 人) and 以.
 PALETTE = """
 一 丨 丶 丿 乙 亅
 二 亠 人 儿 入 八 冂 冖 冫 几 凵 刀 力 勹 匕 匚 匸 十 卜 卩 厂 厶 又 乂 𠂊 𠂉 マ ナ 九 了 丂 乃
 口 囗 土 士 夂 夕 大 女 子 宀 寸 小 ⺌ ⺍ 尢 尸 山 川 巛 工 己 巾 干 幺 广 廴 廾 弋 弓 ヨ 彑 彡 彳
-    艹 辶 阝 丬 也 才 亡
+    艹 辶 阝 丬 也 才 亡 三 及
 心 戈 戸 手 支 攵 文 斗 斤 方 日 月 木 欠 止 歹 殳 毋 比 毛 氏 气 水 火 爪 父 片 牛 犬 王 夫 勿 尺
-    井 廿 龶 㐄 五 不 卌
+    井 廿 龶 㐄 五 不 卌 今 巴
 玄 玉 瓦 生 用 田 疋 疒 癶 白 皮 皿 目 矢 石 示 禸 禾 穴 立 甘 牙 罒 业 乍 卯 司 央 巨 布 𢆉 可 北 半
+    以 且 由 申 冊
 竹 米 糸 缶 羊 羽 老 而 耒 耳 聿 肉 自 至 臼 舌 舟 艮 虍 虫 血 行 衣 西 瓜 共 戍 兆 曲 亥 亦 关 并
-    朱 𠔉 𠂤
+    朱 𠔉 𠂤 夹 𠂢 乑
 見 角 言 谷 豆 豕 豸 貝 赤 走 足 身 車 辛 辰 酉 釆 里 甫 臣 余 我 呉
 金 長 門 隹 雨 青 非 其 免 垂 岡 斉
 面 革 音 頁 風 食 首 咼 爰 飛
@@ -87,12 +93,18 @@ PALETTE = """
 
 # Variant forms that count as the same part (decided: same part). The
 # palette shows one tile, and a guess row shows the form the kanji uses.
+# Most are the Kangxi radicals' own variants: 𠆢 is 人 as a roof (会, 今),
+# 丷 is 八 drawn inward (前, 説), 牜 and ⺧ are 牛 on the left (物) and on top
+# (告), ⻊ is 足 on the left (路), ⺮ is 竹 on top (答), 龵 is 手 on top (看),
+# 巳 is 己 closed at the top (包, 選), 㔾 is 卩 with a curled foot (危, 範).
+# 夾 is the older drawing of 夹 (頰). DRAWN_AS and ROOF say when KanjiVG's
+# element shows as one of these.
 VARIANT_FORMS = {
-    "人": "亻",
+    "人": "亻𠆢",
     "水": "氵氺",
-    "牛": "⺧",
+    "牛": "⺧牜",
     "羊": "⺷",
-    "手": "扌",
+    "手": "扌龵",
     "心": "忄⺗",
     "刀": "刂",
     "火": "灬",
@@ -103,6 +115,62 @@ VARIANT_FORMS = {
     "爪": "爫",
     "老": "耂",
     "西": "覀",
+    "八": "丷",
+    "足": "⻊",
+    "竹": "⺮",
+    "己": "巳",
+    "卩": "㔾",
+    "夹": "夾",
+}
+
+# KanjiVG names some parts by where they come from, not by how they are
+# drawn: 会's roof is 人, 前's 丷 is 八, 渇's 匕 is 人. The strokes say what a
+# reader sees. For a part KanjiVG names (left), the glyph its stroke types
+# draw (first character of each type, as in STROKE_PATTERNS). A glyph that
+# is a form of the same tile only changes what is shown; one that belongs to
+# another tile (匕, マ, 冖) makes the part that tile.
+DRAWN_AS = {
+    "八": {"㇔㇒": "丷"},                              # 前 説 並 弟
+    "牛": {"㇒㇐㇑㇀": "牜",                           # 物 特 牧: ends rising
+           "㇒㇐㇑㇐": "⺧"},                           # 告 造 酷: the vertical stops
+    "足": {"㇑㇕㇐㇑㇐㇑㇀": "⻊"},                      # 路 距 跡
+    "竹": {"㇒㇐㇔㇒㇐㇒": "⺮"},                        # 答 第 等: short ticks, no verticals
+    "羊": {"㇔㇒㇐㇑㇐㇐": "⺷"},                        # 美 義 差: the vertical stops
+    "手": {"㇒㇐㇐㇒": "龵"},                           # 看
+    "卩": {"㇆㇟": "㔾",                               # 危 範 宛
+           "㇇㇔": "マ", "㇆㇔": "マ"},                  # 令's foot in 領 齢, as in 冷 鈴
+    "人": {"㇒㇟": "匕"},                               # 曷 in 渇 喝 掲 謁 褐
+    "宀": {"㇔㇖": "冖"},                               # 隺 in 確 鶴: no top dot
+}
+
+# 人 on top, at least this wide against what it covers, is the roof 𠆢 (会
+# 今 命). 人 inside 冂 (内 病) is narrower: under 0.75 in this KanjiVG,
+# against 0.9 and up for every roof.
+ROOF_WIDTH = 0.85
+
+# 己 closed at the top is 巳. KanjiVG draws both alike, so it goes by the
+# element around it.
+CLOSED_SELF_IN = {"包", "巷", "巽", "遷"}  # 包 抱 砲; 港; 選; 遷
+
+# KanjiVG elements that aren't tiles but split into tiles cleanly, by
+# their strokes in order: (glyph, how many strokes). Without these they
+# fall apart into single strokes or the wrong tiles.
+COMPONENT_SPLITS = {
+    "重": [("𠂉", 2), ("里", 7)],             # 重 動 種 働 腫 薫 衝: 𠂉 over 里, as in 毎
+    "午": [("𠂉", 2), ("十", 2)],             # 午 許: not 𠂉 over a 干 that shares its line
+    "开": [("一", 1), ("廾", 3)],             # 開 研 形 刑 型: not 干 + 干
+    "単": [("⺍", 3), ("日", 4), ("十", 2)],   # 戦 弾 禅, as 単 itself
+    "劵": [("𠔉", 6), ("力", 2)],             # 勝 騰 謄: 𠔉 as in 券 巻
+    "百": [("一", 1), ("白", 5)],             # 宿 縮 優 憂
+    "𡗗": [("三", 3), ("人", 2)],             # 春 奏 奉 泰 俸 棒: 三 and 人
+    "戋": [("二", 2), ("戈", 4)],             # 残 浅 銭 践 桟
+    "丰": [("三", 3), ("丨", 1)],             # 邦 峰 縫 蜂 拝
+    "彦": [("立", 5), ("厂", 1), ("彡", 3)],  # 顔 彦: 立 over 厂, as in 産
+    "菐": [("业", 5), ("丷", 2), ("一", 1), ("夫", 4)],  # 僕 撲
+    "奉": [("三", 3), ("人", 2), ("干", 3)],  # 奉 俸 棒: 三 and 人 over 干
+    "卸": [("𠂉", 2), ("一", 1), ("止", 4), ("卩", 2)],  # 卸 御: 午 over 止, sharing its vertical
+    "官": [("宀", 3), ("口", 3), ("口", 2)],  # 官 館 管 棺: two boxes under 宀, sharing a side
+    "象": [("𠂊", 2), ("口", 3), ("豕", 7)],  # 象 像: the box's bottom line is 豕's first stroke
 }
 
 # KanjiVG element names drawn the same as another glyph. Players see shapes,
@@ -114,6 +182,7 @@ LOOKALIKES = {
     "⻖": "阝", "⻏": "阝",
     "⺨": "犭", "⺤": "爫", "⻞": "飠", "⺦": "丬",
     "⺕": "ヨ", "彐": "ヨ",
+    "龹": "𠔉",
     "𠂇": "ナ", "丆": "ナ",
     "襾": "西",
     "戶": "戸", "靑": "青", "黃": "黄", "黑": "黒", "齒": "歯", "龍": "竜", "龜": "亀", "麥": "麦",
@@ -139,6 +208,9 @@ STROKE_PATTERNS = {
     ("㇒", "㇐", "㇑", "㇐"): "⺧",                 # 先, 洗
     ("㇐", "㇑", "㇑", "㇐"): "廿",                 # 散
     ("㇒", "㇑", "㇕", "㇐", "㇕", "㇐"): "𠂤",     # 師, 帥
+    ("㇔", "㇒"): "丷",                             # 南, 喜, 帝, 益, 逆: two strokes meeting below
+    ("㇇", "㇔"): "マ",                             # 野's 予, as 予 itself
+    ("㇔", "㇒", "㇐", "㇐", "㇒", "㇏"): "𠔉",     # 拳, as 券 and 巻
 }
 CROSSING = 0.6  # share of the ㇒'s height that must reach below the ㇐ for ナ
 
@@ -587,6 +659,14 @@ def palette_tiles() -> tuple[list[str], dict[str, str]]:
     for single in STROKE_PARTS.values():
         if single not in form_to_tile:
             raise SystemExit(f"STROKE_PARTS: {single} is not in PALETTE")
+    for named, shapes in DRAWN_AS.items():
+        for shown in [named, *shapes.values()]:
+            if shown not in form_to_tile:
+                raise SystemExit(f"DRAWN_AS: {shown} is not a palette tile or form")
+    for element, recipe in COMPONENT_SPLITS.items():
+        for glyph, _count in recipe:
+            if glyph not in form_to_tile:
+                raise SystemExit(f"COMPONENT_SPLITS: {element} uses {glyph}, not a palette tile or form")
     return tiles, form_to_tile
 
 
@@ -618,13 +698,64 @@ def pattern_tile(numbers: list[int], strokes: list[dict]) -> str | None:
     return tile
 
 
-def cut(node: dict, strokes: list[dict], form_to_tile: dict) -> list[dict]:
+def drawn_as(glyph: str, numbers, strokes: list[dict]) -> str:
+    """The glyph a part KanjiVG names `glyph` is drawn as (DRAWN_AS)."""
+    return DRAWN_AS.get(glyph, {}).get("".join(shape_of(numbers, strokes)), glyph)
+
+
+def is_roof(kid: dict, node: dict, strokes: list[dict]) -> bool:
+    """人 on top of the rest of its group, about as wide as what it covers (会 今)."""
+    others = [n for other in node["kids"] if other is not kid
+              for n in ([other] if isinstance(other, int) else stroke_numbers(other))]
+    if not others:
+        return False
+    mine = points_of(stroke_numbers(kid), strokes)
+    rest = points_of(others, strokes)
+    # KanjiVG's own position where it gives one (傘's small 人 are left and right).
+    if (kid["raw"] or side_of(mine, rest)) != "top":
+        return False
+    box, under = box_of(mine), box_of(rest)
+    return box[2] - box[0] >= ROOF_WIDTH * (under[2] - under[0])
+
+
+def shown_form(glyph: str, kid: dict, node: dict, strokes: list[dict], ancestors: tuple) -> str:
+    """The glyph a named part shows: DRAWN_AS, then the roof 𠆢 and the closed 巳."""
+    if kid["part"]:
+        return glyph  # a piece of a split element: its strokes aren't the whole shape
+    form = drawn_as(glyph, stroke_numbers(kid), strokes)
+    if form == "人" and is_roof(kid, node, strokes):
+        return "𠆢"
+    if form == "己" and CLOSED_SELF_IN & set(ancestors):
+        return "巳"
+    return form
+
+
+def component_parts(node: dict, strokes: list[dict], form_to_tile: dict) -> list[dict] | None:
+    """A COMPONENT_SPLITS element as its tiles, or None when its strokes don't fit."""
+    numbers = sorted(stroke_numbers(node))
+    recipe = COMPONENT_SPLITS[node["el"]]
+    if len(numbers) != sum(count for _glyph, count in recipe):
+        return None
+    parts, start = [], 0
+    for glyph, count in recipe:
+        parts.append({"el": form_to_tile[glyph], "form": glyph,
+                      "strokes": set(numbers[start:start + count]), "split": True})
+        start += count
+    return parts
+
+
+def cut(node: dict, strokes: list[dict], form_to_tile: dict,
+        tile_strokes: dict | None = None, ancestors: tuple = ()) -> list[dict]:
     """Split a node into the highest components that are palette tiles.
 
     Strokes that draw a tile by STROKE_PATTERNS are that tile, unless they
     are all of a group KanjiVG names. Any other stroke outside every tile becomes a single-stroke part.
     Pieces of a split element (kvg:part, such as 衣 around 里 in 裏) are kept
-    apart here and joined by join_pieces.
+    apart here and joined by join_pieces. A named part shows the glyph its
+    strokes draw (shown_form); an element in COMPONENT_SPLITS splits by its
+    recipe; and a group named as a tile but holding more than twice that
+    tile's strokes is misnamed (望's top is named 亡 but holds 亡 and 月), so
+    it is looked into. `ancestors` are the elements around `node`.
     """
     parts = []
     run = []  # loose strokes in a row
@@ -632,13 +763,26 @@ def cut(node: dict, strokes: list[dict], form_to_tile: dict) -> list[dict]:
     def end_run() -> None:
         # A named group made only of these strokes is that element (壬 runs like ⺧).
         named_whole = node["el"] is not None and len(run) == len(stroke_numbers(node))
-        tile = None if named_whole else pattern_tile(run, strokes)
-        if tile:
-            parts.append({"el": form_to_tile[tile], "form": tile, "strokes": set(run), "shape": True})
-        else:
-            for n in run:
-                single = stroke_part(strokes[n]["type"])
-                parts.append({"el": single, "form": single, "strokes": {n}, "single": True})
+        # From each stroke, the longest run of strokes that draws a tile
+        # (喜's ㇔ ㇒ ㇐ is 丷 and a line); else a single-stroke part. ナ and
+        # 𠂉 need the run to themselves: a ㇐ ㇒ inside a longer run is part
+        # of something else (倉's ㇕ ㇐ ㇐ ㇒).
+        i = 0
+        while i < len(run):
+            for j in range(len(run), i, -1):
+                whole_run = j - i == len(run)
+                tile = None if named_whole and whole_run else pattern_tile(run[i:j], strokes)
+                if tile in ("ナ", "𠂉") and not whole_run:
+                    tile = None
+                if tile:
+                    break
+            if tile:
+                parts.append({"el": form_to_tile[tile], "form": tile, "strokes": set(run[i:j]), "shape": True})
+                i = j
+            else:
+                single = stroke_part(strokes[run[i]]["type"])
+                parts.append({"el": single, "form": single, "strokes": {run[i]}, "single": True})
+                i += 1
         run.clear()
 
     for kid in node["kids"]:
@@ -647,20 +791,26 @@ def cut(node: dict, strokes: list[dict], form_to_tile: dict) -> list[dict]:
             continue
         end_run()
         glyph = glyph_of(kid["el"])
-        if glyph in form_to_tile:
+        numbers = stroke_numbers(kid)
+        misnamed = bool(tile_strokes) and len(numbers) > 2 * tile_strokes.get(glyph, len(numbers))
+        recipe = component_parts(kid, strokes, form_to_tile) if kid["el"] in COMPONENT_SPLITS else None
+        if recipe:
+            parts.extend(recipe)
+        elif glyph in form_to_tile and not misnamed:
+            form = shown_form(glyph, kid, node, strokes, ancestors)
             parts.append({
-                "el": form_to_tile[glyph],
-                "form": glyph,
-                "strokes": set(stroke_numbers(kid)),
+                "el": form_to_tile[form],
+                "form": form,
+                "strokes": set(numbers),
                 "piece": (kid["el"], kid["number"]) if kid["part"] else None,
                 "node": kid,
             })
-        elif kid["el"] is None and pattern_tile(stroke_numbers(kid), strokes):
-            tile = pattern_tile(stroke_numbers(kid), strokes)
+        elif kid["el"] is None and pattern_tile(numbers, strokes):
+            tile = pattern_tile(numbers, strokes)
             parts.append({"el": form_to_tile[tile], "form": tile,
-                          "strokes": set(stroke_numbers(kid)), "shape": True})
+                          "strokes": set(numbers), "shape": True})
         else:
-            parts.extend(cut(kid, strokes, form_to_tile))
+            parts.extend(cut(kid, strokes, form_to_tile, tile_strokes, ancestors + (kid["el"],)))
     end_run()
     return parts
 
@@ -691,7 +841,7 @@ def join_pieces(parts: list[dict], strokes: list[dict], form_to_tile: dict, tile
             if len(part["strokes"]) * 2 > tile_strokes.get(part["form"], 99):
                 joined.append({key: value for key, value in part.items() if key not in ("piece", "node")})
             else:
-                joined.extend(cut(part["node"], strokes, form_to_tile))
+                joined.extend(cut(part["node"], strokes, form_to_tile, tile_strokes))
         else:
             joined.append({
                 "el": part["el"],
@@ -815,8 +965,11 @@ def split_kanji(kanji: str, root: dict, strokes: list[dict], form_to_tile: dict,
         # The kanji is a tile itself, so it is one part: 金 is 金 wherever it
         # appears, and as an answer it has nothing to split.
         parts = [{"el": form_to_tile[glyph], "form": glyph, "strokes": set(range(len(strokes)))}]
+    elif root["el"] in COMPONENT_SPLITS and component_parts(root, strokes, form_to_tile):
+        parts = component_parts(root, strokes, form_to_tile)  # 重 itself
     else:
-        parts = join_pieces(cut(root, strokes, form_to_tile), strokes, form_to_tile, tile_strokes)
+        parts = join_pieces(cut(root, strokes, form_to_tile, tile_strokes, (root["el"],)),
+                            strokes, form_to_tile, tile_strokes)
         if not parts:
             raise SystemExit(f"KanjiVG has no strokes for {kanji}")
     parts.sort(key=lambda part: min(part["strokes"]))
@@ -1150,57 +1303,21 @@ def report_parts(kanji: dict, palette: list, report: dict, atomic_answers: list)
             log(f"  {k}: " + " ".join(f"{p.get('form', p['el'])}:{p['pos']}" for p in parts))
 
 
-def main() -> None:
-    started = time.perf_counter()
-    paths = download_sources()
-
-    log("Reading KANJIDIC2...")
-    kanjidic, kd_header = read_kanjidic2(paths["kanjidic2"])
-    joyo = {k for k, info in kanjidic.items() if info["grade"] and 1 <= info["grade"] <= 8}
-
-    log("Reading Waller's JLPT lists...")
-    kanji_levels, level_counts, level_duplicates, page_dates = read_waller_kanji(paths)
-    vocab = read_waller_vocab(paths)
-
-    log("Reading JMdict...")
-    jmdict = read_jmdict(paths["jmdict"])
-    multi_words, word_counts = build_words(jmdict, kanji_levels, vocab)
-
-    single_words = [
-        {"word": k, "length": 1, "jlpt": level, "source": "kanji"}
-        for k, level in kanji_levels.items() if level in ALLOWED_LEVELS
-    ]
-    words = sorted(single_words + multi_words, key=word_order)
-
-    # Every joyo kanji, plus any other kanji a candidate uses.
-    used = {c for w in words for c in w["word"]}
-    wanted = joyo | used
-    missing_from_kanjidic = sorted(wanted - set(kanjidic))
-    if missing_from_kanjidic:
-        raise SystemExit(f"Kanji not in KANJIDIC2: {''.join(missing_from_kanjidic)}")
-
-    log("Reading KanjiVG...")
-    trees, others = read_kanjivg(paths["kanjivg"], wanted)
-    missing_from_kanjivg = sorted(wanted - set(trees))
-    if missing_from_kanjivg:
-        raise SystemExit(f"Kanji not in KanjiVG: {''.join(missing_from_kanjivg)}")
-
-    log("Splitting kanji into parts...")
-    fonts = read_font_ranges(paths["noto_css"])
-    breakdowns, palette, parts_report = build_parts(trees, others, wanted, kanjidic, fonts)
+def kanji_entries(wanted: set, info: dict, levels: dict, breakdowns: dict, parts_report: dict) -> dict:
+    """{kanji: entry} for candidates.json. `info` has each kanji's strokes,
+    grade, freq, meanings, on and kun; `levels` its Waller JLPT level."""
     form_to_tile = parts_report["form_to_tile"]
-
     kanji = {}
     for k in sorted(wanted):
-        info = kanjidic[k]
+        entry = info[k]
         kanji[k] = {
-            "strokes": info["strokes"],
-            "grade": info["grade"],
-            "jlpt": kanji_levels.get(k),
-            "freq": info["freq"],
-            "meanings": info["meanings"],
-            "on": info["on"],
-            "kun": info["kun"],
+            "strokes": entry["strokes"],
+            "grade": entry["grade"],
+            "jlpt": levels.get(k),
+            "freq": entry["freq"],
+            "meanings": entry["meanings"],
+            "on": entry["on"],
+            "kun": entry["kun"],
             "parts": [
                 {"el": p["el"], "pos": p["pos"], **({"form": p["form"]} if p["form"] != p["el"] else {})}
                 for p in breakdowns[k]
@@ -1208,42 +1325,28 @@ def main() -> None:
             "atomic": glyph_of(k) in form_to_tile,
             "override": k in parts_report["overrides"],
         }
+    return kanji
 
-    # Decided: a one-kanji answer that is a tile itself leaves the answers.
+
+def single_kanji_words(levels: dict) -> list[dict]:
+    """The one-kanji candidates: every kanji on Waller's N5..N3 lists."""
+    return [
+        {"word": k, "length": 1, "jlpt": level, "source": "kanji"}
+        for k, level in levels.items() if level in ALLOWED_LEVELS
+    ]
+
+
+def drop_atomic(words: list[dict], kanji: dict) -> tuple[list[dict], list[str]]:
+    """Decided: a one-kanji answer that is a tile itself leaves the answers.
+    Returns (words, the atomic one-kanji answers)."""
     atomic_answers = [w["word"] for w in words if w["length"] == 1 and kanji[w["word"]]["atomic"]]
     if not KEEP_ATOMIC_ANSWERS:
         words = [w for w in words if not (w["length"] == 1 and kanji[w["word"]]["atomic"])]
+    return words, atomic_answers
 
-    sources = {
-        "KANJIDIC2": {
-            "url": KANJIDIC2_URL,
-            "version": f"database {kd_header.get('database_version')}, "
-                       f"created {kd_header.get('date_of_creation')}",
-            "licence": "CC BY-SA 4.0 (EDRDG)",
-        },
-        "KanjiVG": {
-            "url": KANJIVG_URL,
-            "version": KANJIVG_RELEASE,
-            "licence": "CC BY-SA 3.0 (Ulrich Apel)",
-        },
-        "JMdict (jmdict-simplified, eng-common)": {
-            "url": JMDICT_URL,
-            "version": f"{jmdict.get('version')}, JMdict {jmdict.get('dictDate')}",
-            "licence": "CC BY-SA 4.0 (EDRDG)",
-        },
-        "JLPT vocab (Waller, via yomitan-jlpt-vocab)": {
-            "url": JLPT_VOCAB_URL.format(level="{" + ",".join(map(str, ALLOWED_LEVELS)) + "}"),
-            "version": JLPT_VOCAB_RELEASE,
-            "licence": "CC BY-SA 4.0 (Stephen Kraus); lists CC BY (Jonathan Waller)",
-        },
-        "JLPT kanji (Waller, tanos.co.uk via Internet Archive)": {
-            "url": WALLER_KANJI_URL.format(stamp=WALLER_KANJI_SNAPSHOTS[5], level=5),
-            "version": "pages updated " + "; ".join(page_dates) + ", snapshots "
-                       + ", ".join(f"N{lv} {st}" for lv, st in WALLER_KANJI_SNAPSHOTS.items()),
-            "licence": "CC BY (Jonathan Waller)",
-        },
-    }
 
+def write_outputs(sources: dict, kanji: dict, words: list, palette: list) -> None:
+    """Write data/candidates.json and data/parts.json."""
     output = {
         "meta": {
             "generated": datetime.date.today().isoformat(),
@@ -1276,6 +1379,140 @@ def main() -> None:
     PARTS_FILE.write_text(
         json.dumps(parts_output, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
     )
+
+
+def main_parts_only() -> None:
+    """Recompute every kanji's parts and data/parts.json, and nothing else.
+
+    Kanji info and words come from the data/candidates.json already there,
+    so only KanjiVG and the Noto stylesheet are needed (both on hosts that
+    are rarely blocked). Use it after changing PALETTE, VARIANT_FORMS,
+    POSITIONAL_FORMS, the splitting rules or data/parts-overrides.json.
+    """
+    started = time.perf_counter()
+    if not OUTPUT_FILE.exists():
+        raise SystemExit(f"--parts-only needs {OUTPUT_FILE.relative_to(PROJECT_DIR)}: run a full build first")
+    previous = json.loads(OUTPUT_FILE.read_text(encoding="utf-8"))
+    log("Sources (parts only):")
+    paths = {
+        "kanjivg": download(KANJIVG_URL, KANJIVG_FILE),
+        "noto_css": download(NOTO_CSS_URL, NOTO_CSS_FILE, BROWSER_USER_AGENT),
+    }
+    info = previous["kanji"]
+    levels = {k: v["jlpt"] for k, v in info.items() if v.get("jlpt")}
+    wanted = set(info)
+    # Single kanji are listed again from their levels, so one that stops (or
+    # starts) being a tile leaves (or rejoins) the answers as in a full build.
+    multi_words = [w for w in previous["words"] if w["length"] > 1]
+    words = sorted(single_kanji_words(levels) + multi_words, key=word_order)
+
+    log("Reading KanjiVG...")
+    trees, others = read_kanjivg(paths["kanjivg"], wanted)
+    missing_from_kanjivg = sorted(wanted - set(trees))
+    if missing_from_kanjivg:
+        raise SystemExit(f"Kanji not in KanjiVG: {''.join(missing_from_kanjivg)}")
+
+    log("Splitting kanji into parts...")
+    fonts = read_font_ranges(paths["noto_css"])
+    # Stroke counts for tile glyphs: KANJIDIC's for the joyo kanji (kept in
+    # candidates.json), KanjiVG's drawings for the rest (隹, 亻).
+    stroke_info = {k: {"strokes": v["strokes"]} for k, v in info.items()}
+    breakdowns, palette, parts_report = build_parts(trees, others, wanted, stroke_info, fonts)
+    kanji = kanji_entries(wanted, info, levels, breakdowns, parts_report)
+    words, atomic_answers = drop_atomic(words, kanji)
+    write_outputs(previous["meta"]["sources"], kanji, words, palette)
+
+    log("")
+    report_parts(kanji, palette, parts_report, atomic_answers)
+    changed = sorted(k for k in wanted if kanji[k]["parts"] != info[k]["parts"])
+    log(f"Kanji whose parts changed: {len(changed)}")
+    log(f"Candidates: {len(words)} (was {len(previous['words'])})")
+    log(f"Wrote {OUTPUT_FILE.relative_to(PROJECT_DIR)} ({OUTPUT_FILE.stat().st_size:,} bytes) "
+        f"and {PARTS_FILE.relative_to(PROJECT_DIR)} ({PARTS_FILE.stat().st_size:,} bytes) "
+        f"in {time.perf_counter() - started:.1f} s")
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument(
+        "--parts-only", action="store_true",
+        help="recompute parts and data/parts.json only, reading kanji info and words "
+             "from the existing data/candidates.json (needs only KanjiVG and the Noto CSS)")
+    args = parser.parse_args(argv)
+    if args.parts_only:
+        main_parts_only()
+    else:
+        main_full()
+
+
+def main_full() -> None:
+    started = time.perf_counter()
+    paths = download_sources()
+
+    log("Reading KANJIDIC2...")
+    kanjidic, kd_header = read_kanjidic2(paths["kanjidic2"])
+    joyo = {k for k, info in kanjidic.items() if info["grade"] and 1 <= info["grade"] <= 8}
+
+    log("Reading Waller's JLPT lists...")
+    kanji_levels, level_counts, level_duplicates, page_dates = read_waller_kanji(paths)
+    vocab = read_waller_vocab(paths)
+
+    log("Reading JMdict...")
+    jmdict = read_jmdict(paths["jmdict"])
+    multi_words, word_counts = build_words(jmdict, kanji_levels, vocab)
+
+    words = sorted(single_kanji_words(kanji_levels) + multi_words, key=word_order)
+
+    # Every joyo kanji, plus any other kanji a candidate uses.
+    used = {c for w in words for c in w["word"]}
+    wanted = joyo | used
+    missing_from_kanjidic = sorted(wanted - set(kanjidic))
+    if missing_from_kanjidic:
+        raise SystemExit(f"Kanji not in KANJIDIC2: {''.join(missing_from_kanjidic)}")
+
+    log("Reading KanjiVG...")
+    trees, others = read_kanjivg(paths["kanjivg"], wanted)
+    missing_from_kanjivg = sorted(wanted - set(trees))
+    if missing_from_kanjivg:
+        raise SystemExit(f"Kanji not in KanjiVG: {''.join(missing_from_kanjivg)}")
+
+    log("Splitting kanji into parts...")
+    fonts = read_font_ranges(paths["noto_css"])
+    breakdowns, palette, parts_report = build_parts(trees, others, wanted, kanjidic, fonts)
+    kanji = kanji_entries(wanted, kanjidic, kanji_levels, breakdowns, parts_report)
+    words, atomic_answers = drop_atomic(words, kanji)
+
+    sources = {
+        "KANJIDIC2": {
+            "url": KANJIDIC2_URL,
+            "version": f"database {kd_header.get('database_version')}, "
+                       f"created {kd_header.get('date_of_creation')}",
+            "licence": "CC BY-SA 4.0 (EDRDG)",
+        },
+        "KanjiVG": {
+            "url": KANJIVG_URL,
+            "version": KANJIVG_RELEASE,
+            "licence": "CC BY-SA 3.0 (Ulrich Apel)",
+        },
+        "JMdict (jmdict-simplified, eng-common)": {
+            "url": JMDICT_URL,
+            "version": f"{jmdict.get('version')}, JMdict {jmdict.get('dictDate')}",
+            "licence": "CC BY-SA 4.0 (EDRDG)",
+        },
+        "JLPT vocab (Waller, via yomitan-jlpt-vocab)": {
+            "url": JLPT_VOCAB_URL.format(level="{" + ",".join(map(str, ALLOWED_LEVELS)) + "}"),
+            "version": JLPT_VOCAB_RELEASE,
+            "licence": "CC BY-SA 4.0 (Stephen Kraus); lists CC BY (Jonathan Waller)",
+        },
+        "JLPT kanji (Waller, tanos.co.uk via Internet Archive)": {
+            "url": WALLER_KANJI_URL.format(stamp=WALLER_KANJI_SNAPSHOTS[5], level=5),
+            "version": "pages updated " + "; ".join(page_dates) + ", snapshots "
+                       + ", ".join(f"N{lv} {st}" for lv, st in WALLER_KANJI_SNAPSHOTS.items()),
+            "licence": "CC BY (Jonathan Waller)",
+        },
+    }
+
+    write_outputs(sources, kanji, words, palette)
 
     # ---- Report ----
     log("")

@@ -2,7 +2,7 @@
 
 The decisions so far, and why, so any new thread can pick up the game without the original conversation. Status of each: **Decided** (the user chose it), **Proposed** (suggested, not yet confirmed — confirm before building on it), or **Open**.
 
-Last updated: 2026-11-08.
+Last updated: 2026-11-10.
 
 ## The game
 
@@ -36,6 +36,7 @@ After playing step 3, the user found one kanji too short: 79% of one-kanji answe
 - **Decided — Loose strokes leave the daily for now (step 4b):** 177 of the 603 Keep answers had a stray single stroke as a part (丨 丶 丿 乙 亅; e.g. 今日, 電気, 仕事). With every part a cell, those cells are close to guesswork. They stay Keep, but the daily list leaves them out (`LISTS` `without` in `tools/compile_game.py`) until their breakdowns are fixed in `data/parts-overrides.json`; fixed ones come back on the next compile. 一 is a real part and stays. Days already played keep their answer (勝 and 経由 were days 8 and 9).
 - **Decided — First fixes (step 4b):** 10 kanji fixed with tiles the palette already has, the way similar kanji split: 重 動 種 (𠂉 over 里, as in 毎), 産 (立 over 厂 and 生), 着 (羊 over 目), 表 (龶 衣), 平 (干 八, as in 前), 号 (口 丂), 母 (毋, as in 毎), 犯 (犭 卩, as in 危). That brought back 25 words: the daily has 453 answers, and 146 Keep words are still left out.
 - **Decided — The rest stay out:** the most common left-out kanji (事 13 words, 年 11, 中 8, 今 7, 以 6) are made of strokes. As whole tiles, most of their words would have under 4 parts (仕事 would have 3), so a new tile wouldn't bring them back.
+- **Proposed — After the parts audit (2026-11-10):** the main list has 461 answers, and 114 Keep words still have a loose stroke. 今 and 以 became tiles for accuracy, not for the count: 念 含 陰 hold 今, and 以 fell apart into strokes the way 不 and 北 did. That brought 今度 and 今後 back; 今日 has 2 parts and 以 left the one-kanji candidates. The rest is in "Part breakdowns".
 - **Decided — No launch date:** with no dailies there's no epoch to set (PR #14, which set one for 2026-11-10, was closed unmerged). The live URL already plays; launching is adding the card to the Apps page.
 
 ## Scoring (Decided, step 2)
@@ -67,7 +68,7 @@ Like Wordle's repeated letters: greens first, then yellows, each in stroke order
 ### Winning
 
 - **One kanji:** the guess is the answer. At Normal and Hard: every cell green.
-- **Look-alikes:** 未/末, 押/抽 and 拐/招 have the same parts in the same places. The compile step leaves the 4 of them that are answers (未 末 押 招) out of the one-kanji answers, so an all-green row is always the answer. They stay guessable, and stay in longer words.
+- **Look-alikes:** 未/末 and 拐/招 have the same parts in the same places. The compile step leaves the 3 of them that are answers (未 末 招) out of the one-kanji answers, so an all-green row is always the answer. They stay guessable, and stay in longer words. (押/抽 were a pair until the parts audit made 抽 = 扌 + 由.)
 - **Not a guess:** a kanji outside the jōyō list, one with a part that isn't in the palette, the wrong length, or a repeat of an earlier guess is turned away without using a row.
 
 ### Longer words (2–4 kanji)
@@ -103,7 +104,7 @@ From `js/config/economy.js`, every number there:
 - **Decided — A new epoch (step 8a):** dailies are saved under their puzzle number, so when the epoch moves, testers' earlier games would mark new puzzles as played. A daily's own date says which epoch it was played under (its date less its number, plus one), so `settleDailies()` in `js/store.js` turns any daily that doesn't fit the epoch now into a keep-playing game, under `<epoch>#<number>` (`2026-11-01#7`). Its win, kanji and points still count; it stops being that number's daily and stops counting toward the streak. Its ledger entries follow it, and a daily on the go from another epoch is dropped. It runs when the game data loads and on every save received from another device, so a device not opened since launch can't bring old numbers into a merge. No save version bump: the shape is the same. The user picked this over archiving them where stats can't see them (2026-11-08).
 - **Launch day**, if dailies come back, is one line: `EPOCH` in `tools/compile_game.py`, a recompile, and a deploy that day.
 - **Answer order:** a fixed (seeded) shuffle of the Keep words. Days already played, up to tomorrow, are locked; later days are shuffled again on each compile, so new Keep words mix in evenly. When the list runs out it starts again from the top.
-- **A year of dailies** needs 365 answers. The main list has 453 (step 4b).
+- **A year of dailies** needs 365 answers. The main list has 461 (453 in step 4b; the parts audit added 8).
 - **Practice:** a random Keep answer, skipping the last 30 played in that mode (`rules.js` `practice.avoidRecent`).
 - **Decided — Streak (2026-11-09):** wins in a row, across modes, in the order the games were played (a day's keep-playing games by the finish time in their key, `daily.js` `keyTime()`; a daily counts as its day's first). A loss ends it; days between games don't. Streak rewards (`economy.js` `streakRewards`, at 3, 5, 10 and 25 wins) pay each time a run reaches their length, for any won game. It was days in a row with a daily won; the 7- and 30-day achievements are retired, and On a roll (5 in a row) and Unstoppable (10) took their place.
 - **Stats:** wins, fastest win, clean wins, Hard wins and kanji collected count every game. Kanji collected counts every kanji of a solved word.
@@ -111,7 +112,7 @@ From `js/config/economy.js`, every number there:
 
 ## The palette (Decided, step 2)
 
-Each puzzle shows a subset of the 251 tiles instead of all of them, like Wordle's keyboard. The engine is `js/engine/palette.js`.
+Each puzzle shows a subset of the 263 tiles instead of all of them, like Wordle's keyboard. The engine is `js/engine/palette.js`.
 
 - **What's in it:** every part of the answer, the six single strokes (`rules.js` `palette.always`), and random decoys up to the mode's `palette` size in `modes.js` (40) times the level's `paletteScale` (0.7): 28 keys ("Levels").
 - **Guesses:** only kanji built entirely from the palette's tiles, typed ones included (`rules.js` `guessFromPalette`).
@@ -162,7 +163,7 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 - **Decided — Normal takes any parts:** they don't have to make a kanji.
 - **Decided — No free meaning:** only the Meaning hint shows it (`freeMeaning: false`).
 - **Decided — Layout hint:** useful at Normal and Hard; at Guided the board already shows the layout.
-- **Proposed — Look-alikes:** parts that are exactly the answer's, in the same order, win, even when a look-alike shares them (未 and 末); the compile step keeps the 4 look-alike answers out anyway.
+- **Proposed — Look-alikes:** parts that are exactly the answer's, in the same order, win, even when a look-alike shares them (未 and 末); the compile step keeps the 3 look-alike answers out anyway.
 - **Proposed — One daily for every level:** one daily, whatever the level, so puzzle numbers and streaks are shared. A game keeps the level it started at (in its start, `save.playing`), and its history entry records it. A game with no moves yet moves to a level picked since.
 - **Proposed — Sharing:** the share text names the level (`Kanjiru 漢 #7 Normal 3/6`), with one square per cell. The squares are split by kanji only where the board showed the split (Guided).
 - **Proposed — How to play:** the example rows show 時間's five cells: 口 日 寸 木 月 (日 yellow, 寸 green), then 日 土 寸 日 門, then 時間 solved.
@@ -284,23 +285,32 @@ The user asked for a layout overhaul: the header holds only Points and Settings,
 
 Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in stroke order, each with its position in the whole kanji. The palette is `data/parts.json`. The rules are in `tools/README.md` ("Parts").
 
-- **Decided — Palette:** 251 tiles.
+- **Decided — Palette (step 1):** 251 tiles, 263 since the parts audit (Proposed, below).
   - The radicals that jōyō kanji use, plus shapes that recur but aren't radicals (业, 免, 兼), and a few kanji that would otherwise fall apart into single strokes (五, 不, 半, 北).
   - ナ and マ stand for the katakana-like shapes in 右, 左 and 予.
   - The six single strokes 一 丨 丶 丿 乙 亅 cover what's left over.
-- **Decided — Variants are the same part:** 氵 and 氺 count as 水, 亻 as 人, 扌 as 手, 忄 as 心, 刂 as 刀, 灬 as 火, 犭 as 犬, 礻 as 示, 衤 as 衣, 飠 as 食, 爫 as 爪, 耂 as 老, 覀 as 西, ⺧ as 牛, ⺷ as 羊.
+- **Decided — Variants are the same part:** 氵 and 氺 count as 水, 亻 as 人, 扌 as 手, 忄 as 心, 刂 as 刀, 灬 as 火, 犭 as 犬, 礻 as 示, 衤 as 衣, 飠 as 食, 爫 as 爪, 耂 as 老, 覀 as 西, ⺧ as 牛, ⺷ as 羊. The parts audit added 𠆢 (人), 丷 (八), 牜 (牛), ⻊ (足), ⺮ (竹), 龵 (手), 巳 (己), 㔾 (卩) and 夾 (夹).
   - **Why:** players learn them as one idea, a guess of 水 for 海 should score, and the palette stays small.
   - Each part keeps the glyph it appears as (`form`), so a revealed part can show 氵.
   - 月 and 肉 are different tiles: players see the shape 月 in 腸, not where it came from.
+- **Proposed — Parts audit (2026-11-10):** native Japanese players said some radicals were wrong ("人 used for another, similar-looking one") and some splits made no sense. `docs/PARTS-AUDIT.md` has the whole audit: every tile's Kangxi radical, all 273 kanji it changed (160 in their tiles or positions, 113 only in the glyph shown), and what was left alone.
+  - **What players see:** KanjiVG names parts by where they come from; the audit shows the shape a reader sees, as a form of the same tile (so it scores the same, like 氵). 𠆢 for 人 as a roof (会 今 命 合, 39 kanji), 丷 for 八 drawn inward (前 説 並, 39), 牜 and ⺧ for 牛 on the left and on top (物 特, 告 造), ⻊ for 足 on the left (路), ⺮ for 竹 on top (答 第), ⺷ for 羊 whose vertical stops (美 義 差), 龵 for 手 on top (看), 巳 for 己 closed at the top (包 港 選), 㔾 for 卩 with a curled foot (危 範 犯).
+  - **Wrong tiles:** a part drawn as another tile is that tile now. 渇 喝 掲 謁 褐 have 匕 (was 人), 領 齢 have マ like 冷 (was 卩), 確 鶴 have 冖 (was 宀), 開 研 形 have 一 + 廾 (was 干 + 干), 望 gets back its 月, 午 and 許 have 十 (was 干).
+  - **12 new tiles, 263 in all:** shapes that recur and whose split was wrong or a stroke salad. 且 (組 助 祖 査; was 月 + 一), 冊 (論 輪 編; was 冂 + 廾), 夹 with 夾 (狭 峡 挟 頰; was 大 人 人 大), 及 (吸 級 扱; was 丿 + 又), 巴 (色 絶 肥; was 己), 今 (念 含 陰), 由 (油 宙 笛), 申 (神 伸 紳), 三 (春 奏 泰 寿 実: 三 + 人, the reading players learn), 以 (似), 𠂢 (派 脈) and 乑 (衆). No tile was removed or renamed, since saved guesses store tile ids.
+  - **Rules, not hand fixes, where a shape recurs:** `DRAWN_AS`, `ROOF_WIDTH`, `CLOSED_SELF_IN` and `COMPONENT_SPLITS` in `tools/build_data.py`, a check for misnamed KanjiVG groups (望), and stroke patterns found inside longer runs (喜's 丷). `tools/README.md` ("Parts") has the rules.
+  - **Hand fixes:** 25 (was 20). The rules now cover 7 (三 重 動 種 犯 平 実); 12 are new: 内 両 画 在 存 (positions), 乗 (禾 with 廿 across it), 謄 塞 僅 謹 (as 騰 寒 勤), 衆 and 脊.
+  - **Effect on the answers:** the main list went from 453 to 461. 13 words came in because their kanji lost a loose stroke (今度 今後 記念 神社 精神 神経 働 南 喜 戦 演 館 顔). 5 left because their kanji now have fewer parts: 助手 祖母 祖父 春 残 have 3. 勝 (a day already played) has 3 parts now and keeps its slot.
+  - **Why Proposed:** the user asked for the audit and for the display forms. The new tiles and each split are Claude's calls; `docs/PARTS-AUDIT.md` ("For the user to decide") lists the ones worth a second look.
 - **Decided — Depth: building blocks.** A kanji splits into the biggest pieces that are tiles, like jisho's radical search. 語 = 言 + 五 + 口, not 言 + 吾 (吾 isn't a tile).
 - **Decided — Positions:** left, right, top, bottom, outer, inner, whole or none. The kanji's first split decides, so 語's 五 and 口 are both right.
   - Enclosures are outer and what they hold is inner (国 = 囗 outer + 玉 inner).
   - none is for parts that cross (中 = 口 + 丨).
-- **Decided — Fonts:** 11 palette glyphs are drawn from KanjiVG's strokes instead of text.
-  - Not in Noto Sans/Serif JP: 龶 㐄 业 𢆉.
-  - Not in JIS X 0213, so a phone's own fonts may lack them: 𠂊 ⺌ ⺍ ⺗ ⺧ ⺷ 卌.
+- **Decided — Fonts:** 18 palette glyphs are drawn from KanjiVG's strokes instead of text (11 before the parts audit).
+  - Not in Noto Sans/Serif JP: 龶 㐄 业 𢆉 龵.
+  - Not in JIS X 0213, so a phone's own fonts may lack them: 𠂊 ⺌ ⺍ ⺗ ⺧ ⺷ 卌 丷 㔾 牜 ⻊ ⺮ 夹.
+  - 𠆢 巳 巴 夾 冊 且 𠂢 乑 are in both, so they show as text.
   - `review/parts.html` tests the device's own fonts. On Windows, all draw.
-- **Hand fixes:** 20 kanji in `data/parts-overrides.json`: 万 三 円 年 実 寒 声 勤 無 舞 (step 1) and 重 動 種 産 着 表 平 号 母 犯 (step 4b).
+- **Hand fixes:** 25 kanji in `data/parts-overrides.json`: 万 円 年 寒 声 勤 無 舞 (step 1), 産 着 表 号 母 (step 4b) and 内 両 画 在 存 乗 謄 塞 僅 謹 衆 脊 (parts audit). 三 実 重 動 種 平 犯 left: the audit's rules give them now.
 
 ### How the known problems were fixed
 
@@ -316,8 +326,8 @@ Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in strok
 
 ### Still open
 
-- **Look-alikes:** settled in step 2: 未 末 押 招 leave the one-kanji answers ("Scoring", "Winning").
-- **Clumsy breakdowns:** 150 one-kanji candidates still have single-stroke parts, and a few have several (乗, 呼, 段, 喜, 候). Words with a loose stroke stay out of the daily ("The puzzle"). Flag them on the parts check page, then fix them in `data/parts-overrides.json`.
+- **Look-alikes:** settled in step 2: 未 末 招 leave the one-kanji answers ("Scoring", "Winning").
+- **Clumsy breakdowns:** 129 N3-or-easier kanji still have single-stroke parts (150 before the audit). Most read naturally (主 = 丶 + 王, 千 = 丿 + 十, 失 = 丿 + 夫); a few are shapes with no name a reader would use (段's left, 候's middle, 旅's lower right). Words with a loose stroke stay out of the main list ("The puzzle"). Flag them on the parts check page, then fix them in `data/parts-overrides.json`. `docs/PARTS-AUDIT.md` lists what was left alone and why.
 - **Phones:** check `review/parts.html` on iOS and Android to confirm which glyphs need the drawings.
 
 ## Hosting
