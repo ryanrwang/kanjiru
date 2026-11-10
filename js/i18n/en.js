@@ -7,7 +7,7 @@
  */
 export default {
   meta: {
-    description: 'A daily kanji puzzle: guess the word from its parts.'
+    description: 'A kanji word puzzle: guess the word from its parts.'
   },
 
   header: {
@@ -31,10 +31,30 @@ export default {
     body: 'Fill the cells with the word’s parts in writing order, like Wordle’s letters. Where one kanji ends is for you to work out. A part turns green in its cell, yellow if it’s elsewhere in the word, grey if the word hasn’t got it.',
     hit: 'Right part, right spot',
     near: 'Right part, wrong spot',
-    miss: 'Not in the answer'
+    miss: 'Not in the answer',
+    // The lines under the little game, one per step (js/howto.js).
+    step: {
+      type: 'Tap parts to fill a row, in writing order.',
+      colours: 'Green: right cell. Yellow: elsewhere in the word. Grey: not in it.',
+      use: 'Use the colours for the next guess.',
+      closer: 'Three right. Two parts are in the word, in other cells.',
+      split: 'Where one kanji ends is up to you to work out.',
+      solved: 'Solved: {answer}. You get 6 tries.'
+    }
   },
 
-  // The play card: today's daily, the Hard and Guided switches, then play again.
+  // Every game played, under the play card (js/history.js).
+  history: {
+    title: 'Your games',
+    count: '{n} played · {won} solved',
+    won: 'Solved in {n}',
+    lost: 'Not solved',
+    gaveUp: 'Gave up',
+    more: 'Show {n} more'
+  },
+
+  // The play card: the game (or today's daily, in a mode with one), the Hard
+  // and Guided switches, then Play.
   play: {
     soon: 'Coming soon',
     loading: 'Loading…',
@@ -42,6 +62,7 @@ export default {
     practiceOnly: 'No daily yet. Keep playing for points.',
     daily: 'Daily #{n}',
     ready: 'Guess today’s word from its parts in {rows} tries.',
+    readyAny: 'Guess a word from its parts in {rows} tries.',
     going: '{n} of {rows} guesses used · {level}',
     won: 'Solved in {n} ✓ · {level}',
     lost: 'Not solved today · {level}',
@@ -152,6 +173,18 @@ export default {
       strokesUnit: 'strokes',
       tap: 'Tap to close'
     },
+    // Ending early: the flag in the header during a game (js/play/screen.js endGame).
+    end: {
+      open: 'End game',
+      title: 'End this game?',
+      body: '{n} of {rows} guesses used.',
+      giveUp: 'Give up',
+      giveUpDesc: 'See the answer. It counts as a loss and ends your win streak. Parts you found still pay.',
+      new: 'New puzzle',
+      newDesc: 'Skip to another word. This one isn’t counted, win or loss. Hints used on it stay used.',
+      skipped: 'A new puzzle. The last one wasn’t counted.',
+      gaveUp: 'You gave up. Here’s the answer.'
+    },
     errors: {
       slots: 'Fill all {cells} cells first.',
       'not-real': 'Those parts don’t make real kanji in that order. Try another mix.',
@@ -194,6 +227,7 @@ export default {
   result: {
     won: 'Solved in {n}!',
     lost: 'Out of guesses',
+    gaveUp: 'You gave up',
     parts: 'Parts',
     points: 'Points',
     pointsEarned: '+{n} pts',
@@ -201,7 +235,7 @@ export default {
     rewards: 'Rewards',
     balance: 'You have {icon} {n} pts',
     spend: 'Spend them',
-    streak: 'Daily streak',
+    streak: 'Win streak',
     streakDays: '{n} in a row',
     share: 'Share',
     copied: 'Copied. Paste it anywhere.',
@@ -222,9 +256,9 @@ export default {
   points: {
     title: 'Points',
     wallet: 'Your points',
-    how: 'Each part you find pays up to {part}, a win {win} or more, and streaks and achievements pay extra.',
+    how: 'Each part you find pays up to {part}, a win {win} or more, and win streaks and achievements pay extra.',
     hints: 'Hints held',
-    streak: 'Daily streak',
+    streak: 'Win streak',
     achievements: 'Achievements',
     of: '{n} of {total}'
   },
@@ -274,7 +308,7 @@ export default {
     hint: '{icon} {name}',
     hints: '{icon} {name} ×{n}',
     sep: ' · ',
-    streak: '{n} days in a row!',
+    streak: '{n} wins in a row!',
     drop: 'Bonus hint',
     achievement: 'Achievement: {name}',
     unlocks: 'Unlocks {name}'
@@ -290,6 +324,12 @@ export default {
 
   toast: {
     dismiss: 'Dismiss'
+  },
+
+  // The ask before something that can't be undone (js/confirm.js).
+  confirm: {
+    cancel: 'Cancel',
+    step: 'Step {n} of {of}'
   },
 
   settings: {
@@ -315,6 +355,44 @@ export default {
       body: 'For testing: numbered dots on the game’s keys show the answer in writing order, and you can add points.',
       add: 'Add {n} pts',
       added: 'Added {n} pts. You have {total} pts.'
+    }
+  },
+
+  // Starting over, in Settings: reset achievements, or delete everything
+  // (three asks, the last one typed).
+  reset: {
+    title: 'Start over',
+    achievements: {
+      name: 'Reset achievements',
+      note: 'Earn them again from zero. Your games, points, hints and looks bought stay.',
+      button: 'Reset achievements',
+      title: 'Reset achievements?',
+      body: 'Every achievement goes back to unearned, and only games you play from now on count toward them.',
+      keep: 'Your games, points, hints and looks bought stay. Rewards already paid aren’t paid again, and looks an achievement unlocked lock until you earn it again.',
+      confirm: 'Reset achievements',
+      confirmDesc: 'Start them again from zero.',
+      done: 'Achievements reset. Play to earn them again.'
+    },
+    all: {
+      name: 'Delete all data',
+      note: 'Every game, point, hint, look and achievement on this device. Three steps to confirm.',
+      button: 'Delete all data',
+      title1: 'Delete all your progress?',
+      body1: 'This deletes everything Kanjiru has saved on this device:',
+      counts: '{games} games played, {points} pts, {hints} hints, {achievements} achievements, and every look you bought.',
+      stays: 'Your language and light or dark setting stay.',
+      next: 'Continue',
+      nextDesc: 'Two more steps before anything is deleted.',
+      title2: 'Are you sure?',
+      body2: 'This can’t be undone. Your progress can’t be brought back unless you have a copy.',
+      backup: 'To keep a copy, cancel and use Copy save text in Move your progress first.',
+      sure: 'Yes, I’m sure',
+      title3: 'Type {word} to delete',
+      word: 'DELETE',
+      typeLabel: 'Confirmation word',
+      typeHint: 'Type {word} below',
+      delete: 'Delete everything',
+      done: 'All your progress is deleted. You’re starting fresh.'
     }
   },
 
@@ -349,7 +427,7 @@ export default {
   about: {
     title: 'About',
     open: 'About and credits',
-    lead: 'A daily kanji puzzle: guess the word from its parts, like Wordle.',
+    lead: 'A kanji word puzzle: guess the word from its parts, like Wordle.',
     name: 'The name is 感じる (kanjiru, “to sense”), with the 漢 of 漢字 (kanji).',
     by: 'Made by Ryan Wang',
     privacy: {
@@ -470,18 +548,29 @@ export default {
       ai: 'Ai 藍',
       matcha: 'Matcha 抹茶',
       sakura: 'Sakura 桜',
+      fuji: 'Fuji 藤',
+      sumi: 'Sumi 墨',
       urushi: 'Urushi 漆',
       kinpaku: 'Kinpaku 金箔'
     },
     tiles: {
       flip: 'Flip',
+      fade: 'Fade',
+      turn: 'Turn',
+      drop: 'Drop',
+      wipe: 'Brush wipe',
       ink: 'Ink bleed',
+      shoji: 'Shoji 障子',
       stamp: 'Hanko stamp'
     },
     effect: {
       none: 'None',
       draw: 'Brush draw',
+      wave: 'Wave',
+      confetti: 'Confetti',
       petals: 'Petal fall',
+      glow: 'Gold shine',
+      seal: 'Seal 印',
       hanabi: 'Hanabi 花火'
     }
   },
@@ -529,6 +618,8 @@ export default {
     'first-win': { name: 'First kanji', desc: 'Solve your first puzzle.' },
     'streak-7': { name: 'One week', desc: 'Solve 7 dailies in a row.' },
     'streak-30': { name: 'One month', desc: 'Solve 30 dailies in a row.' },
+    'win-run-5': { name: 'On a roll', desc: 'Solve 5 puzzles in a row.' },
+    'win-run-10': { name: 'Unstoppable', desc: 'Solve 10 puzzles in a row.' },
     'sharp-eye': { name: 'Sharp eye', desc: 'Solve a puzzle in 2 guesses.' },
     unaided: { name: 'Unaided', desc: 'Win without any hints.' },
     'hard-win': { name: 'Hard win', desc: 'Solve a puzzle with Hard on.' },

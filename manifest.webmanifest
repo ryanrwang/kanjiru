@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Kanjiru · 漢じる",
   "short_name": "Kanjiru",
-  "description": "A daily kanji puzzle: guess the word from its parts.",
+  "description": "A kanji word puzzle: guess the word from its parts.",
   "lang": "en",
   "dir": "ltr",
   "start_url": "./",

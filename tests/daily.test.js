@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   localDate, dayIndex, addDays, puzzleNumber, puzzleDate, daily, practice,
-  recentAnswers, historyKey, isDailyKey, msToNextDaily
+  recentAnswers, historyKey, isDailyKey, keyTime, msToNextDaily
 } from '../js/engine/daily.js';
 import { MODE } from '../js/registry.js';
 import { fixtureData } from './helpers.js';
@@ -82,8 +82,17 @@ test('the countdown to the next daily', () => {
 test('the main mode plays its own list, with answers of any length', () => {
   const mixed = fixtureData({ answers: { main: ['日本', '明'] }, epoch: '2026-11-01' });
   assert.equal(MODE.main.length, null);
-  assert.equal(daily(mixed, MODE.main, '2026-11-01').answer, '日本');
-  assert.equal(daily(mixed, MODE.main, '2026-11-02').answer, '明');
-  assert.equal(daily(mixed, MODE.k1, '2026-11-01'), null, 'a retired mode has no list');
   assert.ok(['日本', '明'].includes(practice(mixed, MODE.main, { rng: () => 0 }).answer));
+  // No daily since 2026-11-09; with one, the days play the list in order.
+  assert.equal(daily(mixed, MODE.main, '2026-11-01'), null);
+  const withDaily = { ...MODE.main, daily: true };
+  assert.equal(daily(mixed, withDaily, '2026-11-01').answer, '日本');
+  assert.equal(daily(mixed, withDaily, '2026-11-02').answer, '明');
+  assert.equal(daily(mixed, MODE.k1, '2026-11-01'), null, 'a retired mode has no list');
+});
+
+test('keyTime: when a keep-playing game finished, from its key', () => {
+  assert.equal(keyTime(historyKey({ daily: false }, 1762700000000)), 1762700000000);
+  assert.equal(keyTime('7'), 0);
+  assert.equal(keyTime('2026-11-01#7'), 0);
 });

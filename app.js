@@ -10,15 +10,18 @@
  * an entry and it appears.
  *
  * Pages (the URL hash, so the phone's back gesture works):
- *   (none)            the play page: how to play, then a play card per
- *                     listed mode with the Hard and Guided switches on it,
- *                     then, on a phone, a tip to add it to the home screen
+ *   (none)            the play page: a play card per listed mode with the
+ *                     Hard and Guided switches on it; on a phone, a tip to
+ *                     add it to the home screen; How to play (js/howto.js),
+ *                     open and on top for a new player, folded under the
+ *                     card after a game; then every game played (js/history.js)
  *   #points           the Points page (js/points.js): the wallet, looks,
  *                     hints and achievements, and buying
  *   #about            the About page (js/about.js): the game, your progress
  *                     and the credits; opened from Settings
- *   #main             a mode's daily (js/play/screen.js)
- *   #main/practice    another puzzle after it ("keep playing")
+ *   #main             a mode's daily (js/play/screen.js), or in a mode
+ *                     without dailies (main, now), a random puzzle
+ *   #main/practice    another puzzle after the daily ("keep playing")
  */
 import { MODES, MODE, LEVEL, ECONOMY, settingsLevel, validate } from './js/registry.js';
 import { t, setLang } from './js/i18n.js';
@@ -34,8 +37,11 @@ import { createEngine } from './js/engine/game.js';
 import { answersFor, localDate, msToNextDaily } from './js/engine/daily.js';
 import { glyphMaker } from './js/play/glyph.js';
 import { openGame } from './js/play/screen.js';
-import { dailyStatus, currentLevel } from './js/play/session.js';
+import { dailyStatus, practiceStatus, currentLevel } from './js/play/session.js';
 import { earnAchievements, describe } from './js/play/rewards.js';
+import { howTo } from './js/howto.js';
+import { historyCard, PAGE } from './js/history.js';
+import { games } from './js/engine/stats.js';
 
 const TOKENS = window.TOKENS;
 // Reassigned when a save arrives from another device (js/settings.js).
@@ -47,6 +53,7 @@ const pts = (n) => t('currency.amount', { n });
 
 // ── Header: the points and Settings ──────────────────────────────────
 
+const FLAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/></svg>';
 const BULB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>';
 const GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 
@@ -83,9 +90,23 @@ function renderHeader() {
         game ? el('span', { class: 'crumb-sub' }, game.sub) : null));
   }
 
-  // While a game is on, the hints held open the hints modal, in the
-  // points' place.
+  // While a game is on, End game (a flag: give up, or a new puzzle; js/play/
+  // screen.js endGame) and the hints held, which open the hints modal, take
+  // the points' place.
   const hintsOn = !!(game && game.playing);
+  let end = document.getElementById('end-open');
+  if (hintsOn && !end) {
+    end = el('button', {
+      class: 'icon-btn end-btn', id: 'end-open', type: 'button', 'data-id': 'end',
+      onclick: () => view && view.endGame && view.endGame()
+    });
+    end.innerHTML = FLAG;
+    document.getElementById('wallet').before(end);
+  } else if (!hintsOn && end) end.remove();
+  if (end) {
+    end.title = t('game.end.open');
+    end.setAttribute('aria-label', t('game.end.open'));
+  }
   let hints = document.getElementById('hints-open');
   if (hintsOn) {
     if (!hints) {
@@ -217,17 +238,21 @@ function levelSwitches(title) {
     })));
 }
 
-// One card per listed mode: today's daily first, then keep playing. The
-// switches show whenever the next game can still take them.
+// One card per listed mode. A mode with a daily offers it first, then keep
+// playing; one without (main, since 2026-11-09) starts a random puzzle each
+// time, or carries on the one on the go. The switches show whenever the
+// next game can still take them.
 function playCard(mode) {
   const can = playable(mode);
-  const status = can ? dailyStatus(game.data, mode) : null;
+  const random = can && !mode.daily ? practiceStatus(mode) : null;
+  const status = can && !random ? dailyStatus(game.data, mode) : null;
   const done = !!(status && status.entry);
-  const going = !!(status && status.started && status.guesses > 0);
-  const level = status ? t(`level.${status.level}.name`) : null;
+  const going = random ? random.guesses > 0 : !!(status && status.started && status.guesses > 0);
+  const level = random || status ? t(`level.${(random || status).level}.name`) : null;
 
   let line;
   if (!can) line = !mode.playable || game.data ? t('play.soon') : game.error ? t('play.loadFailed') : t('play.loading');
+  else if (random) line = going ? t('play.going', { n: random.guesses, rows: mode.guesses, level }) : t('play.readyAny', { rows: mode.guesses });
   else if (!status) line = t('play.practiceOnly');
   else if (done && status.entry.won) line = t('play.won', { n: status.entry.guesses.length, level });
   else if (done) line = t('play.lost', { level });
@@ -238,7 +263,9 @@ function playCard(mode) {
     class: `btn ${cls}`, type: 'button', onclick: () => go(path)
   }, text);
   let actions = [];
-  if (can && (!status || done)) {
+  if (random) {
+    actions = [button('btn-primary btn-large', going ? t('play.continue') : t('play.start'), mode.id)];
+  } else if (can && (!status || done)) {
     actions = [button('btn-primary btn-large', t('play.more'), `${mode.id}/practice`),
       status ? button('btn-secondary btn-large', t('play.result'), mode.id) : null];
   } else if (can) {
@@ -261,31 +288,27 @@ function playCard(mode) {
     actions.length ? el('div', { class: 'play-actions' }, actions) : null);
 }
 
-// How a game reads, worked through: the answer is 時間, whose parts in
-// writing order are 日 土 寸 門 日. The cells don't show where 時 ends;
-// like Wordle's letters, a part is green in its cell and yellow in another.
-// It opens the play page, always, as its intro.
-const DEMO = {
-  rows: [
-    [['口', 'miss'], ['日', 'near'], ['寸', 'hit'], ['木', 'miss'], ['月', 'miss']],
-    [['日', 'hit'], ['土', 'hit'], ['寸', 'hit'], ['日', 'near'], ['門', 'near']],
-    [['日', 'hit'], ['土', 'hit'], ['寸', 'hit'], ['門', 'hit'], ['日', 'hit']]
-  ],
-  answer: '時間'
-};
+// Every game played, under the card (js/history.js), PAGE more at a time.
+let history = null;
+let historyShown = PAGE;
 
-function howTo() {
-  return el('section', { class: 'card howto', 'aria-labelledby': 'howto-title' },
-    el('h2', { class: 'howto-title', id: 'howto-title' }, t('howto.title')),
-    el('p', { class: 'howto-lead' }, t('howto.lead')),
-    el('p', { class: 'howto-text' }, t('howto.body')),
-    el('div', { class: 'demo', 'aria-hidden': 'true' },
-      DEMO.rows.map((row) => el('div', { class: 'demo-row' },
-        el('span', { class: 'demo-slot' }, row.map(([part, state]) => el('span', { class: `tile is-cell is-${state}`, lang: 'ja' }, part))),
-        row.every(([, state]) => state === 'hit') ? el('span', { class: 'demo-answer kanji', lang: 'ja' }, DEMO.answer) : null))),
-    el('ul', { class: 'demo-legend' },
-      ['hit', 'near', 'miss'].map((state) =>
-        el('li', {}, el('span', { class: `legend-dot is-${state}-bg` }), t(`howto.${state}`)))));
+function renderHistory() {
+  const fresh = historyCard({
+    save: store.get(), data: game.data, engine: game.engine, shown: historyShown,
+    onMore: () => {
+      const from = historyShown;
+      historyShown += PAGE;
+      renderHistory();
+      // The first game just listed takes the focus, so the keyboard carries on there.
+      const next = history && history.querySelectorAll('.history-item')[from];
+      if (next) { next.setAttribute('tabindex', '-1'); next.focus(); }
+    }
+  });
+  if (history && history.isConnected) {
+    if (fresh) history.replaceWith(fresh);
+    else history.remove();
+  } else if (fresh) app.append(fresh);
+  history = fresh;
 }
 
 // Adding Kanjiru to the home screen (js/install.js): on a phone, once there's
@@ -338,10 +361,21 @@ function renderCards(focusId = null) {
   return fresh;
 }
 
+// How to play: open on top until the first game is played, then folded
+// under the card (docs/DESIGN.md, "Screens and menus").
+let guide = null;
+
 function renderPlay() {
-  app.replaceChildren(howTo(), renderCards());
+  const save = store.get();
+  const newcomer = games(save.history).length === 0;
+  if (guide) guide.stop();
+  guide = howTo({ open: newcomer, tiles: save.settings.tiles });
+  history = null;
+  historyShown = PAGE;
+  app.replaceChildren(...(newcomer ? [guide.node, renderCards()] : [renderCards(), guide.node]));
   tip = null;
   renderTip();
+  renderHistory();
   // The countdown ticks; at midnight the new daily takes the card.
   const day = localDate();
   playTimer = setInterval(() => {
@@ -359,7 +393,8 @@ function page() {
   const [first, kind] = location.hash.replace(/^#/, '').split('/');
   if (first === 'points' || first === 'about') return { name: first };
   const mode = MODE[first];
-  return mode ? { name: 'game', mode, kind: kind === 'practice' ? 'practice' : 'daily' } : { name: 'play' };
+  // A mode without dailies plays a random puzzle at #<mode> too.
+  return mode ? { name: 'game', mode, kind: kind === 'practice' || !mode.daily ? 'practice' : 'daily' } : { name: 'play' };
 }
 
 function go(path) {
@@ -397,6 +432,7 @@ async function renderGame({ mode, kind }) {
 
 function renderAll() {
   if (view) { view.destroy(); view = null; }
+  if (guide) { guide.stop(); guide = null; }
   clearInterval(playTimer);
   const p = page();
   // Before the header, which shows the hints in a game on the go.
@@ -427,6 +463,6 @@ renderAll();
 // streak and stats, so it redraws too.
 ready.then(() => {
   const now = page().name;
-  if (now === 'play') renderCards();
+  if (now === 'play') { renderCards(); renderHistory(); }
   else if (now === 'points' && game.moved && view) view.refresh();
 });

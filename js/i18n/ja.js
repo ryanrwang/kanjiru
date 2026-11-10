@@ -4,7 +4,7 @@
  */
 export default {
   meta: {
-    description: 'パーツからことばを当てる、毎日の漢字パズル。'
+    description: 'パーツからことばを当てる漢字パズル。'
   },
 
   header: {
@@ -28,10 +28,29 @@ export default {
     body: 'ことばのパーツを書き順にマスへ入れます。どこで漢字が切れるかも考えます。そのマスなら緑、ことばの別の場所にあれば黄、ことばになければ灰色になります。',
     hit: '正しいパーツ・正しい位置',
     near: '正しいパーツ・ちがう位置',
-    miss: '答えにないパーツ'
+    miss: '答えにないパーツ',
+    // ミニゲームの下の説明（一段階ずつ）
+    step: {
+      type: 'パーツをタップして、書き順にマスを埋めます。',
+      colours: '緑：正しいマス。黄：ことばの別の場所。灰：ことばにない。',
+      use: '色をヒントに次の回答を。',
+      closer: '3つ正解。2つはことばの別のマスにあります。',
+      split: 'どこで漢字が切れるかも考えよう。',
+      solved: '正解：{answer}。チャンスは6回。'
+    }
   },
 
-  // プレイカード：今日のデイリー、むずかしい・ガイドのスイッチ、もう一度遊ぶ
+  // 遊んだゲームの一覧（プレイカードの下）
+  history: {
+    title: 'あなたのゲーム',
+    count: '{n}回プレイ・{won}回クリア',
+    won: '{n}回でクリア',
+    lost: 'クリアならず',
+    gaveUp: 'ギブアップ',
+    more: 'さらに{n}件表示'
+  },
+
+  // プレイカード：ゲーム（デイリーのあるモードでは今日のデイリー）、むずかしい・ガイドのスイッチ、遊ぶ
   play: {
     soon: '近日公開',
     loading: '読み込み中…',
@@ -39,6 +58,7 @@ export default {
     practiceOnly: 'デイリーはまだありません。もっと遊んでポイントを貯めよう。',
     daily: 'デイリー #{n}',
     ready: '今日のことばをパーツから当てよう。チャンスは{rows}回。',
+    readyAny: 'ことばをパーツから当てよう。チャンスは{rows}回。',
     going: '{rows}回中{n}回回答・{level}',
     won: '{n}回でクリア ✓・{level}',
     lost: '今日はクリアならず・{level}',
@@ -150,6 +170,18 @@ export default {
       strokesUnit: '画',
       tap: 'タップで閉じる'
     },
+    // 途中で終える：ゲーム中のヘッダーの旗
+    end: {
+      open: 'ゲームを終える',
+      title: 'このゲームを終えますか？',
+      body: '{rows}回中{n}回回答済み。',
+      giveUp: 'あきらめる',
+      giveUpDesc: '答えを見ます。負けとして記録され、連勝が止まります。見つけたパーツのポイントはもらえます。',
+      new: '新しい問題',
+      newDesc: '別のことばにします。この問題は勝ち負けとも記録されません。使ったヒントは戻りません。',
+      skipped: '新しい問題です。前の問題は記録されません。',
+      gaveUp: 'あきらめました。答えはこちら。'
+    },
     errors: {
       slots: '{cells}マスすべてを埋めてください。',
       'not-real': 'その順番のパーツでは実在する漢字になりません。別の組み合わせを試してください。',
@@ -192,6 +224,7 @@ export default {
   result: {
     won: '{n}回でクリア！',
     lost: '回答回数を使い切りました',
+    gaveUp: 'ギブアップ',
     parts: 'パーツ',
     points: 'ポイント',
     pointsEarned: '+{n}pt',
@@ -199,8 +232,8 @@ export default {
     rewards: 'ごほうび',
     balance: '所持 {icon} {n}pt',
     spend: 'ポイントを使う',
-    streak: 'デイリー連続記録',
-    streakDays: '{n}日連続',
+    streak: '連勝',
+    streakDays: '{n}回連続',
     share: 'シェア',
     copied: 'コピーしました。好きな場所に貼り付けてください。',
     copyManually: '上のテキストを選択して、コピーしてください。',
@@ -220,9 +253,9 @@ export default {
   points: {
     title: 'ポイント',
     wallet: '所持ポイント',
-    how: '見つけたパーツは1つ最大{part}pt、クリアで{win}pt以上。連続記録と実績でさらにもらえます。',
+    how: '見つけたパーツは1つ最大{part}pt、クリアで{win}pt以上。連勝と実績でさらにもらえます。',
     hints: '所持ヒント',
-    streak: 'デイリー連続',
+    streak: '連勝',
     achievements: '実績',
     of: '{total}個中{n}個'
   },
@@ -272,7 +305,7 @@ export default {
     hint: '{icon} {name}',
     hints: '{icon} {name} ×{n}',
     sep: '・',
-    streak: '{n}日連続！',
+    streak: '{n}連勝！',
     drop: 'ボーナスヒント',
     achievement: '実績：{name}',
     unlocks: '{name}を解放'
@@ -284,6 +317,12 @@ export default {
     earned: '{date}に獲得',
     progress: '{n}／{goal}',
     best: 'これまでの最高：{n}'
+  },
+
+  // 取り消せない操作の前の確認
+  confirm: {
+    cancel: 'キャンセル',
+    step: 'ステップ {n}/{of}'
   },
 
   toast: {
@@ -317,6 +356,43 @@ export default {
   },
 
   // ホーム画面に追加（js/install.js）：プレイページのヒントと設定の項目
+  // やり直す（設定）：実績のリセット、すべてのデータの削除（3段階の確認、最後は入力）
+  reset: {
+    title: 'やり直す',
+    achievements: {
+      name: '実績をリセット',
+      note: '実績をゼロから取り直します。ゲーム、ポイント、ヒント、購入した見た目はそのままです。',
+      button: '実績をリセット',
+      title: '実績をリセットしますか？',
+      body: 'すべての実績が未達成に戻り、これから遊ぶゲームだけが数えられます。',
+      keep: 'ゲーム、ポイント、ヒント、購入した見た目はそのままです。受け取った報酬は二度はもらえません。実績で解除した見た目は、もう一度達成するまでロックされます。',
+      confirm: '実績をリセット',
+      confirmDesc: 'ゼロから取り直す。',
+      done: '実績をリセットしました。遊んでもう一度達成しよう。'
+    },
+    all: {
+      name: 'すべてのデータを削除',
+      note: 'この端末のゲーム、ポイント、ヒント、見た目、実績をすべて削除します。3段階で確認します。',
+      button: 'すべてのデータを削除',
+      title1: 'すべての進行状況を削除しますか？',
+      body1: 'この端末に保存されたKanjiruのデータをすべて削除します：',
+      counts: '遊んだゲーム{games}回、{points}pt、ヒント{hints}個、実績{achievements}個、購入した見た目すべて。',
+      stays: '言語とライト・ダークの設定はそのままです。',
+      next: '続ける',
+      nextDesc: '削除の前に、あと2段階あります。',
+      title2: '本当によろしいですか？',
+      body2: 'この操作は取り消せません。コピーがなければ、進行状況は元に戻せません。',
+      backup: 'コピーを残すには、キャンセルして「進行状況を移す」のセーブテキストをコピーしてください。',
+      sure: 'はい、削除します',
+      title3: '{word} と入力して削除',
+      word: '削除',
+      typeLabel: '確認のことば',
+      typeHint: '下に {word} と入力',
+      delete: 'すべて削除',
+      done: 'すべての進行状況を削除しました。最初からスタートです。'
+    }
+  },
+
   install: {
     title: 'ホーム画面に漢じるを追加',
     why: {
@@ -345,7 +421,7 @@ export default {
   about: {
     title: 'アプリ情報',
     open: 'アプリ情報・クレジット',
-    lead: 'パーツからことばを当てる、毎日の漢字パズル。Wordleのように遊べます。',
+    lead: 'パーツからことばを当てる漢字パズル。Wordleのように遊べます。',
     name: '名前は「感じる」の「感」を、漢字の「漢」にしたものです。',
     by: '制作：Ryan Wang',
     privacy: {
@@ -466,18 +542,29 @@ export default {
       ai: '藍',
       matcha: '抹茶',
       sakura: '桜',
+      fuji: '藤',
+      sumi: '墨',
       urushi: '漆',
       kinpaku: '金箔'
     },
     tiles: {
       flip: 'めくり',
+      fade: 'ふわり',
+      turn: 'くるり',
+      drop: 'ストン',
+      wipe: '筆はらい',
       ink: 'にじみ墨',
+      shoji: '障子',
       stamp: 'はんこ'
     },
     effect: {
       none: 'なし',
       draw: '筆書き',
+      wave: 'なみ',
+      confetti: '紙吹雪',
       petals: '花びら',
+      glow: '金の光',
+      seal: '印',
       hanabi: '花火'
     }
   },
@@ -525,6 +612,8 @@ export default {
     'first-win': { name: 'はじめの一字', desc: '初めてパズルを解く。' },
     'streak-7': { name: '一週間', desc: 'デイリーを7日連続で解く。' },
     'streak-30': { name: '一か月', desc: 'デイリーを30日連続で解く。' },
+    'win-run-5': { name: '好調', desc: '5問続けて解く。' },
+    'win-run-10': { name: '快進撃', desc: '10問続けて解く。' },
     'sharp-eye': { name: '慧眼', desc: '2回以内で解く。' },
     unaided: { name: '独力', desc: 'ヒントなしでクリアする。' },
     'hard-win': { name: '難関突破', desc: 'ハードをオンにしてパズルを解く。' },

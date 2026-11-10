@@ -16,7 +16,8 @@ Last updated: 2026-11-10.
 - [x] **Loose strokes and hints:** answers with a loose single stroke (丨 丶 丿 乙 亅) leave the daily (`LISTS` `without`); 10 kanji fixed in `data/parts-overrides.json` bring back 25 words, so the daily has 453 answers. Parts a power shows (Reveal a part, Head start, Reveal a kanji) fill their cells, green, on each new row, and stay put at Hard. No page scroll while playing (step 4b)
 - [x] **Points, shop & achievements:** points and hints held are a ledger (save v2), so merging devices adds them up exactly. A finished game pays its points, streak rewards, a bonus hint and achievements, shown on the result card and as toasts. The shop opens from the points in the header: hints and locked looks, two taps to buy. The power bar floats above the keyboard, open before the first guess. Hard win replaces Full set (step 5)
 - [x] **Launch prep, off screen:** home-screen install (manifest, icons, iOS tags) and a network-first service worker for offline play; share previews with a 1200 × 630 image; first load on a phone from 2.9 s to 1.6 s to the daily (scripts and data fetched at once, gzipped data, a smaller font stylesheet); and dailies from an earlier epoch become keep-playing games, so launch day is one line and a recompile (step 8a)
-- [x] **Hint overhaul:** a hints pill in the header (漢 › Play in a game) opens a modal: each hint, how many you hold and Use, with one more confirm. Every hint plays its own animation (正 tally strokes, a splitting layout, a brush-written meaning, parts dropping into cells, a sweep across the keys). Meaning in Japanese for all 453 daily answers. Reading retired, Head start folded into Reveal a part (any time). The Points page lists hints one per row with Buy and Don't ask again (2026-11-10)
+- [x] **Players' feedback, round 1 (2026-11-10):** end a game at any time (Give up, or New puzzle), reset achievements, delete all data behind three asks, a diagonal line across keys not in the answer, an animated How to play (open for a new player, folded after a game), every game played under the play card, and 8 colours, 8 tile reveals and 8 win effects, all playing in the game (this was step 6)
+- [x] **Hint overhaul:** a hints pill in the header (漢 › Play in a game) opens a modal: each hint, how many you hold and Use, with one more confirm. Every hint plays its own animation (正 tally strokes, a splitting layout, a brush-written meaning, parts dropping into cells, a sweep across the keys). One kanji guide frame per kanji holds strokes, layout and solved kanji; new rows show revealed parts faintly instead of filling them in. End game moves to the header flag. Meaning in Japanese for all 460 answers. Reading retired, Head start folded into Reveal a part (any time). The Points page lists hints one per row with Buy and Don't ask again (2026-11-10)
 - [x] **Screens and menus:** the header holds only Points and Settings. The play page is home: a play card with the Hard and Guided switches, then How to play. The Points page holds the wallet, Looks with previews, Hints & powers and Achievements, and replaces the shop sheet. Settings gains Language, Appearance and a Debug mode (answer dots on the keys, add points) (2026-11-08)
 
 ## Order
@@ -25,14 +26,15 @@ Last updated: 2026-11-10.
 1 Parts & palette ✓ ──► 2 Engine ✓ ──► 3 Game screen ✓ ──► 4 One daily ✓ ──► 4b Loose strokes & hints ✓
                                           ├──► 5 Points, shop & achievements ✓
                                           ├──► 8a Launch prep ✓ ──► 8b Launch
-                                          └──► 6 Skin effects (after launch)
+                                          └──► 6 Skin effects ✓ (2026-11-10)
 7 Device transfer  ✓ done
 You: review words  (any time; the game only uses words marked Keep)
 ```
 
-- **Next:** step 8b. Its first half (About, the install tip, accessibility) is on branch `launch`; the Apps page and puzzle 1 wait for launch day. Step 6 can wait until after launch. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
-- **Launch date:** not picked yet; ask the user. Flipping it is part of 8b ("Launch day, ready to run").
-- **Words:** 453 daily answers from 603 Keep words are enough for launch (about 1.2 years). More can be added any time on the review page, then `tools/compile_game.py`. 146 Keep words with loose strokes come back as their kanji are fixed.
+- **Next:** the parts audit from native players' feedback (some parts shown as a look-alike, such as 人 for 𠆢, and splits that don't make sense, such as 狭 as 大 人 人 大), on its own branch; then the rest of step 8b: the Apps page card (it needs a screenshot) and checking the install on real phones. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
+- **No dailies (2026-11-09):** the user chose random puzzles only, as many as you like, so there's no launch date (docs/DESIGN.md, "No dailies").
+- **Words:** 460 answers from 603 Keep words are enough for launch. More can be added any time on the review page, then `tools/compile_game.py`. 114 Keep words with loose strokes come back as their kanji are fixed.
+- **Parts audit (2026-11-10, branch `claude/radical-audit`):** after native players' feedback, every tile mapped to its Kangxi radical, display forms such as 𠆢 and 丷, 12 new tiles (263), and 273 kanji re-split (`docs/PARTS-AUDIT.md`; Proposed in docs/DESIGN.md, "Part breakdowns"). Adds `tools/build_data.py --parts-only`. Tick it into Done when it merges.
 
 **Running threads at the same time:** every thread shares this one folder, and Git can only have one branch checked out in it. Two threads in the same folder will switch each other's branches. So either run one thread at a time, or start each one in its own worktree (the app's worktree option when you start a session).
 
@@ -144,7 +146,7 @@ Done when a new player can earn, buy and use a hint and unlock a skin end to end
 
 ## 6. Skin effects
 
-**Needs:** step 3 (the board and result card exist).
+**Done** (2026-11-10), with the players' feedback: eight of each look, every tile reveal on the board and every win effect over it (docs/DESIGN.md, "Skins").
 
 ```
 Kanjiru step 6: build the fancy skins.
@@ -201,11 +203,13 @@ Step 8 was split in two, so the half that doesn't touch the screens could run wh
 
 **Progress (2026-11-08):** items 1–3 are on branch `launch`: the About page (`js/about.js`, from Settings and the result card), the install tip (`js/install.js`, on the play page and in Settings), keyboard play and screen reader text in the game, and WCAG AA contrast in every look (docs/DESIGN.md, "Accessibility"). Still to do: check the install on a real iPhone and Android phone once it's live, then items 4 and 5 on launch day.
 
-**Launch day, ready to run:**
+**No dailies (2026-11-09):** for 3–5 people playing now and then, the user dropped the daily: every game is a random puzzle, and the streak is wins in a row. So item 5 and "Launch day, ready to run" steps 1–3 are dropped (PR #14, the epoch for 2026-11-10, was closed). Launching is item 4, the Apps page card, whenever the user wants; its h3 reads "A Kanji Word Puzzle".
+
+**Launch day, ready to run** (steps 1–3 only if dailies come back):
 1. In `tools/compile_game.py`, set `EPOCH = "YYYY-MM-DD"` to launch day, then run `python -I -X utf8 tools/compile_game.py`; on the day it prints "today is puzzle 1".
 2. Run `node --test` and `python -I -X utf8 -m unittest discover -s tools`, commit `tools/compile_game.py` and `data/game/`, and merge to `main` that day (the deploy takes under a minute).
 3. Check https://www.ryanrwang.com/apps/kanjiru/ shows Daily #1, and that `data/game/answers.json` there has the new epoch.
-4. Apps page, in the Clearful repo (read `D:\Dropbox\Clearful\.claude\github-deploy.md` first): the user uploads an 800 × 600 `images/gallery/apps/kanjiru.webp` by FTP (a dark screenshot, like the other apps' cards), then a card goes into `apps/index.html` before Return to Top: `href="kanjiru/"`, `id="kanjiru"`, alt "Kanjiru kanji puzzle app", h2 "Kanjiru 漢じる", h3 "A Daily Kanji Puzzle". The file mixes CRLF and LF, so keep its endings. Compare with the server first (`verify-live`), then branch, PR and squash-merge, and check `/apps/` on both domains.
+4. Apps page, in the Clearful repo (read `D:\Dropbox\Clearful\.claude\github-deploy.md` first): the user uploads an 800 × 600 `images/gallery/apps/kanjiru.webp` by FTP (a dark screenshot, like the other apps' cards), then a card goes into `apps/index.html` before Return to Top: `href="kanjiru/"`, `id="kanjiru"`, alt "Kanjiru kanji puzzle app", h2 "Kanjiru 漢じる", h3 "A Kanji Word Puzzle". The file mixes CRLF and LF, so keep its endings. Compare with the server first (`verify-live`), then branch, PR and squash-merge, and check `/apps/` on both domains.
 
 ```
 Kanjiru step 8b: launch.

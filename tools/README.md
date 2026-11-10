@@ -10,7 +10,7 @@ Builds `data/candidates.json` (the Kanjiru answers, with each kanji's info and p
    - `kanji`: every jōyō kanji with strokes, grade, JLPT level, frequency, meanings, readings, `parts`, `atomic` (it is a tile itself) and `override` (its parts come from the overrides file).
    - `parts`: a list of `{el, pos}` in stroke order. `el` is the tile, `pos` is where it sits in the whole kanji, and `form` is added when the glyph shown differs from the tile (氵 for 水).
    - `words`: every N5 to N3 kanji that isn't a tile itself, plus the common JMdict words of 2 to 4 kanji that use only N5 to N3 kanji.
-4. Writes `data/parts.json`: `tiles`, each with `id`, `strokes`, `uses` (jōyō kanji containing it) and `forms`. Each form has a `glyph`, its own `strokes` and `uses`, and, if the fonts may lack it, `font: false` (not in Noto Sans/Serif JP) or `jis: false` (not in JIS X 0213), plus `svg`: KanjiVG's strokes to draw instead (`viewBox` and `paths`; stroke them, no fill).
+4. Writes `data/parts.json`: `tiles`, each with `id`, `strokes`, `uses` (jōyō kanji containing it) and `forms`. Each form has a `glyph`, its own `strokes` and `uses`, `jis: false` when it's not in JIS X 0213, and `font: false` when it's not in Noto Sans/Serif JP, with `svg`: KanjiVG's strokes to draw instead (`viewBox` and `paths`; stroke them, no fill). The game loads Noto, so only glyphs Noto lacks are drawn (`DRAW_NON_JIS` brings back drawings for glyphs outside JIS X 0213).
 5. Prints a summary: the palette, parts per kanji, positions, single strokes, atomic answers, look-alike kanji, hand overrides, the kanji flagged on the review page (from `data/review.json`, read only), counts per length, and run time.
 
 Python 3.10 or later, standard library only. Run it from the project folder (`-X utf8` lets Windows print the kanji in the summary):
@@ -21,6 +21,21 @@ python -I -X utf8 tools/build_data.py
 
 The first run downloads about 17 MB and takes about 15 seconds. Later runs use the saved files and take about 5 seconds.
 
+### Parts only
+
+KANJIDIC2 (edrdg.org) and the Internet Archive aren't reachable everywhere. To redo just the part breakdowns, after changing the palette, the rules below or `data/parts-overrides.json`:
+
+```
+python -I -X utf8 tools/build_data.py --parts-only
+```
+
+- It reads each kanji's info (strokes, grade, JLPT level, frequency, meanings, readings) and the words from the `data/candidates.json` already there, so it needs a full build to have run once.
+- It downloads only KanjiVG and the Noto stylesheet (GitHub and Google Fonts), or reuses them from `tools/sources/`.
+- It recomputes every kanji's `parts`, `atomic` and `override`, rewrites `data/parts.json`, and rewrites `data/candidates.json` with everything else as it was. One-kanji words are listed again from the JLPT levels, so a kanji that becomes a tile leaves the answers, as in a full build.
+- The summary ends with how many kanji changed parts against the file it replaced.
+
+Then run `tools/compile_game.py` as usual. The full build works as before.
+
 ### Changing what it builds
 
 The settings are constants at the top of the script:
@@ -30,10 +45,14 @@ The settings are constants at the top of the script:
 - `MAX_GLOSSES = 3`: English glosses kept per word.
 - `REQUIRE_COMMON = True`: keep only spellings JMdict marks common, or that Waller lists. This drops about 430 rare alternate spellings, such as 学文 for 学問.
 - `PALETTE`: the tiles players tap. Adding or removing one changes every breakdown that uses it.
-- `VARIANT_FORMS`: other glyphs a tile covers (氵 and 氺 for 水). They score as the tile.
-- `LOOKALIKES`: KanjiVG element names drawn the same as a palette glyph (⻌ is 辶, 彐 is ヨ).
+- `VARIANT_FORMS`: other glyphs a tile covers (氵 and 氺 for 水, 𠆢 for 人, 丷 for 八). They score as the tile.
+- `DRAWN_AS`: for a KanjiVG element, the glyph its stroke types draw (八 written ㇔ ㇒ is 丷; 人 written ㇒ ㇟ is 匕). A form of the same tile only changes what is shown; a glyph of another tile makes the part that tile.
+- `ROOF_WIDTH = 0.85`: 人 on top, at least this wide against what it covers, shows as the roof 𠆢.
+- `CLOSED_SELF_IN`: elements whose 己 is drawn closed, so it shows as 巳 (包, 港's 巷, 選's 巽, 遷).
+- `COMPONENT_SPLITS`: KanjiVG elements that aren't tiles, split into tiles by stroke counts (开 = 一 + 廾, 劵 = 𠔉 + 力).
+- `LOOKALIKES`: KanjiVG element names drawn the same as a palette glyph (⻌ is 辶, 彐 is ヨ, 龹 is 𠔉).
 - `STROKE_PARTS`: the single-stroke tile for each KanjiVG stroke type.
-- `STROKE_PATTERNS`: loose strokes that draw a tile (㇒ + ㇐ crossing is ナ).
+- `STROKE_PATTERNS`: loose strokes that draw a tile (㇒ + ㇐ crossing is ナ, ㇔ + ㇒ is 丷).
 - `KEEP_ATOMIC_ANSWERS = False`: a one-kanji answer that is a tile itself (金) leaves the answers. True keeps it.
 - `SIDE_THRESHOLD`, `INSIDE_TOLERANCE`, `INSIDE_SHARE`: the geometry tests for positions.
 
@@ -43,10 +62,15 @@ The rules, in order:
 
 1. **A kanji that is a tile** (金, 車, 雨) is one part, `whole`.
 2. **Cut at the highest tile:** walk KanjiVG's component tree and stop at the first group whose glyph is a tile or one of its forms. 語 = 言 + 五 + 口.
-3. **Loose strokes:** strokes outside every tile become a tile from `STROKE_PATTERNS` (先's top is ⺧), or else one single-stroke tile each (本 = 木 + 一). A group KanjiVG names keeps its name: 壬's strokes run like ⺧ but stay strokes.
-4. **Split elements** (KanjiVG's `kvg:part`, such as 衣 around 里 in 裏) are joined into one part. A piece whose partner went into another tile still counts if it has more than half the tile's strokes (業's 羊); otherwise it splits further (主 = 丶 + 王).
-5. **Positions:** the kanji's first split decides, so 語's 五 and 口 are both `right`. An enclosure (KanjiVG's kamae, tare, nyo, or a split element with something inside) is `outer`, and a group with 75% of its outline inside it is `inner`. Otherwise KanjiVG's position is used, and where it has none, the groups' centres are compared (`none` when they overlap, as in 中).
-6. **Hand fixes** in `data/parts-overrides.json` replace the result for that kanji.
+   - A group named as a tile but holding more than twice its strokes is misnamed and looked into: KanjiVG names 望's top 亡, though it holds 亡 and 月.
+   - An element in `COMPONENT_SPLITS` splits by its recipe, wherever it appears: 開 = 門 + 一 + 廾, not 門 + 干 + 干.
+3. **What a part shows:** KanjiVG names parts by where they come from. The strokes decide the glyph (`DRAWN_AS`): 会's roof shows as 𠆢 (`ROOF_WIDTH`), 前's top as 丷, 物's left as 牜, 路's left as ⻊, 答's top as ⺮, 包's inside as 巳 (`CLOSED_SELF_IN`). Some shapes belong to another tile: 渇's 人 is drawn as 匕, 領's 卩 as マ, 確's 宀 as 冖. Display forms score as their tile (氵 for 水).
+4. **Loose strokes:** strokes outside every tile become a tile from `STROKE_PATTERNS` (先's top is ⺧, 喜's ㇔ ㇒ is 丷), or else one single-stroke tile each (本 = 木 + 一). A pattern can start at any stroke of a run, longest first, except ナ and 𠂉, which need the run to themselves. A group KanjiVG names keeps its name: 壬's strokes run like ⺧ but stay strokes.
+5. **Split elements** (KanjiVG's `kvg:part`, such as 衣 around 里 in 裏) are joined into one part. A piece whose partner went into another tile still counts if it has more than half the tile's strokes (業's 羊); otherwise it splits further (主 = 丶 + 王).
+6. **Positions:** the kanji's first split decides, so 語's 五 and 口 are both `right`. An enclosure (KanjiVG's kamae, tare, nyo, or a split element with something inside) is `outer`, and a group with 75% of its outline inside it is `inner`. Otherwise KanjiVG's position is used, and where it has none, the groups' centres are compared (`none` when they overlap, as in 中).
+7. **Hand fixes** in `data/parts-overrides.json` replace the result for that kanji.
+
+The full audit of the palette and the breakdowns, with every tile's Kangxi radical, is `docs/PARTS-AUDIT.md`.
 
 ### Hand fixes: data/parts-overrides.json
 
@@ -58,7 +82,7 @@ For kanji the rules get wrong. Each entry lists the parts in stroke order as `[g
 
 - **Glyphs:** palette tiles or their forms. The build stops on anything else.
 - **Positions:** left, right, top, bottom, outer, inner, whole or none.
-- **Drawings:** a glyph with no KanjiVG drawing elsewhere that the fonts may lack needs its stroke numbers, counting from 1: `["卌", "top", [3, 4, 5, 6, 7]]`.
+- **Stroke numbers:** a glyph found nowhere else needs its KanjiVG stroke numbers, counting from 1, for its stroke count and, if the fonts may lack it, its drawing: `["卌", "top", [3, 4, 5, 6, 7]]`, `["乑", "bottom", [7, 8, 9, 10, 11, 12]]`.
 
 To find what needs fixing, flag kanji on the parts check page (`review/parts.html`); the next build lists them.
 
@@ -75,19 +99,20 @@ python -I -X utf8 tools/compile_game.py
 
 - **Answers are Keep words only,** from `data/review.json` (read, never written). With no Keep words every list is empty, and the summary says so. Use `--review PATH` to read another file, such as the main folder's when running from a worktree.
 - **Left out:** one-kanji look-alikes (未 末 押 招: same parts in the same places as another kanji), and Keep words that are no longer candidates. The summary lists both.
-- **Loose strokes:** a `LISTS` rule with `without` leaves out words with any of those tiles as a part. `main` leaves out the loose single strokes 丨 丶 丿 乙 亅 (`LOOSE_STROKES`; 一 is a real part and stays), since a cell holding one is close to guesswork. The words stay Keep, and come back on the next compile once `data/parts-overrides.json` fixes their kanji. The summary counts them, and lists any already-played day whose answer is now left out (it keeps its slot).
+- **Loose strokes:** a `LISTS` rule with `without` leaves out words with any of those tiles as a part. `main` leaves out the loose single strokes 丨 丶 丿 乙 亅 (`LOOSE_STROKES`; 一 is a real part and stays), since a cell holding one is close to guesswork. The words stay Keep, and come back on the next compile once `data/parts-overrides.json` fixes their kanji. The summary counts them, and lists any already-played day whose answer is now left out (in a list with a daily, it keeps its slot).
 - **Stable order:** answers for days already played, up to tomorrow, never move. Every later day is shuffled again from a fixed seed, so newly kept words mix in evenly. A word cut after its day is listed but stays in its slot.
 - **The summary** shows each list's answer count against the 365 a year of dailies needs.
 
 Settings at the top:
 
-- `EPOCH = "2026-11-01"`: the date of puzzle 1. Set it to launch day at launch, then never change it. A new epoch unlocks every day.
+- `EPOCH = "2026-11-01"`: the date of puzzle 1. No mode has a daily now, so it's unused; if one comes back, set it to launch day, then never change it. A new epoch unlocks every day.
 - `SHUFFLE_SEED`: changing it reorders every day not yet played.
 - `LOCK_AHEAD_DAYS = 1`: days past today that are locked too, for time zones ahead of this computer.
+- `LISTS` `daily`: whether a mode plays the list as a daily. Only then are days already played locked; `main` has none (`daily: False`), so every answer meets its rules.
 - `ALLOW_LOOKALIKE_ANSWERS = False`: True keeps the look-alikes as answers.
 - `MAX_KANJI_MEANINGS = 3`.
 
-Tests, on small made-up data: `python -I -X utf8 -m unittest discover -s tools`.
+Tests, on small made-up data: `python -I -X utf8 -m unittest discover -s tools`. `test_compile_game.py` covers this script; `test_build_data.py` covers the part rules (`DRAWN_AS`, the roof, `COMPONENT_SPLITS`, misnamed groups, loose-stroke patterns) and `--parts-only`, on a made-up KanjiVG.
 
 ### Review pages
 

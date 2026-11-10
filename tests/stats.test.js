@@ -1,39 +1,43 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { stats, runs, newAchievements, streakRewards, passes } from '../js/engine/stats.js';
+import { stats, newAchievements, streakRewards, passes } from '../js/engine/stats.js';
 import { ACHIEVEMENTS, KNOWN_STATS, ECONOMY } from '../js/registry.js';
 
 const win = (date, answer, guesses = 3, powers = []) =>
   ({ date, guesses: Array(guesses - 1).fill('林').concat(answer), won: true, powers, answer });
 const loss = (date, answer) => ({ date, guesses: ['林', '森'], won: false, powers: [], answer });
 
-test('streak: days in a row with a daily won, in any mode', () => {
+// A keep-playing game's history key: "p" + when it finished, in base 36.
+const at = (ms) => `p${ms.toString(36)}`;
+
+test('streak: wins in a row, dailies and keep-playing alike, in any mode', () => {
   const history = {
-    k1: { 1: win('2026-11-01', '明'), 2: win('2026-11-02', '時'), 4: win('2026-11-04', '間') },
-    k2: { 3: win('2026-11-03', '日本'), 4: win('2026-11-04', '本日') }
+    k1: { 1: win('2026-11-01', '明'), [at(2000)]: win('2026-11-09', '時') },
+    k2: { 3: win('2026-11-03', '日本') }
   };
-  const s = stats(history, { today: '2026-11-04' });
-  assert.equal(s.bestStreak, 4);
-  assert.equal(s.currentStreak, 4);
+  const s = stats(history);
+  assert.equal(s.bestStreak, 3, 'days between games don\'t matter');
+  assert.equal(s.currentStreak, 3);
 });
 
-test('streak: a day not played yet doesn\'t break it; a missed day does', () => {
-  const history = { k1: { 1: win('2026-11-01', '明'), 2: win('2026-11-02', '時') } };
-  assert.equal(stats(history, { today: '2026-11-03' }).currentStreak, 2);
-  assert.equal(stats(history, { today: '2026-11-04' }).currentStreak, 0);
-  assert.equal(stats(history, { today: '2026-11-04' }).bestStreak, 2);
-});
-
-test('streak: losses and practice games don\'t count', () => {
-  const history = { k1: {
-    1: win('2026-11-01', '明'),
-    2: loss('2026-11-02', '時'),
-    pz: win('2026-11-02', '間'),
-    3: win('2026-11-03', '林')
+test('streak: a loss ends it', () => {
+  const history = { main: {
+    [at(1000)]: win('2026-11-01', '明'),
+    [at(2000)]: win('2026-11-01', '時'),
+    [at(3000)]: loss('2026-11-02', '間'),
+    [at(4000)]: win('2026-11-02', '林')
   } };
-  const s = stats(history, { today: '2026-11-03' });
-  assert.equal(s.bestStreak, 1);
+  const s = stats(history);
+  assert.equal(s.bestStreak, 2);
   assert.equal(s.currentStreak, 1);
+});
+
+test('streak: a day\'s games go in the order they finished', () => {
+  // Written out of order: the win finished last.
+  const history = { main: { [at(9000)]: win('2026-11-02', '明'), [at(5000)]: loss('2026-11-02', '時') } };
+  assert.equal(stats(history).currentStreak, 1);
+  const flipped = { main: { [at(5000)]: win('2026-11-02', '明'), [at(9000)]: loss('2026-11-02', '時') } };
+  assert.equal(stats(flipped).currentStreak, 0);
 });
 
 test('wins, fastest, clean wins and kanji collected count practice too', () => {
@@ -70,9 +74,10 @@ test('full-set days: every daily mode won that day', () => {
   assert.equal(stats(history, { today: '2026-11-02', dailyModes: [] }).fullSetDays, 0);
 });
 
-test('runs: best and current', () => {
-  assert.deepEqual(runs(['2026-11-01', '2026-11-02', '2026-11-05'], '2026-11-05'), { best: 2, current: 1 });
-  assert.deepEqual(runs([], '2026-11-05'), { best: 0, current: 0 });
+test('streak: none played', () => {
+  const s = stats({});
+  assert.equal(s.bestStreak, 0);
+  assert.equal(s.currentStreak, 0);
 });
 
 test('stats() works out every stat achievements may test', () => {
@@ -93,7 +98,8 @@ test('achievements: atLeast, atMost, and never twice', () => {
 });
 
 test('streak rewards: each length passed pays', () => {
-  assert.deepEqual(streakRewards(2, 3, ECONOMY).map((r) => r.days), [3]);
-  assert.deepEqual(streakRewards(6, 30, ECONOMY).map((r) => r.days), [7, 30]);
-  assert.deepEqual(streakRewards(3, 3, ECONOMY), []);
+  const [a, b, c] = ECONOMY.streakRewards.map((r) => r.wins);
+  assert.deepEqual(streakRewards(a - 1, a, ECONOMY).map((r) => r.wins), [a]);
+  assert.deepEqual(streakRewards(b - 1, c, ECONOMY).map((r) => r.wins), [b, c]);
+  assert.deepEqual(streakRewards(a, a, ECONOMY), []);
 });

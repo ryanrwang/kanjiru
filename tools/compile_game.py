@@ -41,7 +41,8 @@ from pathlib import Path
 # The date of daily puzzle 1. Every puzzle number, and so every daily answer,
 # hangs on it, so after launch never change it.
 #
-# Launch day (step 8b): set it to that date, run this script, commit
+# No mode has a daily now (2026-11-09), so it's unused. If one comes back:
+# set it to its launch day, run this script, commit
 # data/game/ and deploy that day (before the epoch there is no daily). The
 # whole schedule is shuffled afresh, and on their next visit testers' earlier
 # dailies become keep-playing games (settleDailies() in js/store.js), so
@@ -52,7 +53,7 @@ EPOCH = "2026-11-01"
 SHUFFLE_SEED = "kanjiru"
 
 # Days after today whose answers are locked too (time zones ahead of this
-# computer may already be on tomorrow).
+# computer may already be on tomorrow). Only lists with a daily lock days.
 LOCK_AHEAD_DAYS = 1
 
 # The answer lists, one per mode (js/config/modes.js `answers`). A Keep word
@@ -67,8 +68,12 @@ LOCK_AHEAD_DAYS = 1
 # the next compile once fixed. 一 is a real part, so it stays.
 LOOSE_STROKES = ("丨", "丶", "丿", "乙", "亅")
 
+# `daily`: whether a mode plays this list as a daily. Days already played
+# then keep their answer, even one that no longer fits the rules. Without a
+# daily (main since 2026-11-09) nothing is locked, so every answer fits:
+# 勝, an early daily, left when the parts audit gave it 3 parts.
 LISTS = {
-    "main": {"lengths": (1, 2, 3, 4), "parts": (4, 6), "without": LOOSE_STROKES},
+    "main": {"lengths": (1, 2, 3, 4), "parts": (4, 6), "without": LOOSE_STROKES, "daily": False},
 }
 
 # Kanji with the same parts in the same places as another joyo kanji (未/末)
@@ -191,7 +196,7 @@ def compile_answers(candidates: dict, review: dict | None, previous: dict | None
         fitting = {w for w in keep if w in by_word and fits(w, rule)}
         left_out = {w for w in fitting if has_unwanted(w, rule)}
         wanted = fitting - left_out
-        previous_list = prev_answers.get(name, []) if same_epoch else []
+        previous_list = prev_answers.get(name, []) if same_epoch and rule.get("daily", True) else []
         locked = previous_list[:min(locked_count, len(previous_list))]
         rest = sorted(wanted - set(locked))
         random.Random(f"{SHUFFLE_SEED}:{name}").shuffle(rest)

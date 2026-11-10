@@ -1,0 +1,159 @@
+/*
+ * How to play, on the play page: a short animation of one game, played out
+ * on a small board. The answer is 時間, whose parts in writing order are
+ * 日 土 寸 門 日. Three guesses are typed in part by part and revealed in
+ * the player's own tile reveal (settings.tiles), with a line under the board
+ * saying what each step shows, then 時間 appears, and it starts again.
+ *
+ *   const guide = howTo({ open, tiles });   // guide.node; guide.stop()
+ *
+ * open: shown open (a new player) or folded to its title (after a game;
+ * app.js decides). It plays only while open and on screen; under reduced
+ * motion it shows the three rows at once, every line listed. The board is
+ * a picture (aria-hidden): the text above it says the same for screen readers.
+ */
+import { t } from './i18n.js';
+import { el } from './dom.js';
+
+const ANSWER = '時間';
+// Each guess: [part, mark] per cell, and the line shown after its reveal.
+const ROWS = [
+  { parts: [['口', 'miss'], ['日', 'near'], ['寸', 'hit'], ['木', 'miss'], ['月', 'miss']], typing: 'howto.step.type', after: 'howto.step.colours' },
+  { parts: [['日', 'hit'], ['土', 'hit'], ['寸', 'hit'], ['日', 'near'], ['門', 'near']], typing: 'howto.step.use', after: 'howto.step.closer' },
+  { parts: [['日', 'hit'], ['土', 'hit'], ['寸', 'hit'], ['門', 'hit'], ['日', 'hit']], typing: 'howto.step.split', after: 'howto.step.solved' }
+];
+
+const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ms = (v) => parseFloat(v) || 0;
+
+export function howTo({ open = true, tiles = 'flip' } = {}) {
+  const answer = el('span', { class: 'demo-answer kanji', lang: 'ja' }, ANSWER);
+  const rows = ROWS.map(() => el('div', { class: 'demo-row' },
+    el('span', { class: 'demo-slot' }, Array.from({ length: 5 }, (_, i) => {
+      const cell = el('span', { class: 'tile is-cell demo-cell', lang: 'ja' });
+      cell.style.setProperty('--i', i);
+      return cell;
+    }))));
+  const line = el('p', { class: 'demo-line' });
+  const board = el('div', { class: 'demo', 'aria-hidden': 'true', 'data-tiles': tiles },
+    el('div', { class: 'demo-answer-row' }, answer), rows, line);
+
+  const details = el('details', { class: 'card howto', open },
+    el('summary', { class: 'howto-summary' },
+      el('h2', { class: 'howto-title', id: 'howto-title' }, t('howto.title')),
+      el('span', { class: 'howto-chevron', 'aria-hidden': 'true' })),
+    el('div', { class: 'howto-body' },
+      el('p', { class: 'howto-lead' }, t('howto.lead')),
+      el('p', { class: 'howto-text' }, t('howto.body')),
+      board,
+      el('ul', { class: 'demo-legend' },
+        ['hit', 'near', 'miss'].map((state) =>
+          el('li', {}, el('span', { class: `legend-dot is-${state}-bg` }), t(`howto.${state}`))))));
+
+  // ── The animation ──────────────────────────────────────────────────
+
+  let timer = 0;
+  let playing = false;
+  const cellsOf = (r) => [...rows[r].querySelectorAll('.demo-cell')];
+
+  function clear() {
+    rows.forEach((row, r) => {
+      row.classList.remove('is-new');
+      cellsOf(r).forEach((cell) => { cell.className = 'tile is-cell demo-cell'; cell.textContent = ''; });
+    });
+    answer.classList.remove('is-shown');
+    say('');
+  }
+
+  function say(key) {
+    line.textContent = key ? t(key, { answer: ANSWER }) : '';
+    line.classList.toggle('is-shown', !!key);
+  }
+
+  function fill(r, marks) {
+    cellsOf(r).forEach((cell, i) => {
+      const [part, mark] = ROWS[r].parts[i];
+      cell.textContent = part;
+      cell.className = `tile is-cell demo-cell${marks ? ` is-${mark}` : ' is-typed'}`;
+    });
+  }
+
+  // Every row at once, revealed: under reduced motion, or as the still
+  // picture before it starts.
+  function still() {
+    ROWS.forEach((row, r) => fill(r, true));
+    answer.classList.add('is-shown');
+    line.textContent = '';
+    line.classList.remove('is-shown');
+  }
+
+  // Steps run one after another; each returns how long until the next.
+  function steps() {
+    const tr = window.TOKENS.active().transition;
+    const type = ms(tr.slow);
+    const reveal = (ms(getComputedStyle(board).getPropertyValue('--reveal-time')) || ms(tr.reveal)) + ms(tr.base) * 4;
+    const hold = ms(tr.message) * 0.6;
+    const list = [() => { clear(); return type; }];
+    ROWS.forEach((row, r) => {
+      list.push(() => { say(row.typing); return type; });
+      row.parts.forEach(([part], i) => list.push(() => {
+        const cell = cellsOf(r)[i];
+        cell.textContent = part;
+        cell.classList.add('is-typed');
+        return type;
+      }));
+      list.push(() => {
+        fill(r, true);
+        rows[r].classList.add('is-new');
+        return reveal;
+      });
+      list.push(() => {
+        rows[r].classList.remove('is-new');
+        if (r === ROWS.length - 1) answer.classList.add('is-shown');
+        say(row.after);
+        return hold;
+      });
+    });
+    list.push(() => ms(tr.message) * 0.4);
+    return list;
+  }
+
+  function run(list = steps(), at = 0) {
+    if (!playing || !details.isConnected) { playing = false; return; }
+    const step = at < list.length ? list[at] : null;
+    if (!step) { run(steps(), 0); return; }
+    timer = setTimeout(() => run(list, at + 1), step());
+  }
+
+  function start() {
+    if (playing || reducedMotion()) return;
+    playing = true;
+    run();
+  }
+
+  function stop() {
+    playing = false;
+    clearTimeout(timer);
+  }
+
+  still();
+  // Plays while open and on screen.
+  const watcher = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting && details.open) start();
+      else if (!entry.isIntersecting) stop();
+    });
+  }, { threshold: 0.5 }) : null;
+  if (watcher) watcher.observe(board);
+  details.addEventListener('toggle', () => {
+    if (!details.open) { stop(); still(); return; }
+    if (!watcher) start();
+    else { watcher.unobserve(board); watcher.observe(board); }   // checks it's on screen
+  });
+  if (!watcher && open) start();
+
+  return {
+    node: details,
+    stop() { stop(); if (watcher) watcher.disconnect(); }
+  };
+}

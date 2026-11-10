@@ -184,8 +184,8 @@ export function validate() {
     if (!(ECONOMY.drops[k] >= 0 && ECONOMY.drops[k] <= 1)) say(`economy.drops.${k} needs a number from 0 to 1`);
   });
   ECONOMY.streakRewards.forEach((r) => {
-    if (r.power && !POWER[r.power]) say(`streak reward at ${r.days} days gives unknown power "${r.power}"`);
-    if (retired(r.power)) say(`streak reward at ${r.days} days gives retired power "${r.power}"`);
+    if (r.power && !POWER[r.power]) say(`streak reward at ${r.wins} wins gives unknown power "${r.power}"`);
+    if (retired(r.power)) say(`streak reward at ${r.wins} wins gives retired power "${r.power}"`);
   });
 
   // Text: every catalogue entry needs its English text, and every other

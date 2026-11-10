@@ -27,6 +27,8 @@
  *                 kept as a keep-playing game (settleDailies). guesses: the words
  *                 guessed, or for parts guesses the tile ids per kanji;
  *                 powers: power ids used (js/engine/game.js record)
+ *   resets        { achievements }   when achievements were last reset (ms,
+ *                 Settings): only games after it count toward them
  *   playing       { [modeId]: { daily, practice } }   games on the go, each
  *                 { start, log, done }: engine.replay(start, log) rebuilds it.
  *                 A finished daily stays (done) until the next one, so its
@@ -71,6 +73,7 @@ export function fresh() {
     unlocked: {},
     achievements: {},
     history: {},
+    resets: {},
     playing: {}
   };
 }
@@ -240,6 +243,50 @@ function askForPersistentStorage() {
   } catch (e) { /* not supported */ }
 }
 
+// ── Starting over (Settings) ─────────────────────────────────────────
+
+// Achievements earned before a reset: dropped. Their dates are days, so one
+// earned on the reset's own day stays.
+function dropReset(save) {
+  const at = isObject(save.resets) ? Number(save.resets.achievements) || 0 : 0;
+  if (!at || !isObject(save.achievements)) return save;
+  const day = localDay(at);
+  Object.keys(save.achievements).forEach((id) => {
+    if (String(save.achievements[id]) < day) delete save.achievements[id];
+  });
+  return save;
+}
+
+const pad2 = (n) => String(n).padStart(2, '0');
+function localDay(ms) {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+// Achievements start again: every one is unearned, and only games played
+// from now count toward them. Games, points, hints and looks bought stay;
+// a reward already paid isn't paid again (js/play/rewards.js). Looks an
+// achievement unlocked lock again, so any in use go back to the default.
+// lockedNow(save) → the slots whose look is now locked.
+export function resetAchievements(lockedNow = () => [], now = Date.now()) {
+  return update((s) => {
+    s.resets = { ...(isObject(s.resets) ? s.resets : {}), achievements: now };
+    s.achievements = {};
+    lockedNow(s).forEach((slot) => { s.settings[slot] = DEFAULT_LOOK[slot]; });
+  });
+}
+
+// Everything goes: games, points, hints, looks, achievements. The language
+// and light or dark stay, since they belong to the device.
+export function resetAll() {
+  const before = get().settings;
+  state = fresh();
+  state.settings.lang = before.lang;
+  state.settings.scheme = before.scheme;
+  persist();
+  return state;
+}
+
 // ── Moving devices ───────────────────────────────────────────────────
 //
 // A received save either replaces this device's save or merges with it.
@@ -341,6 +388,8 @@ export const MERGE = {
   achievements: eachKey((a, b) => (String(b) < String(a) ? b : a)),
   // Games from both; streaks and stats are worked out again from these.
   history: eachKey((mineMode, theirMode) => eachKey(betterGame)(mineMode, theirMode)),
+  // The later reset wins, and achievements from before it go (mergeSaves).
+  resets: eachKey((a, b) => Math.max(Number(a) || 0, Number(b) || 0)),
   // Games on the go belong to the device in your hand. A daily the other
   // device finished is in history, which wins over one on the go here.
   playing: (mine) => mine
@@ -352,7 +401,7 @@ export function mergeSaves(mine, theirs) {
     merged[key] = JSON.parse(JSON.stringify(rule(mine[key], theirs[key])));
   });
   merged.v = VERSION;
-  return fillDefaults(merged, fresh());
+  return dropReset(fillDefaults(merged, fresh()));
 }
 
 // Keys of the save that MERGE has no rule for (validate() reports them).

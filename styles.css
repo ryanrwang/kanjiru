@@ -313,7 +313,8 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .play-level-title,
 .sheet-section-title,
-.howto-title {
+.howto-title,
+.history-title {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--font-tracking-caps);
@@ -348,13 +349,45 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   text-align: end;
 }
 
-/* ── Play page: how to play, its intro ─────────────────────────────── */
+/* ── Play page: how to play (js/howto.js) ─────────────────────────── */
 
+/* A <details>: open for a new player, folded to its title after a game. */
 .howto {
   display: flex;
   flex-direction: column;
+  padding: 0;
+}
+
+.howto-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  cursor: pointer;
+  list-style: none;
+  border-radius: inherit;
+}
+
+.howto-summary::-webkit-details-marker { display: none; }
+.howto-summary:hover { background: var(--color-interactive-hover); }
+
+.howto-chevron {
+  width: var(--spacing-sm);
+  height: var(--spacing-sm);
+  border-right: var(--stroke-thick) solid var(--color-text-muted);
+  border-bottom: var(--stroke-thick) solid var(--color-text-muted);
+  transform: rotate(45deg);
+  transition: transform var(--transition-fast) var(--transition-ease);
+}
+
+.howto[open] .howto-chevron { transform: rotate(-135deg); }
+
+.howto-body {
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-md);
-  padding: var(--spacing-lg);
+  padding: 0 var(--spacing-lg) var(--spacing-lg);
 }
 
 .howto-lead {
@@ -365,10 +398,16 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .howto-text { color: var(--color-text-secondary); }
 
+/* The little game: the answer over three rows, and a line saying what each
+   step shows. Sizes stay put while it plays, so nothing below it moves. */
 .demo {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: var(--spacing-xs);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-page);
 }
 
 .demo-row {
@@ -382,10 +421,43 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   gap: var(--spacing-xs);
 }
 
-.demo-answer {
-  font-size: var(--font-size-xl);
-  line-height: var(--font-lineHeight-tight);
+.demo-answer-row {
+  display: flex;
+  justify-content: center;
+  min-height: var(--layout-cell);
 }
+
+.demo-answer {
+  font-size: var(--font-size-2xl);
+  line-height: var(--layout-cell);
+  color: var(--color-text-accent);
+  visibility: hidden;
+}
+
+.demo-answer.is-shown {
+  visibility: visible;
+  animation: kanji-in var(--transition-slow) var(--transition-bounce) both;
+}
+
+/* A part typed into its cell pops in, as on the board. */
+.demo-cell.is-typed {
+  border-color: var(--color-border-strong);
+  animation: kanji-in var(--transition-base) var(--transition-bounce) both;
+}
+
+.demo-line {
+  min-height: calc(var(--font-size-md) * var(--font-lineHeight-snug) * 2);
+  margin-top: var(--spacing-xs);
+  max-width: var(--layout-powerMin);
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  text-align: center;
+  color: var(--color-text-secondary);
+  opacity: var(--opacity-hidden);
+  transition: opacity var(--transition-base) var(--transition-ease);
+}
+
+.demo-line.is-shown { opacity: var(--opacity-full); }
 
 .demo-legend {
   display: flex;
@@ -405,6 +477,94 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   margin-right: var(--spacing-xs);
   border-radius: var(--radius-full);
   vertical-align: middle;
+}
+
+/* ── Play page: every game played (js/history.js) ──────────────────── */
+
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+}
+
+.history-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.history-count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The answer, what it means and how it went, then the guesses' squares. */
+.history-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) 0;
+  border-top: var(--stroke-thin) solid var(--color-border-subtle);
+}
+
+.history-item:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.history-word {
+  min-width: var(--layout-cellMd);
+  font-size: var(--font-size-xl);
+  line-height: var(--font-lineHeight-tight);
+}
+
+.history-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stroke-thick);
+  min-width: 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+}
+
+.history-gloss {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--color-text-secondary);
+}
+
+.history-meta { color: var(--color-text-muted); }
+
+.history-result {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.history-result.is-won { color: var(--color-text-accent); }
+
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--spacing-sm));
+  gap: var(--stroke-thick);
+}
+
+.history-sq {
+  width: var(--spacing-sm);
+  height: var(--spacing-sm);
+  border-radius: var(--stroke-thick);
 }
 
 /* ── Tiles ─────────────────────────────────────────────────────────── */
@@ -485,6 +645,14 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
 
 .btn-ghost { color: var(--color-text-secondary); }
 .btn-ghost:hover:not(:disabled) { background: var(--color-interactive-hover); }
+
+/* Something that can't be undone (Delete all data): outlined in the accent,
+   which keeps AA contrast in every skin. */
+.btn-danger {
+  color: var(--color-text-accent);
+  box-shadow: inset 0 0 0 var(--stroke-thick) currentColor;
+}
+.btn-danger:hover:not(:disabled) { background: var(--color-interactive-hover); }
 
 .btn-row {
   display: flex;
@@ -812,6 +980,38 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
   color: var(--color-text-secondary);
 }
 
+/* The ask before something that can't be undone (js/confirm.js): ending a
+   game, resetting achievements, deleting everything. */
+.ask-sheet .ask-options { grid-template-columns: 1fr; }
+.ask-sheet .ask-option { border-color: var(--color-border-default); }
+.ask-sheet .ask-option:hover:not(:disabled) { border-color: var(--color-border-strong); }
+.ask-option.is-danger .ask-option-name { color: var(--color-text-accent); }
+.ask-option:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
+
+.ask-sheet-titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.ask-step {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--font-tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.ask-sheet-body { color: var(--color-text-secondary); }
+
+.ask-typed-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.ask-typed-hint { font-weight: var(--font-weight-bold); }
+
 /* ── Shared bits ───────────────────────────────────────────────────── */
 
 /* Read by screen readers, not shown. (Clue names above the keyboard too:
@@ -898,6 +1098,7 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
 /* At Normal and Hard, fitBoard() in js/play/screen.js sizes the board:
    data-cell and data-frame pick layout tokens (the largest that fit). */
 .board {
+  position: relative;   /* the win effect plays over it (.fx-board) */
   --board-cell: var(--layout-cell);
   --board-font: var(--font-size-lg);
   --board-kanji: var(--font-size-2xl);
@@ -1399,12 +1600,32 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   align-items: center;
 }
 
-/* Tile reveal (settings.tiles). Flip is the default; a tile style from
-   js/config/skins.js gets its own block keyed by [data-tiles] (step 6).
-   Each tile waits its turn (--i, set in js/play/screen.js). */
-.board-row.is-new .tile,
-.look-preview.is-new .tile {
-  animation: tile-flip var(--transition-reveal) var(--transition-ease) both;
+/* Tile reveal (settings.tiles, js/config/skins.js). The same rules play a
+   new row on the board (.board-row.is-new), the Points page's preview
+   (.look-preview.is-new) and each look's example (.reveal-stage.is-playing).
+   The play page's How to play (.demo-row.is-new) plays it too.
+   [data-tiles] on the board, the preview or the example picks the reveal:
+   its keyframes (--reveal), how long one tile takes (--reveal-time, which
+   js/play/screen.js reads to know when a row is done) and its easing.
+   Each tile waits its turn (--i, set in js/play/screen.js and js/points.js).
+   Every reveal goes from the tile's own colours to its mark's (--mark-bg). */
+[data-tiles] {
+  --reveal: tile-flip;
+  --reveal-time: var(--transition-reveal);
+  --reveal-ease: var(--transition-ease);
+}
+[data-tiles="fade"]  { --reveal: tile-fade; }
+[data-tiles="turn"]  { --reveal: tile-turn; }
+[data-tiles="drop"]  { --reveal: tile-drop; --reveal-ease: var(--transition-bounce); }
+[data-tiles="ink"]   { --reveal: tile-ink; --reveal-time: var(--transition-long); }
+[data-tiles="wipe"]  { --reveal: tile-wipe; --reveal-ease: var(--transition-ink); }
+[data-tiles="shoji"] { --reveal: tile-shoji; --reveal-time: var(--transition-long); }
+[data-tiles="stamp"] { --reveal: tile-stamp; --reveal-ease: var(--transition-bounce); }
+
+:is(.board-row.is-new, .demo-row.is-new, .look-preview.is-new, .reveal-stage.is-playing) .tile {
+  position: relative;
+  isolation: isolate;
+  animation: var(--reveal) var(--reveal-time) var(--reveal-ease) both;
   animation-delay: calc(var(--i, 0) * var(--transition-base));
 }
 
@@ -1412,6 +1633,7 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   animation: kanji-in var(--transition-base) var(--transition-bounce) both;
 }
 
+/* The pending look, then the mark's: every reveal's start and end. */
 @keyframes tile-flip {
   0% {
     transform: rotateX(0deg);
@@ -1437,6 +1659,201 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
     border-color: transparent;
     color: var(--color-feedback-text);
   }
+}
+
+/* Fade: the colour comes up through the tile, with a soft swell. */
+@keyframes tile-fade {
+  0% {
+    transform: scale(1);
+    background-color: var(--color-tile-bg);
+    border-color: var(--color-tile-border);
+    color: var(--color-tile-text);
+  }
+  50% { transform: scale(0.94); }
+  100% {
+    transform: scale(1);
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+}
+
+/* Turn: like Flip, but sideways, as a card turns over. */
+@keyframes tile-turn {
+  0% {
+    transform: rotateY(0deg);
+    background-color: var(--color-tile-bg);
+    border-color: var(--color-tile-border);
+    color: var(--color-tile-text);
+  }
+  50% {
+    transform: rotateY(90deg);
+    background-color: var(--color-tile-bg);
+    border-color: var(--color-tile-border);
+    color: var(--color-tile-text);
+  }
+  51% {
+    transform: rotateY(-90deg);
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+  100% {
+    transform: rotateY(0deg);
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+}
+
+/* Drop: each tile falls into its cell in its colour and settles. */
+@keyframes tile-drop {
+  0% {
+    transform: translateY(calc(var(--spacing-lg) * -1));
+    opacity: var(--opacity-hidden);
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+  40% { opacity: var(--opacity-full); }
+  100% {
+    transform: translateY(0);
+    opacity: var(--opacity-full);
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+}
+
+/* Ink bleed: a drop lands in the middle and the colour spreads out from it
+   (the ::before below), slow then quick, like ink in paper. */
+@keyframes tile-ink {
+  0%, 30% {
+    background-color: var(--color-tile-bg);
+    border-color: var(--color-tile-border);
+    color: var(--color-tile-text);
+  }
+  45%, 99% {
+    background-color: var(--color-tile-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+  100% {
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+}
+
+@keyframes ink-spread {
+  0%   { clip-path: circle(0% at 50% 60%); }
+  30%  { clip-path: circle(12% at 50% 60%); }
+  100% { clip-path: circle(80% at 50% 60%); }
+}
+
+/* Brush wipe: the colour is painted across from the left (the ::before). */
+@keyframes tile-wipe {
+  0%, 99% {
+    background-color: var(--color-tile-bg);
+    border-color: var(--color-tile-border);
+  }
+  0%, 45% { color: var(--color-tile-text); }
+  55% { color: var(--color-feedback-text); }
+  100% {
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+}
+
+@keyframes wipe-across {
+  0%   { clip-path: inset(0 100% 0 0); }
+  100% { clip-path: inset(0 0 0 0); }
+}
+
+/* Shoji: two paper panels slide apart to show the colour behind. */
+@keyframes tile-shoji {
+  0%, 99% {
+    background-color: var(--mark-bg);
+    border-color: var(--color-tile-border);
+  }
+  0%, 30% { color: var(--color-tile-text); }
+  45% { color: var(--color-feedback-text); }
+  100% {
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+}
+
+@keyframes shoji-left {
+  0%, 15% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes shoji-right {
+  0%, 15% { transform: translateX(0); }
+  100% { transform: translateX(100%); }
+}
+
+/* Hanko stamp: pressed down hard, like a seal. */
+@keyframes tile-stamp {
+  0% {
+    transform: scale(1.5) rotate(-8deg);
+    opacity: var(--opacity-hidden);
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+  60% { transform: scale(0.9) rotate(0deg); opacity: var(--opacity-full); }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: var(--opacity-full);
+    background-color: var(--mark-bg);
+    border-color: transparent;
+    color: var(--color-feedback-text);
+  }
+}
+
+/* The layers some reveals draw under the glyph: ink's spreading colour,
+   the brush's painted stroke, and the shoji's two panels. */
+:is([data-tiles="ink"] :is(.board-row, .demo-row).is-new, [data-tiles="ink"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::before,
+:is([data-tiles="wipe"] :is(.board-row, .demo-row).is-new, [data-tiles="wipe"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--mark-bg);
+  animation: ink-spread var(--reveal-time) var(--transition-ink) both;
+  animation-delay: calc(var(--i, 0) * var(--transition-base));
+}
+
+:is([data-tiles="wipe"] :is(.board-row, .demo-row).is-new, [data-tiles="wipe"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::before {
+  animation-name: wipe-across;
+}
+
+:is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile { overflow: hidden; }
+
+:is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::before,
+:is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+  z-index: -1;
+  background: var(--color-tile-bg);
+  box-shadow: inset calc(var(--stroke-thin) * -1) 0 0 var(--color-tile-border);
+  animation: shoji-left var(--reveal-time) var(--transition-ease) both;
+  animation-delay: calc(var(--i, 0) * var(--transition-base));
+}
+
+:is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::after {
+  left: 50%;
+  box-shadow: inset var(--stroke-thin) 0 0 var(--color-tile-border);
+  animation-name: shoji-right;
 }
 
 @keyframes kanji-in {
@@ -2024,6 +2441,21 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 }
 
 .palette-tile.is-out { opacity: var(--opacity-faint); }
+
+/* A key found not in the answer: a thin diagonal line across it, corner to
+   corner, so it reads as crossed off at a glance. */
+.palette-tile.is-miss::after {
+  content: '';
+  position: absolute;
+  inset: var(--spacing-xs);
+  pointer-events: none;
+  background: linear-gradient(to top right,
+    transparent calc(50% - var(--stroke-thin)),
+    var(--color-feedback-text) calc(50% - var(--stroke-thin)),
+    var(--color-feedback-text) calc(50% + var(--stroke-thin)),
+    transparent calc(50% + var(--stroke-thin)));
+  opacity: var(--opacity-soft);
+}
 
 .palette-variant {
   position: absolute;
@@ -2622,79 +3054,47 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   font-size: var(--font-size-xs);
 }
 
-/* Tile reveals: Flip (as on the board), Ink bleed (the colour spreads from
-   a drop in the middle) and Hanko stamp (pressed down like a seal). Step 6
-   builds the board's Ink bleed and Hanko from these. */
-.reveal-stage .tile {
-  position: relative;
-  isolation: isolate;
+/* The tile reveals' examples play the board's own rules ("Tile reveal",
+   above): .reveal-stage.is-playing is one of their places. */
+
+/* Win effects (settings.effect; pieces from js/play/effects.js). The same
+   rules play over the board when a game is won (.fx-board, in the board's
+   corner, the size of the board) and as each look's example here
+   (.fx-stage). Both start when they get .is-playing. The container sets the
+   sizes: how far pieces fall (--fx-h, the board's height in a game), a
+   piece's size (--fx-piece) and how far a burst reaches (--fx-burst). */
+.fx-stage {
+  --fx-h: var(--spacing-2xl);
+  --fx-piece: var(--spacing-sm);
+  --fx-burst: var(--spacing-md);
 }
 
-.reveal-stage.is-playing .tile {
-  animation: tile-flip var(--transition-reveal) var(--transition-ease) both;
-  animation-delay: calc(var(--i, 0) * var(--transition-base));
-}
-
-/* Ink takes longer than a flip: the drop, then the spread. */
-.reveal-stage[data-tiles="ink"].is-playing .tile {
-  animation-name: tile-ink;
-  animation-duration: var(--transition-long);
-}
-
-.reveal-stage[data-tiles="ink"].is-playing .tile::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: var(--mark-bg);
-  animation: ink-spread var(--transition-long) var(--transition-ink) both;
-  animation-delay: calc(var(--i, 0) * var(--transition-base));
-}
-
-.reveal-stage[data-tiles="stamp"].is-playing .tile {
-  animation-name: tile-stamp;
-  animation-timing-function: var(--transition-bounce);
-}
-
-@keyframes tile-ink {
-  0%, 30% {
-    background-color: var(--color-tile-bg);
-    border-color: var(--color-tile-border);
-    color: var(--color-tile-text);
-  }
-  45%, 99% {
-    background-color: var(--color-tile-bg);
-    border-color: transparent;
-    color: var(--color-feedback-text);
-  }
-  100% {
-    background-color: var(--mark-bg);
-    border-color: transparent;
-    color: var(--color-feedback-text);
-  }
-}
-
-@keyframes ink-spread {
-  0%   { clip-path: circle(0% at 50% 60%); }
-  30%  { clip-path: circle(12% at 50% 60%); }
-  100% { clip-path: circle(80% at 50% 60%); }
-}
-
-@keyframes tile-stamp {
-  0%   { transform: scale(1.5) rotate(-8deg); opacity: var(--opacity-hidden); }
-  60%  { transform: scale(0.9) rotate(0deg); opacity: var(--opacity-full); }
-  100% { transform: scale(1) rotate(0deg); opacity: var(--opacity-full); }
-}
-
-/* Win effects, over a solved row: Brush draw writes the answer out from
-   its top left, Petal fall drops petals across it, Hanabi bursts twice. */
 .fx {
   position: absolute;
   inset: 0;
+  overflow: hidden;
   pointer-events: none;
 }
 
+.fx-board {
+  --fx-h: var(--spacing-3xl);
+  --fx-piece: var(--spacing-md);
+  --fx-burst: var(--spacing-3xl);
+  --fx-time: calc(var(--transition-long) * 3);
+  /* The drawn word and the seal sit in the middle of the board. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fx-out var(--fx-time) var(--transition-ease) both;
+}
+
+/* The board's effect fades out at the end; js/play/effects.js then removes it. */
+@keyframes fx-out {
+  0%, 85% { opacity: var(--opacity-full); }
+  100% { opacity: var(--opacity-hidden); }
+}
+
+/* Brush draw: the answer written out from its top left. */
 .fx-kanji {
   height: var(--layout-cellXs);
   font-size: var(--font-size-xl);
@@ -2702,45 +3102,176 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   color: var(--color-text-primary);
 }
 
-.fx-stage.is-playing .fx-kanji {
+.is-playing .fx-kanji {
   animation: brush-draw var(--transition-long) var(--transition-ink) both;
 }
+
+.fx-board .fx-kanji-card {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-raised);
+  box-shadow: var(--shadow-lg);
+  animation: kanji-in var(--transition-slow) var(--transition-ease) both;
+}
+
+.fx-board .fx-kanji {
+  display: block;
+  height: auto;
+  font-size: var(--font-size-hero);
+  line-height: var(--font-lineHeight-tight);
+  white-space: nowrap;
+}
+
+/* Three or four kanji: smaller, to fit a phone's board. */
+.fx-board .fx-kanji[data-len="3"],
+.fx-board .fx-kanji[data-len="4"] { font-size: var(--font-size-display); }
 
 @keyframes brush-draw {
   0%   { clip-path: polygon(0 0, 0 0, 0 0); }
   100% { clip-path: polygon(0 0, 200% 0, 0 200%); }
 }
 
+/* Wave: the solved row's tiles hop, one after another. */
+.is-playing[data-effect="wave"] .tile,
+.board-row.fx-wave .tile {
+  animation: tile-hop var(--transition-slow) var(--transition-bounce) both;
+  animation-delay: calc(var(--i, 0) * var(--transition-fast));
+}
+
+@keyframes tile-hop {
+  0%, 100% { transform: translateY(0); }
+  45% { transform: translateY(calc(var(--spacing-sm) * -1)); }
+}
+
+/* Gold shine: a band of light sweeps across the solved row. */
+.is-playing[data-effect="glow"] .tile,
+.board-row.fx-glow .tile {
+  position: relative;
+  overflow: hidden;
+  animation: tile-glow var(--transition-long) var(--transition-ease) both;
+  animation-delay: calc(var(--i, 0) * var(--transition-fast));
+}
+
+.is-playing[data-effect="glow"] .tile::after,
+.board-row.fx-glow .tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, var(--color-effect-shine) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: shine-across var(--transition-long) var(--transition-ease) both;
+  animation-delay: calc(var(--i, 0) * var(--transition-fast));
+}
+
+@keyframes shine-across {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes tile-glow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 var(--spacing-md) var(--stroke-thick) var(--color-effect-spark); }
+}
+
+/* Seal: the game's hanko is stamped beside the solved row. */
+.fx-seal {
+  position: absolute;
+  right: var(--spacing-xs);
+  bottom: var(--spacing-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--layout-cellXs);
+  height: var(--layout-cellXs);
+  border-radius: var(--radius-sm);
+  background: var(--color-action-primary-bg);
+  color: var(--color-action-primary-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-black);
+  line-height: var(--font-lineHeight-tight);
+  transform: rotate(-12deg);
+  opacity: var(--opacity-hidden);
+}
+
+.fx-board .fx-seal {
+  position: static;
+  width: var(--layout-seal);
+  height: var(--layout-seal);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-2xl);
+  box-shadow: var(--shadow-md);
+}
+
+.is-playing .fx-seal {
+  animation: seal-stamp var(--transition-reveal) var(--transition-bounce) both;
+  animation-delay: var(--transition-base);
+}
+
+@keyframes seal-stamp {
+  0%   { transform: scale(2.2) rotate(-30deg); opacity: var(--opacity-hidden); }
+  60%  { transform: scale(0.92) rotate(-10deg); opacity: var(--opacity-full); }
+  100% { transform: scale(1) rotate(-12deg); opacity: var(--opacity-full); }
+}
+
+/* Petal fall: petals drift down across it. */
 .fx-petal {
   position: absolute;
-  top: calc(var(--spacing-sm) * -1);
+  top: calc(var(--fx-piece) * -1);
   left: calc(var(--x) * 1%);
-  width: var(--spacing-sm);
-  height: var(--spacing-sm);
+  width: var(--fx-piece);
+  height: var(--fx-piece);
   border-radius: 0 var(--radius-full);
   background: var(--color-effect-petal);
   opacity: var(--opacity-hidden);
 }
 
-.fx-stage.is-playing .fx-petal {
+.is-playing .fx-petal {
   animation: petal-fall calc(var(--transition-long) * 2) var(--transition-ease) both;
-  animation-delay: calc(var(--i) * var(--transition-slow));
+  animation-delay: calc(var(--i) * var(--transition-slow) / 2);
 }
 
 @keyframes petal-fall {
   0%   { transform: translate(0, 0) rotate(0deg); opacity: var(--opacity-hidden); }
   15%  { opacity: var(--opacity-full); }
-  50%  { transform: translate(var(--spacing-sm), var(--spacing-lg)) rotate(120deg); }
+  50%  { transform: translate(var(--fx-piece), calc(var(--fx-h) / 2)) rotate(120deg); }
   85%  { opacity: var(--opacity-full); }
-  100% { transform: translate(calc(var(--spacing-sm) * -1), var(--spacing-2xl)) rotate(240deg); opacity: var(--opacity-hidden); }
+  100% { transform: translate(calc(var(--fx-piece) * -1), var(--fx-h)) rotate(240deg); opacity: var(--opacity-hidden); }
 }
 
+/* Confetti: paper bits in the game's colours tumble down. */
+.fx-bit {
+  position: absolute;
+  top: calc(var(--fx-piece) * -1);
+  left: calc(var(--x) * 1%);
+  width: calc(var(--fx-piece) / 2);
+  height: var(--fx-piece);
+  border-radius: var(--stroke-thin);
+  background: var(--color-feedback-hit);
+  opacity: var(--opacity-hidden);
+}
+
+.fx-bit:nth-child(4n+1) { background: var(--color-feedback-near); }
+.fx-bit:nth-child(4n+2) { background: var(--color-action-primary-bg); }
+.fx-bit:nth-child(4n+3) { background: var(--color-effect-petal); }
+
+.is-playing .fx-bit {
+  animation: bit-fall calc(var(--transition-long) * 2) var(--transition-ease) both;
+  animation-delay: calc(var(--i) * var(--transition-fast));
+}
+
+@keyframes bit-fall {
+  0%   { transform: translateY(0) rotate(var(--a)) rotateX(0deg); opacity: var(--opacity-full); }
+  85%  { opacity: var(--opacity-full); }
+  100% { transform: translateY(var(--fx-h)) rotate(calc(var(--a) + 180deg)) rotateX(720deg); opacity: var(--opacity-hidden); }
+}
+
+/* Hanabi: fireworks burst over it. */
 .fx-spark {
   position: absolute;
   top: calc(var(--y) * 1%);
   left: calc(var(--x) * 1%);
   width: var(--stroke-thick);
-  height: var(--spacing-sm);
+  height: var(--fx-piece);
   border-radius: var(--radius-full);
   background: var(--color-effect-spark);
   opacity: var(--opacity-hidden);
@@ -2750,26 +3281,35 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 .fx-spark:nth-child(3n)   { background: var(--color-effect-petal); }
 .fx-spark:nth-child(3n+1) { background: var(--color-action-primary-bg); }
 
-.fx-stage.is-playing .fx-spark {
+.is-playing .fx-spark {
   animation: spark-out var(--transition-long) var(--transition-bounce) both;
   animation-delay: calc(var(--b) * var(--transition-slow));
 }
 
+.fx-board .fx-spark { animation-delay: calc(var(--b) * var(--transition-reveal)); }
+
 @keyframes spark-out {
   0%   { transform: rotate(var(--a)) translateY(0) scaleY(0.2); opacity: var(--opacity-full); }
   70%  { opacity: var(--opacity-full); }
-  100% { transform: rotate(var(--a)) translateY(var(--spacing-md)) scaleY(1); opacity: var(--opacity-hidden); }
+  100% { transform: rotate(var(--a)) translateY(var(--fx-burst)) scaleY(1); opacity: var(--opacity-hidden); }
 }
 
-/* Without motion: the reveals show their end, the effects a still picture. */
+/* Without motion: the reveals show their end, the examples a still picture,
+   and a game plays no win effect (js/play/effects.js). */
 @media (prefers-reduced-motion: reduce) {
   .reveal-stage.is-playing .tile,
   .reveal-stage.is-playing .tile::before,
-  .fx-stage.is-playing .fx-kanji,
-  .fx-stage.is-playing .fx-petal,
-  .fx-stage.is-playing .fx-spark { animation: none; }
+  .reveal-stage.is-playing .tile::after,
+  .is-playing .fx-kanji,
+  .is-playing .fx-petal,
+  .is-playing .fx-bit,
+  .is-playing .fx-spark,
+  .is-playing .fx-seal,
+  .is-playing[data-effect] .tile,
+  .is-playing[data-effect] .tile::after { animation: none; }
 
-  .fx-petal {
+  .fx-petal,
+  .fx-bit {
     top: calc(var(--y) * 1%);
     opacity: var(--opacity-strong);
   }
@@ -2778,6 +3318,8 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
     transform: rotate(var(--a)) translateY(var(--spacing-xs));
     opacity: var(--opacity-strong);
   }
+
+  .fx-seal { opacity: var(--opacity-full); }
 }
 
 /* A locked look's details, under its row: how to get it, and Buy. */
@@ -2930,8 +3472,15 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   }
   .rw-back-logo:hover { animation: none; }
   .board-row.is-new .tile,
+  .board-row.is-new .tile::before,
+  .board-row.is-new .tile::after,
   .look-preview.is-new .tile,
+  .look-preview.is-new .tile::before,
+  .look-preview.is-new .tile::after,
   .board-row.is-new .row-kanji,
+  .demo-row.is-new .tile,
+  .demo-cell.is-typed,
+  .demo-answer.is-shown,
   .frame-part.is-new,
   .kanji-frame.is-new { animation: none; }
   .palette-tile[aria-pressed="true"] { transform: none; }

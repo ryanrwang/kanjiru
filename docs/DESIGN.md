@@ -15,7 +15,8 @@ Last updated: 2026-11-10.
 - **Decided — Everything scalable:** the number of kanji, skins, hint types and point values are catalogue entries, never hard-coded (see CLAUDE.md, "Rules").
 - **Decided — Interface languages:** English and Japanese, picked in Settings. It follows the device until the player picks.
 - **Decided — Guessable kanji:** any of the 2,136 jōyō kanji built from the puzzle's palette ("The palette", below). The candidate list shows easier ones first.
-- **Decided — One daily, then keep playing (step 4):** one daily puzzle, the same for everyone, rolling over at local midnight. After it, players keep playing more puzzles, as many as they like, framed as carrying on, not as practice. They pay the same points (`practiceMultiplier` 1). Streaks count the daily only. Internally a "keep playing" game is still `kind: 'practice'`.
+- **Decided — No dailies, random puzzles only (2026-11-09):** at most 3–5 people will play, now and then, so a daily (miss six a week, a streak that needs every day, a launch date) gave them nothing. Every game is a random puzzle from the main list, as many as you like, any time: `daily: false` on `main` in `js/config/modes.js`. A game skips your last 30 answers (`rules.js` `practice.avoidRecent`). No puzzle numbers, countdown, comparing or launch date; the share text stays hidden. The daily code stays, so a mode with `daily: true` would bring one back. The play card's Play opens `#main`, which in a mode without dailies is a random game (`kind: 'practice'` inside).
+- **Replaced — One daily, then keep playing (step 4):** one daily puzzle, the same for everyone, rolling over at local midnight. After it, players keep playing more puzzles, as many as they like, framed as carrying on, not as practice. They pay the same points (`practiceMultiplier` 1). Streaks count the daily only. Internally a "keep playing" game is still `kind: 'practice'`.
 - **Decided — Tune by playing:** every rule, size and number below lives in `js/config/`, so balancing after playtests is a catalogue edit.
 
 ## The puzzle (Decided, step 4)
@@ -34,8 +35,9 @@ After playing step 3, the user found one kanji too short: 79% of one-kanji answe
 - **Open — More words:** 2,389 common two-kanji words with 4–6 parts aren't on a JLPT list. Many are everyday words worth keeping; review them later.
 - **Decided — Loose strokes leave the daily for now (step 4b):** 177 of the 603 Keep answers had a stray single stroke as a part (丨 丶 丿 乙 亅; e.g. 今日, 電気, 仕事). With every part a cell, those cells are close to guesswork. They stay Keep, but the daily list leaves them out (`LISTS` `without` in `tools/compile_game.py`) until their breakdowns are fixed in `data/parts-overrides.json`; fixed ones come back on the next compile. 一 is a real part and stays. Days already played keep their answer (勝 and 経由 were days 8 and 9).
 - **Decided — First fixes (step 4b):** 10 kanji fixed with tiles the palette already has, the way similar kanji split: 重 動 種 (𠂉 over 里, as in 毎), 産 (立 over 厂 and 生), 着 (羊 over 目), 表 (龶 衣), 平 (干 八, as in 前), 号 (口 丂), 母 (毋, as in 毎), 犯 (犭 卩, as in 危). That brought back 25 words: the daily has 453 answers, and 146 Keep words are still left out.
-- **Decided — The rest stay out:** the most common left-out kanji (事 13 words, 年 11, 中 8, 今 7, 以 6) are made of strokes. As whole tiles, most of their words would have under 4 parts (仕事 would have 3), so a new tile wouldn't bring them back.
-- **Decided — Live before launch:** since PR #6 the live URL plays the daily (epoch 2026-11-01). It isn't linked anywhere; step 8b sets the real epoch, so puzzle 1 is launch day.
+- **Replaced — The rest stay out (step 4b):** the most common left-out kanji (事 13 words, 年 11, 中 8, 今 7, 以 6) are made of strokes. As whole tiles, most of their words would have under 4 parts (仕事 would have 3), so a new tile wouldn't bring them back. 事 年 中 still stay out; 今 and 以 are tiles now (below).
+- **Decided — After the parts audit (2026-11-10):** the main list has 460 answers, and 114 Keep words still have a loose stroke. 今 and 以 became tiles for accuracy, not for the count (the user agreed): 念 含 陰 hold 今, and 以 fell apart into strokes the way 不 and 北 did. That brought 今度 and 今後 back; 今日 has 2 parts and 以 left the one-kanji candidates. The rest is in "Part breakdowns".
+- **Decided — No launch date:** with no dailies there's no epoch to set (PR #14, which set one for 2026-11-10, was closed unmerged). The live URL already plays; launching is adding the card to the Apps page.
 
 ## Scoring (Decided, step 2)
 
@@ -66,7 +68,7 @@ Like Wordle's repeated letters: greens first, then yellows, each in stroke order
 ### Winning
 
 - **One kanji:** the guess is the answer. At Normal and Hard: every cell green.
-- **Look-alikes:** 未/末, 押/抽 and 拐/招 have the same parts in the same places. The compile step leaves the 4 of them that are answers (未 末 押 招) out of the one-kanji answers, so an all-green row is always the answer. They stay guessable, and stay in longer words.
+- **Look-alikes:** 未/末 and 拐/招 have the same parts in the same places. The compile step leaves the 3 of them that are answers (未 末 招) out of the one-kanji answers, so an all-green row is always the answer. They stay guessable, and stay in longer words. (押/抽 were a pair until the parts audit made 抽 = 扌 + 由.)
 - **Not a guess:** a kanji outside the jōyō list, one with a part that isn't in the palette, the wrong length, or a repeat of an earlier guess is turned away without using a row.
 
 ### Longer words (2–4 kanji)
@@ -98,19 +100,20 @@ From `js/config/economy.js`, every number there:
 
 ### Dailies and stats
 
-- **Puzzle number:** days since the epoch, by the local date. The epoch is `EPOCH` in `tools/compile_game.py`, written into `data/game/answers.json` with the answer order (`js/engine/daily.js` reads it). Set it to launch day at step 8b, then never change it.
+- **Puzzle number:** days since the epoch, by the local date. The epoch is `EPOCH` in `tools/compile_game.py`, written into `data/game/answers.json` with the answer order (`js/engine/daily.js` reads it). No mode has a daily now, so it's unused; if one comes back, set it to that day, then never change it.
 - **Decided — A new epoch (step 8a):** dailies are saved under their puzzle number, so when the epoch moves, testers' earlier games would mark new puzzles as played. A daily's own date says which epoch it was played under (its date less its number, plus one), so `settleDailies()` in `js/store.js` turns any daily that doesn't fit the epoch now into a keep-playing game, under `<epoch>#<number>` (`2026-11-01#7`). Its win, kanji and points still count; it stops being that number's daily and stops counting toward the streak. Its ledger entries follow it, and a daily on the go from another epoch is dropped. It runs when the game data loads and on every save received from another device, so a device not opened since launch can't bring old numbers into a merge. No save version bump: the shape is the same. The user picked this over archiving them where stats can't see them (2026-11-08).
-- **Launch day** is then one line: `EPOCH` in `tools/compile_game.py`, a recompile, and a deploy that day.
+- **Launch day**, if dailies come back, is one line: `EPOCH` in `tools/compile_game.py`, a recompile, and a deploy that day.
 - **Answer order:** a fixed (seeded) shuffle of the Keep words. Days already played, up to tomorrow, are locked; later days are shuffled again on each compile, so new Keep words mix in evenly. When the list runs out it starts again from the top.
-- **A year of dailies** needs 365 answers. The main list has 453 (step 4b).
+- **A year of dailies** needs 365 answers. The main list has 460 (453 in step 4b; the parts audit added 8, then 勝 left).
+- **Decided — No locked days without a daily (2026-11-10):** a list locks its days already played only when a mode plays it as a daily (`LISTS` `daily` in `tools/compile_game.py`). Main has none, so every answer meets the 4–6 part rule: 勝, an early daily, left once the parts audit gave it 3 parts.
 - **Practice:** a random Keep answer, skipping the last 30 played in that mode (`rules.js` `practice.avoidRecent`).
-- **Streak:** one streak across modes: days in a row with at least one daily won. A day not yet played doesn't break it. Streak rewards pay each time a run reaches their length.
-- **Stats:** wins, fastest win, clean wins, Hard wins and kanji collected count practice too. Streaks count dailies only. Kanji collected counts every kanji of a solved word.
+- **Decided — Streak (2026-11-09):** wins in a row, across modes, in the order the games were played (a day's keep-playing games by the finish time in their key, `daily.js` `keyTime()`; a daily counts as its day's first). A loss ends it; days between games don't. Streak rewards (`economy.js` `streakRewards`, at 3, 5, 10 and 25 wins) pay each time a run reaches their length, for any won game. It was days in a row with a daily won; the 7- and 30-day achievements are retired, and On a roll (5 in a row) and Unstoppable (10) took their place.
+- **Stats:** wins, fastest win, clean wins, Hard wins and kanji collected count every game. Kanji collected counts every kanji of a solved word.
 - **History entries** (`js/store.js`): `{ date, guesses, won, powers: [ids], answer, level }`, under the puzzle number for a daily, `p` + a timestamp for practice, or `<epoch>#<number>` for a daily from an earlier epoch. `guesses` holds words, or for parts guesses the tile ids per kanji, so `engine.guess()` can replay either.
 
 ## The palette (Decided, step 2)
 
-Each puzzle shows a subset of the 251 tiles instead of all of them, like Wordle's keyboard. The engine is `js/engine/palette.js`.
+Each puzzle shows a subset of the 263 tiles instead of all of them, like Wordle's keyboard. The engine is `js/engine/palette.js`.
 
 - **What's in it:** every part of the answer, the six single strokes (`rules.js` `palette.always`), and random decoys up to the mode's `palette` size in `modes.js` (40) times the level's `paletteScale` (0.7): 28 keys ("Levels").
 - **Guesses:** only kanji built entirely from the palette's tiles, typed ones included (`rules.js` `guessFromPalette`).
@@ -163,10 +166,10 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 - **Decided — Normal takes any parts:** they don't have to make a kanji.
 - **Decided — No free meaning:** only the Meaning hint shows it (`freeMeaning: false`).
 - **Decided — Layout hint:** useful at Normal and Hard; at Guided the board already shows the layout.
-- **Proposed — Look-alikes:** parts that are exactly the answer's, in the same order, win, even when a look-alike shares them (未 and 末); the compile step keeps the 4 look-alike answers out anyway.
+- **Proposed — Look-alikes:** parts that are exactly the answer's, in the same order, win, even when a look-alike shares them (未 and 末); the compile step keeps the 3 look-alike answers out anyway.
 - **Proposed — One daily for every level:** one daily, whatever the level, so puzzle numbers and streaks are shared. A game keeps the level it started at (in its start, `save.playing`), and its history entry records it. A game with no moves yet moves to a level picked since.
 - **Proposed — Sharing:** the share text names the level (`Kanjiru 漢 #7 Normal 3/6`), with one square per cell. The squares are split by kanji only where the board showed the split (Guided).
-- **Proposed — How to play:** the example rows show 時間's five cells: 口 日 寸 木 月 (日 yellow, 寸 green), then 日 土 寸 日 門, then 時間 solved.
+- **Proposed — How to play:** the example rows show 時間's five cells: 口 日 寸 木 月 (日 yellow, 寸 green), then 日 土 寸 日 門, then 時間 solved. Since 2026-11-10 they play as an animation (`js/howto.js`, "Screens and menus").
 - **Open — Tuning:** 28 keys, 6 rows, the Hard and Guided points, what each part pays. All catalogue edits; decide after a few days of play.
 - **Decided — No real-word check at Hard:** the parts must make real kanji, any split; the guess doesn't have to be a real word.
 - **Decided — Hints under the new rules (step 4b):** Reveal a part and Reveal a kanji show the parts they find in their cells (`engine.shownCells()`): faintly in each new row's empty cells since 2026-11-10 ("No filled-in rows", above), green on their keys and in the kanji guide. At Normal the player may put another part there; at Hard it must be there. Stroke count, Layout and Reveal a kanji give away where kanji split; they stay as paid hints, since that's what they're for. Meaning, Sweep and Extra guess need no change. Reveal a kanji is only offered when the answer has 2 or more kanji. (Head start and Reading are retired: "Hints, powers and points".)
@@ -177,11 +180,19 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 The user asked for a layout overhaul: the header holds only Points and Settings, the main page is the game, and points get a page of their own.
 
 - **Decided — The header:** the brand (it goes home), the points as a pill (it opens the Points page, `#points`) and the gear (Settings). Language and light/dark moved into Settings. On the Points page the brand becomes a breadcrumb, 漢 › Points: 漢 goes home, so the page needs no Back button of its own.
-- **Decided — The header in a game (2026-11-09):** the game's own head (Back, the title, a bulb) is gone; the site header stays, slimmer, and reads 漢 › Play with the kind and level under it (Daily #10 · Guided · Hard). 漢 goes home, as on the Points page. While the game is on, a hints pill (a bulb and the number of hints held) takes the points pill's place and opens the hints modal; the user picked that over showing both, which is tight on a 375 px phone. Once the game ends, the points pill comes back, rising with what the game paid.
+- **Decided — The header in a game (2026-11-09):** the game's own head (Back, the title, a bulb) is gone; the site header stays, slimmer, and reads 漢 › Play with the kind and level under it (Keep playing · Guided, or the level alone in a mode without dailies). 漢 goes home, as on the Points page. While the game is on, End game's flag and a hints pill (a bulb and the number of hints held) take the points pill's place; the pill opens the hints modal; the user picked that over showing both, which is tight on a 375 px phone. Once the game ends, the points pill comes back, rising with what the game paid.
+- **Decided — The play card without dailies (2026-11-09):** titled with the mode's name (Kanjiru), "Guess a word from its parts in 6 tries." (or how many guesses the game on the go has used), the switches under "Level for your next puzzle" while no guess is made, and Play (Continue for a game on the go).
 - **Decided — The play page is home:** a play card for the daily: the mode's numeral as a hanko seal (`layout.seal`, in the skin's action colour), Daily #N, a line for where it stands (ready, going, solved, lost), the Hard and Guided switches, and Play (Continue once a game is on). After the daily it offers Play again and See result, titles the switches "Level for your next puzzle", and counts down to the next one on the right of its line ("Next daily in" over the time). The user picked a card with the switches on it over starting a game straight away.
-- **Decided — How to play:** the play page's intro, above the play card and always open: the 時間 example with a legend of the three colours. (It was under the card and folded after the first game; the user asked for it on top.)
-- **Decided — The Points page (`js/points.js`):** the wallet, big, with how points are earned and three counts (hints held, daily streak, achievements earned). Then Looks: the current look on five tiles, colour swatches drawn in each skin's own colours on its own page colour, and the same cards for tile reveal and win effect, each with an example that plays, locked or not: the reveal on three tiles, the effect over a solved row. An example plays the first time it's on screen, and again when it's tapped, hovered or picked. A locked one opens its details under its row (price, or the achievement and how far along you are) with Buy; a bought look goes on at once. Then Hints & powers, one per row in one card (2026-11-09): its icon, name, how many you hold (×2) and Buy on the right, what it does under them, and a line for why it can't be bought or what was just bought. Then Achievements with progress. Buy opens a modal that names the price and what's left (the user asked for a modal over the confirm in place); for a hint it has Don't ask again ("Hints, powers and points").
-- **Decided — Settings:** Language (English / 日本語) and Appearance (Auto / Light / Dark; a one-scheme skin fixes it, with a note why), then Hints (Ask before buying, a switch: on by default, off once Don't ask again is ticked), then Add Kanjiru to your home screen (until it's installed, "Saving and devices"), then Move your progress, then Debug, then About, a button to the About page (step 8b).
+- **Decided — How to play, animated (2026-11-10):** the user asked for a simple, clean animation of how to play, prominent on the first visit and folded once one or more games are played. `js/howto.js` plays the 時間 example on a small board: three guesses typed part by part and revealed in the player's own tile reveal, a line under the board for each step, then 時間 appears and it starts again. It's a `<details>`: open for a player with no games in history, folded to its title after that. It plays only while open and on screen; under reduced motion it shows the three rows at once. The text above it says the same for screen readers. (Before: a still example, always open on top.)
+- **Proposed — Where it sits:** open, it's on top of the play card; folded, it moves under the card, so a returning player sees Play first.
+- **Decided — Every game played (2026-11-10):** the user asked for a full history under the play card. `js/history.js` lists every game, newest first: the answer with its reading and first meaning, how it ended (solved in n, not solved, gave up), the level, the day, and a square per cell per guess in the colours it scored. Totals head it (played, solved).
+- **Proposed — History details:** 20 games at a time, with Show more. The squares are scored again from the saved guesses (`scoreOrder()`), so a game whose guesses no longer fit the answer's parts (the parts data changed, or the retired Easy) lists without them.
+- **Decided — The Points page (`js/points.js`):** the wallet, big, with how points are earned and three counts (hints held, win streak, achievements earned). Then Looks: the current look on five tiles, colour swatches drawn in each skin's own colours on its own page colour, and the same cards for tile reveal and win effect, each with an example that plays, locked or not: the reveal on three tiles, the effect over a solved row. An example plays the first time it's on screen, and again when it's tapped, hovered or picked. A locked one opens its details under its row (price, or the achievement and how far along you are) with Buy; a bought look goes on at once. Then Hints & powers, one per row in one card (2026-11-09): its icon, name, how many you hold (×2) and Buy on the right, what it does under them, and a line for why it can't be bought or what was just bought. Then Achievements with progress. Buy opens a modal that names the price and what's left (the user asked for a modal over the confirm in place); for a hint it has Don't ask again ("Hints, powers and points").
+- **Decided — Settings:** Language (English / 日本語) and Appearance (Auto / Light / Dark; a one-scheme skin fixes it, with a note why), then Hints (Ask before buying, a switch: on by default, off once Don't ask again is ticked), then Add Kanjiru to your home screen (until it's installed, "Saving and devices"), then Move your progress, then Start over, then Debug, then About, a button to the About page (step 8b).
+- **Decided — Start over (2026-11-10):** the user asked to reset achievement progress, and to reset all data with three rounds of checks. Settings has both (`js/confirm.js` asks):
+  - **Reset achievements:** one ask. Every achievement goes back to unearned and only games played after the reset count toward them (`save.resets.achievements`, `stats(history, { since })`). Games, points, hints and looks bought stay.
+  - **Proposed — no second rewards:** an achievement's reward pays once ever, so a reset can't farm points; earned again, it shows without a reward. Looks an achievement unlocked lock again until it's earned again, and one in use goes back to the default.
+  - **Delete all data:** three asks. 1: what goes, with this save's counts (games, points, hints, achievements, looks). 2: "Are you sure?", with how to keep a copy (the save text). 3: type DELETE (削除 in Japanese; DELETE works in either) to turn on Delete everything. Then the save starts fresh, 150 pts and all; only the language and light or dark stay.
 - **Decided — Debug mode, on the live site too:** a switch in Settings (`settings.debug`). On, every key whose part is in the answer shows numbered dots, the answer's cells that part fills in writing order, so the dots spell the whole answer in order. It also adds an "Add 500 pts" button (`ECONOMY.debugPoints`), which writes a ledger entry of kind `debug`, so the points merge and count like any other. The user chose to show the switch everywhere rather than on test servers only.
 - **Decided — Controls (`js/dom.js`):** `switchRow()` is a checkbox with `role="switch"`, drawn as a sliding toggle (a `layout.switch` track, a 16 px knob inset 4 px); the whole row toggles it. `segmented()` is a row of buttons with `aria-pressed` for one of a few.
 - **Proposed — Two buttons in a row:** side by side when each fits on one line, otherwise stacked full width (the play card, the result card).
@@ -191,20 +202,24 @@ The user asked for a layout overhaul: the header holds only Points and Settings,
 
 ## The game screen (steps 3 and 4)
 
-- **Reveal:** each new row flips tile by tile (`settings.tiles`; Flip for now, step 6 adds the rest). Off under reduced motion.
+- **Reveal:** each new row reveals tile by tile in the player's tile reveal (`settings.tiles`, all eight built: "Skins"). Off under reduced motion.
+- **Decided — Crossed-off keys (2026-11-10):** the user asked for a subtle diagonal line across keys not in the answer, so they read as crossed off. A thin line runs corner to corner over grey keys (`.palette-tile.is-miss::after`).
+- **Decided — End a game at any time (2026-11-10):** the user asked to reset or end the current game at any time. A flag in the game's header (beside the hints pill since the hint overhaul) opens an ask (`js/confirm.js`) with two choices: **Give up** shows the answer and records a loss (it ends the win streak and pays the parts found, like any loss; `engine.giveUp()`, logged as `{ giveUp: true }` so it replays, and the history entry has `gaveUp: true`), and **New puzzle**, in a game that isn't a daily, drops this one without recording it (`session.skipPractice()`) and starts another, never the same answer. Hints used on a skipped game stay used.
+- **Proposed — No end from the play card:** Continue opens the game, where the flag is; the card has no end button of its own.
+- **Decided — Win effects play in the game (2026-11-10):** once a won game's last row has revealed, the player's win effect (`settings.effect`) plays over the board while the result card comes in (`js/play/effects.js`; none under reduced motion).
 - **Decided — Hints modal (2026-11-09, `js/play/hints.js`):** the hints pill in the header opens a modal in place of step 5's floating bar: every hint the answer allows, one per row, with what it does, how many you hold (×2) and Use, and why it can't be used now, if so. Use asks once more ("Use Stroke count? You have 2. 1 left after this."), then the modal closes and the hint plays. When you hold none and could use one now, Buy takes Use's place: its confirm names the price, unless Don't ask again was ticked (`settings.confirmHintBuy`), and Use comes back after, with the focus on it. Escape or Back from a confirm goes back to the list. Clues already found stay on show above the keyboard.
 - **Decided — A hint used plays (2026-11-09, `js/play/reveal.js`):** each effect has its own animation, timed by the transition tokens.
   - Hints that tell you something play on a card over the board, which goes by itself (3 s after it's done, `transition.message`) or on a tap or key; then their clue lights up above the keyboard. Stroke count draws each kanji's strokes as 正 tally marks (how Japanese counts), one kanji after another, with the number counting up and landing. Layout splits a square per kanji into its places (top over bottom, left beside right, an outer frame round an inset inner). Meaning writes the meaning in with a brush wipe, in the interface's language.
   - Hints that change the board play on it: Reveal a part drops the part into its cell, green, and flashes its key; Reveal a kanji drops its cells in one after another; Sweep crosses the keyboard, greying each key it clears as it passes; Extra guess grows the new row in.
   - Under reduced motion the card shows still and the board just changes.
 - **Saving:** the game on the go is saved as its start and log after every move (`save.playing`), so a reload carries on. A finished daily is recorded to history and can't be played again; its result shows until the next daily.
-- **Points:** paid once, when a game ends: what `engine.points()` gives, then the streak rewards a won daily reaches, a bonus hint (`engine.rollDrop()`) and any achievements (`js/play/rewards.js`, step 5). Each is a ledger entry ("Saving and devices").
+- **Points:** paid once, when a game ends: what `engine.points()` gives, then the streak rewards a win reaches, a bonus hint (`engine.rollDrop()`) and any achievements (`js/play/rewards.js`, step 5). Each is a ledger entry ("Saving and devices").
 - **Rewards on show:** the result card lists each reward and the new balance; each also shows as a toast (`transition.toast` in `tokens.js`), over sheets too. The points in the header rise with a small "+N pts" when you're back on the play page, and fall with "−N" when you buy. Under reduced motion they show without moving.
-- **Result card:** the answer with its meanings (in Japanese the hand-written meaning, with the English under it), readings and parts, a line naming their source (JMdict and KANJIDIC, EDRDG, which asks for credit where its entries show) with a link to Credits, points, streak, the balance with a link to the Points page ("Spend them"), share text and a countdown to the next daily, with Play again (after the daily) or Next puzzle (after another one). A game from another device (merged in) shows without points, since only its guesses are known.
+- **Result card:** the answer with its meanings (in Japanese the hand-written meaning, with the English under it), readings and parts, a line naming their source (JMdict and KANJIDIC, EDRDG, which asks for credit where its entries show) with a link to Credits, points, win streak, the balance with a link to the Points page ("Spend them"), share text and, in a mode with dailies, a countdown to the next one, with Play again (after the daily) or Next puzzle (after another one). A game from another device (merged in) shows without points, since only its guesses are known.
 - **Readings:** kun readings show their okurigana muted (か + つ). KANJIDIC sometimes lists a reading both with and without it (か.つ and かつ for 勝; 47 kanji), so the one that marks the okurigana is kept (`uniqueKun()` in `js/play/hints.js`).
 - **Share text:** the mode's numeral, the daily number, the level, the score (X when lost) and one square per part per guess (`rules.js` `share`). 💡 marks a game that used a power.
 - **Decided — Sharing is hidden for now (2026-11-08):** the user asked to hide it. The result card leaves out the share text and its button while `rules.js` `share.show` is false; the text and its tests stay, so turning it back on is that one line.
-- **Modes:** `listed` in `js/config/modes.js` gives a mode a play card and `playable` says the screen supports it; a mode with no answers shows "soon". The card offers the daily first, then Keep playing once it's done.
+- **Modes:** `listed` in `js/config/modes.js` gives a mode a play card and `playable` says the screen supports it; a mode with no answers shows "soon". The card offers the daily first, then Keep playing once it's done; a mode without one (`daily: false`) offers Play, a random puzzle.
 
 ## Accessibility (step 8b)
 
@@ -226,19 +241,32 @@ The user asked for a layout overhaul: the header holds only Points and Settings,
 - **Decided — Honest sharing:** the share text marks a game that used a power with 💡 (step 3).
 - **Decided — Buying (step 5, moved 2026-11-08):** the Points page sells hints and locked looks ("Screens and menus"); step 5's shop sheet is gone, and `js/shop.js` keeps only the rules (`powerOffer()`, `skinOffer()`, `buyPower()`, `buySkin()`). The hints modal in a game sells one too. Every purchase takes two taps, Buy then a confirm with the price and what's left: a modal on the Points page, a step of the hints modal in a game. Prices and hold limits come from `powers.js` and `skins.js`.
 - **Decided — Don't ask again (2026-11-09):** a hint's confirm, on the Points page and in a game, has Don't ask again; ticked, hints are bought in one tap from then on (`settings.confirmHintBuy` false). Settings, Hints, turns the confirm back on. Looks always ask: they cost more and are bought once.
-- **Decided — Achievements (step 5):** checked after every game and when the page opens, each paid once with its reward (points, a hint, or the look it unlocks), shown as a toast and listed on the Points page with progress. A hint reward may take you past the hold limit. Full set (every daily mode in a day) meant only a daily won with one mode, so it's retired (`retired: true`: never earned again, saves keep it) and **Hard win** (solve with Hard on, 200 pts) takes its place.
-- **Decided — Meanings in Japanese (2026-11-09):** the dictionaries are English only, so the user had Claude write a short Japanese meaning for each of the 453 daily answers (`data/meanings-ja.json`). The Meaning hint shows it in Japanese, the English gloss in English, and the English where a word has none yet. A meaning never holds a kanji of its own answer (時間 has no 時 or 間): `tools/compile_game.py` leaves out any that does and names it, and its tests check the file. Nor does it spell the answer's reading in kana (checked when they were written). The compile writes them into `data/game/answers.json` (`meanings.ja`); the source file isn't deployed. A few are weak where every useful word shares a kanji with the answer (the weekdays, 一時, 漢字); review them like the words.
+- **Decided — Achievements (step 5):** checked after every game and when the page opens (counting only games since their last reset, "Screens and menus", Start over), each paid once with its reward (points, a hint, or the look it unlocks), shown as a toast and listed on the Points page with progress. A hint reward may take you past the hold limit. Full set (every daily mode in a day) meant only a daily won with one mode, so it's retired (`retired: true`: never earned again, saves keep it) and **Hard win** (solve with Hard on, 200 pts) takes its place.
+- **Decided — Meanings in Japanese (2026-11-09):** the dictionaries are English only, so the user had Claude write a short Japanese meaning for every answer (453, then 13 more after the parts audit: 460) (`data/meanings-ja.json`). The Meaning hint shows it in Japanese, the English gloss in English, and the English where a word has none yet. A meaning never holds a kanji of its own answer (時間 has no 時 or 間): `tools/compile_game.py` leaves out any that does and names it, and its tests check the file. Nor does it spell the answer's reading in kana (checked when they were written). The compile writes them into `data/game/answers.json` (`meanings.ja`); the source file isn't deployed. A few are weak where every useful word shares a kanji with the answer (the weekdays, 一時, 漢字); review them like the words.
 
 ## Skins
 
 - **Decided — Tiers:** basic skins first (light, dark and a few colours), then elegant ones with animations and effects.
 - **Decided — Slots:** colours (`theme`), tile reveal (`tiles`) and win effect (`effect`), mixed freely. The catalogue is `js/config/skins.js`; the colours live in `tokens.js` `THEMES`.
+- **Decided — Eight of each (2026-11-10):** the user asked for 8 colours, 8 tile reveals and 8 win effects. All 24 are built and play in the game; nothing is `soon` now.
+- **Proposed — The new ones and their unlocks:**
+
+  | Slot | Free | Points | Achievement |
+  |---|---|---|---|
+  | Colours | Classic, Ai 藍, Matcha 抹茶, Sakura 桜, Fuji 藤 | Sumi 墨 500, Urushi 漆 800 | Kinpaku 金箔 (Unstoppable) |
+  | Tile reveal | Flip, Fade, Turn | Drop 200, Brush wipe 300, Ink bleed 400 | Shoji 障子 (Hard win), Hanko stamp (On a roll) |
+  | Win effect | None, Brush draw, Wave | Confetti 300, Petal fall 600 | Gold shine (Collector), Seal 印 (Unaided), Hanabi 花火 (Sharp eye) |
+
+  - Fuji (wisteria) and Sumi (ink greys) are `accentTheme()` skins with light and dark; both pass WCAG AA like the rest.
+  - Reveals: Fade (the colour comes up), Turn (a sideways flip), Drop (falls into its cell), Brush wipe (painted across from the left), Shoji (two paper panels slide apart). One set of rules in `styles.css` ("Tile reveal", keyed by `[data-tiles]`) plays them on the board, the Points page's preview and examples, and How to play. `js/play/screen.js` reads the reveal's `--reveal-time` to know when a row is done.
+  - Effects: Wave (the solved row's tiles hop), Confetti (paper bits in the game's colours), Gold shine (light sweeps the solved row), Seal (the game's 漢 hanko stamped on the board). `js/play/effects.js` builds each one's pieces for the board and for its example, so the examples stay true to the game.
+- **Before (to 2026-11-09):**
 - **Free:** Classic, Ai 藍, Matcha 抹茶 and Sakura 桜, each light and dark; Flip tiles; None or Brush draw effect.
 - **Locked:**
-  - Urushi 漆 (800 pts, dark only) and Kinpaku 金箔 (30-day streak)
-  - Ink bleed tiles (400 pts) and Hanko stamp tiles (7-day streak)
+  - Urushi 漆 (800 pts, dark only) and Kinpaku 金箔 (Unstoppable: 10 wins in a row; it was a 30-day streak)
+  - Ink bleed tiles (400 pts) and Hanko stamp tiles (On a roll: 5 wins in a row; it was a 7-day streak)
   - Petal fall (600 pts) and Hanabi 花火 (solve in 2 guesses)
-- **Coming soon:** Ink bleed, Hanko, Petal fall and Hanabi aren't built yet (step 6), so they're marked `soon` in `skins.js`: the Points page doesn't sell them, and an achievement that unlocks one still does, ready for when it's built. Their examples on the Points page (and Brush draw's) are sketches in `styles.css` (`tile-ink`, `tile-stamp`, `brush-draw`, `petal-fall`, `spark-out`); step 6 builds the real effects from them and keeps the examples true to them.
+- **Coming soon (replaced 2026-11-10):** Ink bleed, Hanko, Petal fall and Hanabi were marked `soon` until they were built. The field stays in `skins.js` for a look that isn't built yet.
 - **Decided — Brand colour:** vermilion 朱 (#B8331F on buttons).
 
 ## Saving and devices
@@ -261,6 +289,7 @@ The user asked for a layout overhaul: the header holds only Points and Settings,
 | Points and hints held (`ledger`) | Both sets of entries kept, joined by id, so each game, reward and purchase counts once and points add up exactly. A device's starting points join only when neither has progress |
 | Looks, language and level (`settings`) | This device's stay |
 | Games on the go (`playing`) | This device's stay; a daily the other device finished is in history, which wins |
+| Resets (`resets`, 2026-11-10) | The later reset wins, and achievements dated before it go (`dropReset()`) |
 
 - **Rule:** a new top-level key in the save needs a merge rule; `validate()` warns when one is missing.
 - **Decided — Ledger (step 5):** points and hints held are a ledger (`js/ledger.js`, save v2): every gain and spend is an entry with its own random id (`why`: start, game, streak, drop, achievement, buy, use, debug for points added in debug mode, or v1 for what a v1 save held), and the balance is their sum, never below 0. Merging joins the entries, so it's exact and safe to repeat. A v1 save's wallet and hints become one `v1` entry; two devices that each had one keep the higher, as v1 merges did.
@@ -294,23 +323,38 @@ The user asked for a layout overhaul: the header holds only Points and Settings,
 
 Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in stroke order, each with its position in the whole kanji. The palette is `data/parts.json`. The rules are in `tools/README.md` ("Parts").
 
-- **Decided — Palette:** 251 tiles.
+- **Decided — Palette (step 1):** 251 tiles, 263 since the parts audit (Proposed, below).
   - The radicals that jōyō kanji use, plus shapes that recur but aren't radicals (业, 免, 兼), and a few kanji that would otherwise fall apart into single strokes (五, 不, 半, 北).
   - ナ and マ stand for the katakana-like shapes in 右, 左 and 予.
   - The six single strokes 一 丨 丶 丿 乙 亅 cover what's left over.
-- **Decided — Variants are the same part:** 氵 and 氺 count as 水, 亻 as 人, 扌 as 手, 忄 as 心, 刂 as 刀, 灬 as 火, 犭 as 犬, 礻 as 示, 衤 as 衣, 飠 as 食, 爫 as 爪, 耂 as 老, 覀 as 西, ⺧ as 牛, ⺷ as 羊.
+- **Decided — Variants are the same part:** 氵 and 氺 count as 水, 亻 as 人, 扌 as 手, 忄 as 心, 刂 as 刀, 灬 as 火, 犭 as 犬, 礻 as 示, 衤 as 衣, 飠 as 食, 爫 as 爪, 耂 as 老, 覀 as 西, ⺧ as 牛, ⺷ as 羊. The parts audit added 𠆢 (人), 丷 (八), 牜 (牛), ⻊ (足), ⺮ (竹), 龵 (手), 巳 (己), 㔾 (卩) and 夾 (夹).
   - **Why:** players learn them as one idea, a guess of 水 for 海 should score, and the palette stays small.
   - Each part keeps the glyph it appears as (`form`), so a revealed part can show 氵.
   - 月 and 肉 are different tiles: players see the shape 月 in 腸, not where it came from.
+- **Proposed — Parts audit (2026-11-10):** native Japanese players said some radicals were wrong ("人 used for another, similar-looking one") and some splits made no sense. `docs/PARTS-AUDIT.md` has the whole audit: every tile's Kangxi radical, all 273 kanji it changed (160 in their tiles or positions, 113 only in the glyph shown), and what was left alone.
+  - **What players see:** KanjiVG names parts by where they come from; the audit shows the shape a reader sees, as a form of the same tile (so it scores the same, like 氵). 𠆢 for 人 as a roof (会 今 命 合, 39 kanji), 丷 for 八 drawn inward (前 説 並, 39), 牜 and ⺧ for 牛 on the left and on top (物 特, 告 造), ⻊ for 足 on the left (路), ⺮ for 竹 on top (答 第), ⺷ for 羊 whose vertical stops (美 義 差), 龵 for 手 on top (看), 巳 for 己 closed at the top (包 港 選), 㔾 for 卩 with a curled foot (危 範 犯).
+  - **Wrong tiles:** a part drawn as another tile is that tile now. 渇 喝 掲 謁 褐 have 匕 (was 人), 領 齢 have マ like 冷 (was 卩), 確 鶴 have 冖 (was 宀), 開 研 形 have 一 + 廾 (was 干 + 干), 望 gets back its 月, 午 and 許 have 十 (was 干).
+  - **12 new tiles, 263 in all:** shapes that recur and whose split was wrong or a stroke salad. 且 (組 助 祖 査; was 月 + 一), 冊 (論 輪 編; was 冂 + 廾), 夹 with 夾 (狭 峡 挟 頰; was 大 人 人 大), 及 (吸 級 扱; was 丿 + 又), 巴 (色 絶 肥; was 己), 今 (念 含 陰), 由 (油 宙 笛), 申 (神 伸 紳), 三 (春 奏 泰 寿 実: 三 + 人, the reading players learn), 以 (似), 𠂢 (派 脈) and 乑 (衆). No tile was removed or renamed, since saved guesses store tile ids.
+  - **Rules, not hand fixes, where a shape recurs:** `DRAWN_AS`, `ROOF_WIDTH`, `CLOSED_SELF_IN` and `COMPONENT_SPLITS` in `tools/build_data.py`, a check for misnamed KanjiVG groups (望), and stroke patterns found inside longer runs (喜's 丷). `tools/README.md` ("Parts") has the rules.
+  - **Hand fixes:** 25 (was 20). The rules now cover 7 (三 重 動 種 犯 平 実); 12 are new: 内 両 画 在 存 (positions), 乗 (禾 with 廿 across it), 謄 塞 僅 謹 (as 騰 寒 勤), 衆 and 脊.
+  - **Effect on the answers:** the main list went from 453 to 460. 13 words came in because their kanji lost a loose stroke (今度 今後 記念 神社 精神 神経 働 南 喜 戦 演 館 顔). 6 left because they now have 3 parts: 助手 祖母 祖父 春 残, and 勝 (an early daily, no longer locked, "Dailies and stats").
+  - **Decided — the user's calls (2026-11-10):** the 12 new tiles stay, the single-use ones too (以 for 以 似, 𠂢 for 派 脈, 乑 for 衆): no answer uses them, and they keep those kanji from splitting into strokes when guessed. 今 and 以 stay tiles. The look-alike tiles stay apart (below).
+  - **Decided — Look-alike tiles stay apart for now (2026-11-10):** 关 and 𠔉, and 小 ⺌ ⺍, stay five tiles. They could be merged later; the case, by how each is written (KanjiVG r20260714):
+    - **关 (送 関 咲) and 𠔉 (券 巻 拳): could be one tile.** Both are written with the same six strokes in the same order (㇔ ㇒ ㇐ ㇐ ㇒ ㇏); only whether the falling stroke pokes above the top line differs, which players won't tell apart on a key. Merged, 关 would be a form of the tile.
+    - **⺌ (光 当 常): could be a form of 小.** It's written like 小: the middle stroke first, then left, then right.
+    - **⺍ (学 単 栄): best kept apart, even if the others merge.** Unicode files it with 小 too (CJK RADICAL SMALL TWO), but it's written left to right like ツ, and a reader doesn't see 小 in it.
+    - Merging changes how those parts score (a guess with 小 would count for 光's top) and drops tile ids from saves, which the user said is fine.
+  - **Why Proposed:** the user asked for the audit and for the display forms. The new tiles and each split are Claude's calls; `docs/PARTS-AUDIT.md` ("For the user to decide") lists the ones worth a second look.
 - **Decided — Depth: building blocks.** A kanji splits into the biggest pieces that are tiles, like jisho's radical search. 語 = 言 + 五 + 口, not 言 + 吾 (吾 isn't a tile).
 - **Decided — Positions:** left, right, top, bottom, outer, inner, whole or none. The kanji's first split decides, so 語's 五 and 口 are both right.
   - Enclosures are outer and what they hold is inner (国 = 囗 outer + 玉 inner).
   - none is for parts that cross (中 = 口 + 丨).
-- **Decided — Fonts:** 11 palette glyphs are drawn from KanjiVG's strokes instead of text.
-  - Not in Noto Sans/Serif JP: 龶 㐄 业 𢆉.
-  - Not in JIS X 0213, so a phone's own fonts may lack them: 𠂊 ⺌ ⺍ ⺗ ⺧ ⺷ 卌.
-  - `review/parts.html` tests the device's own fonts. On Windows, all draw.
-- **Hand fixes:** 20 kanji in `data/parts-overrides.json`: 万 三 円 年 実 寒 声 勤 無 舞 (step 1) and 重 動 種 産 着 表 平 号 母 犯 (step 4b).
+- **Decided — Fonts (2026-11-10):** only the 5 glyphs Noto Sans/Serif JP lack are drawn from KanjiVG's strokes: 龵 龶 㐄 业 𢆉. Everything else shows as text in Noto, which the game loads from Google Fonts on every device (`DRAW_NON_JIS` in `tools/build_data.py`).
+  - **Why:** the user checked the drawings on their phones and found the font looks much better. The game never relies on a phone's own fonts for these, so being outside JIS X 0213 doesn't matter.
+  - **Before:** 18 were drawn: those 5, and 13 outside JIS X 0213 in case a phone's fonts lacked them (𠂊 ⺌ ⺍ ⺗ ⺧ ⺷ 卌 丷 㔾 牜 ⻊ ⺮ 夹). Tested in Chromium, Noto draws all 13.
+  - **Risk:** on a phone whose own fonts lack one of those 13, it shows as a box until Noto loads (the service worker keeps the font files for offline play).
+  - `review/parts.html` tests the device's own fonts.
+- **Hand fixes:** 25 kanji in `data/parts-overrides.json`: 万 円 年 寒 声 勤 無 舞 (step 1), 産 着 表 号 母 (step 4b) and 内 両 画 在 存 乗 謄 塞 僅 謹 衆 脊 (parts audit). 三 実 重 動 種 平 犯 left: the audit's rules give them now.
 
 ### How the known problems were fixed
 
@@ -326,8 +370,8 @@ Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in strok
 
 ### Still open
 
-- **Look-alikes:** settled in step 2: 未 末 押 招 leave the one-kanji answers ("Scoring", "Winning").
-- **Clumsy breakdowns:** 150 one-kanji candidates still have single-stroke parts, and a few have several (乗, 呼, 段, 喜, 候). Words with a loose stroke stay out of the daily ("The puzzle"). Flag them on the parts check page, then fix them in `data/parts-overrides.json`.
+- **Look-alikes:** settled in step 2: 未 末 招 leave the one-kanji answers ("Scoring", "Winning").
+- **Clumsy breakdowns:** 129 N3-or-easier kanji still have single-stroke parts (150 before the audit). Most read naturally (主 = 丶 + 王, 千 = 丿 + 十, 失 = 丿 + 夫); a few are shapes with no name a reader would use (段's left, 候's middle, 旅's lower right). Words with a loose stroke stay out of the main list ("The puzzle"). Flag them on the parts check page, then fix them in `data/parts-overrides.json`. `docs/PARTS-AUDIT.md` lists what was left alone and why.
 - **Phones:** check `review/parts.html` on iOS and Android to confirm which glyphs need the drawings.
 
 ## Hosting

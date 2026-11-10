@@ -119,6 +119,17 @@ class Answers(unittest.TestCase):
         later, _ = compile_(review("明", "海", "時", "間"), previous=first)
         self.assertEqual(sorted(later["answers"]["1"]), ["明", "時", "海", "間"])
 
+    def test_a_list_without_a_daily_locks_nothing(self):
+        lists = {"1": {**TEST_LISTS["1"], "daily": False}}
+        first, _ = compile_(review("明", "海", "時"), lists=lists)
+        later, report = compile_(review("明", "海", "間", cut=["時"]), previous=first,
+                                 today=datetime.date(2026, 11, 2), lists=lists)
+        self.assertEqual(report["lists"]["1"]["locked"], 0)
+        self.assertEqual(sorted(later["answers"]["1"]), ["明", "海", "間"], "時 leaves at once")
+
+    def test_main_has_no_daily(self):
+        self.assertIs(cg.LISTS["main"]["daily"], False)
+
     def test_a_new_epoch_unlocks_everything(self):
         first, _ = compile_(review("明", "海", "時"))
         later, report = compile_(review("明", "海", "時"), previous=first,

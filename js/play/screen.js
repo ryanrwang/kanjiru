@@ -64,6 +64,8 @@ import { renderResult } from './result.js';
 import { describe } from './rewards.js';
 import { powerOffer, buyPower } from '../shop.js';
 import { toast } from '../toast.js';
+import { ask, closeAsk } from '../confirm.js';
+import { celebrate } from './effects.js';
 
 const DELETE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H9l-7 7 7 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M17 9l-6 6M11 9l6 6"/></svg>';
 
@@ -75,8 +77,9 @@ const rank = (mark) => MARKS.indexOf(mark);
 // asking head()), onReload() (a new day: open the route again).
 export function openGame(root, ctx) {
   const { data, engine, glyph, mode, kind } = ctx;
-  const open = () => (kind === 'practice'
-    ? session.openPractice(engine, data, mode)
+  // options.skip: an answer a new practice game mustn't be (New puzzle).
+  const open = (options = {}) => (kind === 'practice'
+    ? session.openPractice(engine, data, mode, options)
     : session.openDaily(engine, data, mode));
 
   let game = open();
@@ -85,6 +88,7 @@ export function openGame(root, ctx) {
   let resultTimer = null;
   let frameTimer = null;
   let frameShown = null;   // keys the frame last showed, so new ones animate
+  let stopFx = () => {};   // ends the win effect playing over the board
   let doneRows = 0;
   let byKeyboard = false;  // the last move came from the keyboard
 
@@ -203,13 +207,53 @@ export function openGame(root, ctx) {
   function head() {
     const s = state();
     return {
-      sub: t('game.kindLevel', {
+      // The daily's number, or Keep playing after it; in a mode without
+      // dailies, just the level.
+      sub: s.daily || mode.daily ? t('game.kindLevel', {
         kind: s.daily ? t('game.daily', { n: s.puzzle }) : t('game.practice'),
         level: t(`level.${s.level}.name`)
-      }),
+      }) : t(`level.${s.level}.name`),
       playing: playing() && partsMode(),
       held: hintsFor(s).reduce((n, p) => n + (store.held()[p.id] || 0), 0)
     };
+  }
+
+  // Ends the game early, at any time (the flag in the site header, app.js):
+  // give up (a loss, the answer shows) or, in a game that isn't a daily, a
+  // new puzzle (this one isn't recorded).
+  async function endGame() {
+    if (!playing()) return;
+    const pick = await ask({
+      icon: '🏳️',
+      title: t('game.end.title'),
+      body: t('game.end.body', { n: state().guesses.length, rows: state().rows }),
+      options: [
+        { id: 'give-up', name: t('game.end.giveUp'), desc: t('game.end.giveUpDesc'), danger: true },
+        state().daily ? null : { id: 'new', name: t('game.end.new'), desc: t('game.end.newDesc') }
+      ].filter(Boolean)
+    });
+    if (!pick || !playing()) return;
+    if (card) card.dismiss();
+    if (pick === 'new') {
+      const skipped = state().answer;
+      session.skipPractice(mode);
+      playAgain({ skip: skipped });
+      say('info', t('game.end.skipped'));
+      return;
+    }
+    const r = engine.giveUp(state());
+    if (r.error) return;
+    game = { ...game, state: r.state };
+    finish();
+    live.textContent = t('game.end.gaveUp');
+    byKeyboard = false;
+    renderHead();
+    renderBoard();
+    renderHints();
+    renderPicker();
+    renderResultCard();
+    const title = result.querySelector('#result-title');
+    if (title) { title.setAttribute('tabindex', '-1'); title.focus(); }
   }
   const renderHead = () => ctx.onWallet();
 
@@ -1035,18 +1079,33 @@ export function openGame(root, ctx) {
     renderHead();
     const shown = boardDone.lastElementChild;
     if (shown) shown.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
-    // The result waits for the last row's reveal.
+    // The result, and on a win its effect, wait for the last row's reveal.
     if (!playing()) {
       const wait = reducedMotion() ? 0 : revealTime(r.state.guesses[row]);
-      resultTimer = setTimeout(renderResultCard, wait);
+      resultTimer = setTimeout(() => {
+        if (state().status === 'won') playWin();
+        renderResultCard();
+      }, wait);
     }
   }
 
+  // The win effect in use (settings.effect) over the board (js/play/effects.js).
+  function playWin() {
+    stopFx();
+    stopFx = celebrate(store.get().settings.effect, {
+      board, row: boardDone.lastElementChild, answer: state().answer, numeral: mode.numeral
+    });
+  }
+
+  // How long a row takes to reveal: one tile's time in the reveal in use
+  // (styles.css --reveal-time on the board's [data-tiles]), then a step
+  // more for each tile after the first.
   function revealTime(g) {
     const ms = (v) => parseFloat(v) || 0;
     const tr = window.TOKENS.active().transition;
+    const one = ms(getComputedStyle(board).getPropertyValue('--reveal-time')) || ms(tr.reveal);
     const tiles = g.slots.reduce((n, slot) => n + slot.tiles.length, 0);
-    return ms(tr.reveal) + ms(tr.base) * Math.max(0, tiles - 1);
+    return one + ms(tr.base) * Math.max(0, tiles - 1);
   }
 
   function finish() {
@@ -1101,8 +1160,8 @@ export function openGame(root, ctx) {
     }, 1000);
   }
 
-  function playAgain() {
-    game = open();
+  function playAgain(options = {}) {
+    game = open(options);
     if (!game) { ctx.onHome(); return; }
     ui = freshUi();
     build();
@@ -1112,6 +1171,7 @@ export function openGame(root, ctx) {
   // ── Whole screen ───────────────────────────────────────────────────
 
   function build() {
+    stopFx();
     clearTimeout(resultTimer);
     clearTimeout(frameTimer);
     ui.frameFrom = null;
@@ -1154,8 +1214,9 @@ export function openGame(root, ctx) {
     refresh() { ui.message = null; build(); },
     head,
     openHints: pickHints,
+    endGame,
     destroy() {
-      clearInterval(timer); clearTimeout(resultTimer); clearTimeout(frameTimer); closeHints();
+      clearInterval(timer); clearTimeout(resultTimer); clearTimeout(frameTimer); closeHints(); closeAsk(); stopFx();
       if (card) card.dismiss();
       cancelAnimationFrame(resizeFrame);
       window.removeEventListener('resize', onResize);
