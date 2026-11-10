@@ -10,6 +10,8 @@
  *     Receive    enter a code from the other device
  *     Save text  the whole save as text to copy, or paste one in: a backup
  *                that needs no server
+ *   Start over  reset achievements (one ask), or delete everything (three
+ *               asks, the last one typed): js/confirm.js
  *   Debug       for testing: the answer on the game's keys (js/play/screen.js)
  *               and points to add, as their own ledger entries ('debug')
  *   About       a link to the About page and its credits (js/about.js)
@@ -26,11 +28,14 @@
  * redraw.
  */
 import { t, has, lang, LANGUAGES } from './i18n.js';
-import { ECONOMY } from './registry.js';
+import { ECONOMY, SKINS, ACHIEVEMENTS } from './registry.js';
 import { el, switchRow, segmented } from './dom.js';
 import * as store from './store.js';
 import { sendSave, receiveSave, normalizeCode } from './transfer.js';
 import { installed, platform, canPrompt, promptInstall, onInstallChange, installSteps } from './install.js';
+import { isUnlocked } from './shop.js';
+import { ask as confirm } from './confirm.js';
+import { games } from './engine/stats.js';
 
 const ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
@@ -94,6 +99,7 @@ function render() {
       renderSend(),
       renderReceive(),
       renderText()),
+    renderReset(),
     renderDebug(),
     renderAbout()
   ));
@@ -176,6 +182,80 @@ function renderAbout() {
       class: 'btn btn-secondary btn-small', href: '#about', 'data-id': 'about',
       onclick: () => dialog.close()
     }, t('about.open')));
+}
+
+// ── Starting over ────────────────────────────────────────────────────
+
+function renderReset() {
+  const row = (id, onclick) => el('div', { class: 'sheet-sub', role: 'group', 'aria-labelledby': `reset-${id}-title` },
+    el('h4', { class: 'sheet-sub-title', id: `reset-${id}-title` }, t(`reset.${id}.name`)),
+    el('p', { class: 'sheet-note' }, t(`reset.${id}.note`)),
+    el('div', { class: 'btn-row' },
+      el('button', { class: `btn ${id === 'all' ? 'btn-danger' : 'btn-secondary'}`, type: 'button', 'data-id': `reset-${id}`, onclick },
+        t(`reset.${id}.button`))));
+  return el('section', { class: 'sheet-section', 'aria-labelledby': 'reset-title' },
+    el('h3', { class: 'sheet-section-title', id: 'reset-title' }, t('reset.title')),
+    row('achievements', resetAchievements),
+    row('all', resetAll),
+    renderStatus('reset'));
+}
+
+// The slots whose look in use is locked in a save (after a reset).
+const lockedLooks = (save) => Object.keys(SKINS).filter((slot) => {
+  const item = SKINS[slot].find((x) => x.id === save.settings[slot]);
+  return item && !isUnlocked(slot, item, save);
+});
+
+async function resetAchievements() {
+  const pick = await confirm({
+    icon: ECONOMY.rewardIcons.achievement,
+    title: t('reset.achievements.title'),
+    body: [t('reset.achievements.body'), t('reset.achievements.keep')],
+    options: [{ id: 'reset', name: t('reset.achievements.confirm'), desc: t('reset.achievements.confirmDesc'), danger: true }]
+  });
+  if (pick !== 'reset') return;
+  store.resetAchievements(lockedLooks);
+  ui.status.reset = { kind: 'ok', text: t('reset.achievements.done') };
+  changed();
+}
+
+// Three asks: what goes, are you sure, then type the word.
+async function resetAll() {
+  const save = store.get();
+  const shown = ACHIEVEMENTS.filter((a) => !a.retired || save.achievements[a.id]);
+  const counts = {
+    games: games(save.history).length,
+    points: store.points(save),
+    hints: Object.values(store.held(save)).reduce((a, n) => a + n, 0),
+    achievements: shown.filter((a) => save.achievements[a.id]).length
+  };
+  const of = 3;
+  const one = await confirm({
+    step: { n: 1, of }, icon: '⚠️',
+    title: t('reset.all.title1'),
+    body: [t('reset.all.body1'), t('reset.all.counts', counts), t('reset.all.stays')],
+    options: [{ id: 'next', name: t('reset.all.next'), desc: t('reset.all.nextDesc') }]
+  });
+  if (one !== 'next') return;
+  const two = await confirm({
+    step: { n: 2, of }, icon: '⚠️',
+    title: t('reset.all.title2'),
+    body: [t('reset.all.body2'), t('reset.all.backup')],
+    options: [{ id: 'sure', name: t('reset.all.sure'), danger: true }]
+  });
+  if (two !== 'sure') return;
+  const word = t('reset.all.word');
+  const three = await confirm({
+    step: { n: 3, of }, icon: '⚠️',
+    title: t('reset.all.title3', { word }),
+    typed: { word, also: ['DELETE'], label: t('reset.all.typeLabel'), hint: t('reset.all.typeHint', { word }) },
+    options: [{ id: 'delete', name: t('reset.all.delete'), danger: true }]
+  });
+  if (three !== 'delete') return;
+  store.resetAll();
+  ui.send = { busy: false, code: null, expiresAt: 0 };
+  ui.status.reset = { kind: 'ok', text: t('reset.all.done') };
+  changed();
 }
 
 // ── Debug ────────────────────────────────────────────────────────────

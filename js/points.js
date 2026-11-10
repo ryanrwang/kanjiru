@@ -16,15 +16,16 @@
  * playing over a solved row. A reveal or effect plays when it first comes
  * into view, when it's tapped or hovered, and when it's picked.
  */
-import { POWERS, SLOTS, SKINS, ECONOMY, ACHIEVEMENTS, ACHIEVEMENT } from './registry.js';
+import { POWERS, SLOTS, SKINS, ECONOMY, ACHIEVEMENTS, ACHIEVEMENT, MODES } from './registry.js';
 import { t } from './i18n.js';
 import { el } from './dom.js';
 import * as store from './store.js';
 import { isUnlocked, powerOffer, skinOffer, buyPower, buySkin } from './shop.js';
 import { stats, progress } from './engine/stats.js';
 import { localDate } from './engine/daily.js';
-import { amounts, skinsFor } from './play/rewards.js';
+import { amounts, skinsFor, achievementStats } from './play/rewards.js';
 import { bump } from './toast.js';
+import { example as effectExample } from './play/effects.js';
 
 const pts = (n) => t('currency.amount', { n });
 const sep = () => t('reward.sep');
@@ -35,12 +36,8 @@ const PREVIEW = [['口', 'miss'], ['日', 'near'], ['寸', 'hit'], ['門', 'near
 const SWATCH = [['日', 'hit'], ['土', 'near'], ['寸', 'miss']];
 const SOLVED = [['日', 'hit'], ['土', 'hit'], ['寸', 'hit']];
 const DRAWN = '時';   // the answer Brush draw writes out
-
-// Where each win effect's pieces start: petals across the top (x, and y for
-// the still picture under reduced motion), sparks in two bursts (x, y).
-const PETALS = [[8, 20], [26, 60], [44, 30], [62, 70], [80, 40], [92, 10]];
-const BURSTS = [[30, 45], [70, 35]];
-const SPARKS = 8;
+// The seal stamped by the Seal effect: the game's own (modes.js numeral).
+const SEAL = (MODES.find((m) => m.listed) || MODES[0]).numeral;
 
 const hoverable = () => window.matchMedia && window.matchMedia('(hover: hover)').matches;
 
@@ -120,7 +117,9 @@ export function openPoints(root, ctx) {
   function render(focusKey = null) {
     const save = store.get();
     const values = stats(save.history, { today: localDate() });
-    page.replaceChildren(wallet(save, values), looks(save, values), powers(save), achievements(save, values));
+    // Achievements count the games since their last reset (Settings).
+    const earning = achievementStats(save);
+    page.replaceChildren(wallet(save, values), looks(save, earning), powers(save), achievements(save, earning));
     ui.playing = null;
     if (watcher) {
       watcher.disconnect();
@@ -221,24 +220,11 @@ export function openPoints(root, ctx) {
           class: 'swatch-tile', lang: 'ja', style: { background: c.feedback[mark], color: c.feedback.text }
         }, part)));
     }
-    let stage;
-    if (slot === 'tiles') {
-      stage = el('span', { class: 'swatch-preview reveal-stage', 'data-tiles': item.id }, miniTiles(SWATCH));
-    } else if (item.id === 'draw') {
-      stage = el('span', { class: 'swatch-preview fx-stage', 'data-effect': item.id },
-        el('span', { class: 'fx-kanji kanji', lang: 'ja' }, DRAWN));
-    } else {
-      let fx = [];
-      if (item.id === 'petals') {
-        fx = PETALS.map(([x, y], i) => el('span', { class: 'fx-petal', style: { '--i': i, '--x': x, '--y': y } }));
-      } else if (item.id === 'hanabi') {
-        fx = BURSTS.flatMap(([x, y], b) => Array.from({ length: SPARKS }, (_, i) => el('span', {
-          class: 'fx-spark', style: { '--b': b, '--x': x, '--y': y, '--a': `${(360 / SPARKS) * i}deg` }
-        })));
-      }
-      stage = el('span', { class: 'swatch-preview fx-stage', 'data-effect': item.id },
-        miniTiles(SOLVED), fx.length ? el('span', { class: 'fx' }, fx) : null);
-    }
+    // The same pieces a game plays (js/play/effects.js).
+    const stage = slot === 'tiles'
+      ? el('span', { class: 'swatch-preview reveal-stage', 'data-tiles': item.id }, miniTiles(SWATCH))
+      : el('span', { class: 'swatch-preview fx-stage', 'data-effect': item.id },
+        effectExample(item.id, { tiles: miniTiles(SOLVED), drawn: DRAWN, numeral: SEAL }));
     stage.setAttribute('aria-hidden', 'true');
     stage.dataset.play = key;
     if (ui.playing === key) stage.classList.add('is-playing');

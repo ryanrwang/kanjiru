@@ -17,8 +17,8 @@
  *   unlock  { type: 'free' }
  *           { type: 'points', cost: 400 }            — buy in the shop (js/shop.js)
  *           { type: 'achievement', id: 'win-run-5' }  — see achievements.js
- *   soon    true: its look isn't built yet (step 6), so the shop doesn't
- *           sell it. An achievement still unlocks it
+ *   soon    true: its look isn't built yet, so the shop doesn't sell it.
+ *           An achievement still unlocks it. (None is, since 2026-11-10.)
  *
  * A slot's icon stands for its skins in the shop.
  */
@@ -31,27 +31,43 @@ export const SLOTS = [
   { id: 'effect', icon: '✨' }
 ];
 
+// Eight of each (2026-11-10): the user asked for 8 colours, 8 tile reveals
+// and 8 win effects. Each slot has free looks, looks to buy and looks an
+// achievement unlocks. Every reveal and effect plays in the game itself:
+// the reveals are styles.css "Tile reveal" ([data-tiles]), the effects
+// js/play/effects.js with styles.css "Win effects".
 export const SKINS = {
   theme: [
     { id: 'default', tier: 'basic', unlock: FREE },
     { id: 'ai',      tier: 'basic', unlock: FREE },
     { id: 'matcha',  tier: 'basic', unlock: FREE },
     { id: 'sakura',  tier: 'basic', unlock: FREE },
+    { id: 'fuji',    tier: 'basic', unlock: FREE },
+    { id: 'sumi',    tier: 'fancy', unlock: { type: 'points', cost: 500 } },
     { id: 'urushi',  tier: 'fancy', unlock: { type: 'points', cost: 800 } },
     { id: 'kinpaku', tier: 'fancy', unlock: { type: 'achievement', id: 'win-run-10' } }
   ],
 
   tiles: [
     { id: 'flip',  tier: 'basic', unlock: FREE },
-    { id: 'ink',   tier: 'fancy', unlock: { type: 'points', cost: 400 }, soon: true },
-    { id: 'stamp', tier: 'fancy', unlock: { type: 'achievement', id: 'win-run-5' }, soon: true }
+    { id: 'fade',  tier: 'basic', unlock: FREE },
+    { id: 'turn',  tier: 'basic', unlock: FREE },
+    { id: 'drop',  tier: 'fancy', unlock: { type: 'points', cost: 200 } },
+    { id: 'wipe',  tier: 'fancy', unlock: { type: 'points', cost: 300 } },
+    { id: 'ink',   tier: 'fancy', unlock: { type: 'points', cost: 400 } },
+    { id: 'shoji', tier: 'fancy', unlock: { type: 'achievement', id: 'hard-win' } },
+    { id: 'stamp', tier: 'fancy', unlock: { type: 'achievement', id: 'win-run-5' } }
   ],
 
   effect: [
-    { id: 'none',   tier: 'basic', unlock: FREE },
-    { id: 'draw',   tier: 'basic', unlock: FREE },
-    { id: 'petals', tier: 'fancy', unlock: { type: 'points', cost: 600 }, soon: true },
-    { id: 'hanabi', tier: 'fancy', unlock: { type: 'achievement', id: 'sharp-eye' }, soon: true }
+    { id: 'none',     tier: 'basic', unlock: FREE },
+    { id: 'draw',     tier: 'basic', unlock: FREE },
+    { id: 'wave',     tier: 'basic', unlock: FREE },
+    { id: 'confetti', tier: 'fancy', unlock: { type: 'points', cost: 300 } },
+    { id: 'petals',   tier: 'fancy', unlock: { type: 'points', cost: 600 } },
+    { id: 'glow',     tier: 'fancy', unlock: { type: 'achievement', id: 'collector-50' } },
+    { id: 'seal',     tier: 'fancy', unlock: { type: 'achievement', id: 'unaided' } },
+    { id: 'hanabi',   tier: 'fancy', unlock: { type: 'achievement', id: 'sharp-eye' } }
   ]
 };
 

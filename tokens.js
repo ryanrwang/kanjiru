@@ -80,6 +80,14 @@
         50: '#FDF3F6', 100: '#FBE3EA', 300: '#F0B0C2', 500: '#D9708F',
         700: '#A3425F', 800: '#7E3049', 900: '#4F1E2E', 950: '#2E111A'
       },
+      fuji: {     // 藤 wisteria
+        50: '#F6F3FA', 100: '#EAE3F4', 300: '#BBA8DA', 500: '#8A6CBF',
+        700: '#5B4391', 800: '#45326F', 900: '#2C2047', 950: '#19122A'
+      },
+      sumi: {     // 墨 ink: cool greys, from the inkstone to the paper
+        50: '#F4F4F2', 100: '#E5E5E2', 300: '#B0B0AB', 500: '#6F6F6A',
+        700: '#383836', 800: '#292927', 900: '#1B1B1A', 950: '#101010'
+      },
       kin: {      // 金 gold
         50: '#FBF6E9', 100: '#F4EBD3', 300: '#DCC383', 500: '#B8923A',
         700: '#7A5C1C', 800: '#5E4615', 900: '#3B2D0D', 950: '#221A07'
@@ -103,6 +111,8 @@
         light: 'rgba(23, 21, 19, 0.48)',
         dark:  'rgba(0, 0, 0, 0.64)'
       },
+      // The gold shine that sweeps a solved row (a win effect).
+      shine: 'rgba(255, 255, 255, 0.56)',
       white: '#FFFFFF',
       black: '#000000'
     },
@@ -218,10 +228,11 @@
         border: c.gray[300],
         text:   c.gray[900]
       },
-      // The win effects' examples on the Points page: petals and sparks.
+      // The win effects (js/play/effects.js): petals, sparks, the shine.
       effect: {
         petal: c.sakura[300],
-        spark: c.kin[300]
+        spark: c.kin[300],
+        shine: c.shine
       }
     },
 
@@ -434,6 +445,7 @@
     ai:        accentTheme(c.ai),
     matcha:    accentTheme(c.matcha),
     sakura:    accentTheme(c.sakura),
+    fuji:      accentTheme(c.fuji),
 
     // Fancy (unlockable). Textures and animations come from the skin's
     // CSS class in styles.css; these are only the colours.
@@ -452,7 +464,8 @@
     },
     kinpaku: {
       light: accentTheme(c.kin).light
-    }
+    },
+    sumi:      accentTheme(c.sumi)
   };
 
   // ──────────────────────────────────────────────────────────────────

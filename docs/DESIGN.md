@@ -2,7 +2,7 @@
 
 The decisions so far, and why, so any new thread can pick up the game without the original conversation. Status of each: **Decided** (the user chose it), **Proposed** (suggested, not yet confirmed — confirm before building on it), or **Open**.
 
-Last updated: 2026-11-08.
+Last updated: 2026-11-10.
 
 ## The game
 
@@ -165,7 +165,7 @@ Step 3 had three levels picked on the start screen: Easy (guess a kanji from a s
 - **Proposed — Look-alikes:** parts that are exactly the answer's, in the same order, win, even when a look-alike shares them (未 and 末); the compile step keeps the 4 look-alike answers out anyway.
 - **Proposed — One daily for every level:** one daily, whatever the level, so puzzle numbers and streaks are shared. A game keeps the level it started at (in its start, `save.playing`), and its history entry records it. A game with no moves yet moves to a level picked since.
 - **Proposed — Sharing:** the share text names the level (`Kanjiru 漢 #7 Normal 3/6`), with one square per cell. The squares are split by kanji only where the board showed the split (Guided).
-- **Proposed — How to play:** the example rows show 時間's five cells: 口 日 寸 木 月 (日 yellow, 寸 green), then 日 土 寸 日 門, then 時間 solved.
+- **Proposed — How to play:** the example rows show 時間's five cells: 口 日 寸 木 月 (日 yellow, 寸 green), then 日 土 寸 日 門, then 時間 solved. Since 2026-11-10 they play as an animation (`js/howto.js`, "Screens and menus").
 - **Open — Tuning:** 28 keys, 6 rows, the Hard and Guided points, what each part pays. All catalogue edits; decide after a few days of play.
 - **Decided — No real-word check at Hard:** the parts must make real kanji, any split; the guess doesn't have to be a real word.
 - **Decided — Hints under the new rules (step 4b):** Reveal a part, Head start and Reveal a kanji put the parts they show in their cells, green: each new row starts with them filled in (`engine.shownCells()`). At Normal the player may change one; at Hard it stays. Stroke count, Layout and Reveal a kanji give away where kanji split; they stay as paid hints, since that's what they're for. Meaning, Reading, Sweep and Extra guess need no change. Reveal a kanji is only offered when the answer has 2 or more kanji.
@@ -178,9 +178,16 @@ The user asked for a layout overhaul: the header holds only Points and Settings,
 - **Decided — The header:** the brand (it goes home), the points as a pill (it opens the Points page, `#points`) and the gear (Settings). Language and light/dark moved into Settings. On the Points page the brand becomes a breadcrumb, 漢 › Points: 漢 goes home, so the page needs no Back button of its own.
 - **Decided — The play card without dailies (2026-11-09):** titled with the mode's name (Kanjiru), "Guess a word from its parts in 6 tries." (or how many guesses the game on the go has used), the switches under "Level for your next puzzle" while no guess is made, and Play (Continue for a game on the go).
 - **Decided — The play page is home:** a play card for the daily: the mode's numeral as a hanko seal (`layout.seal`, in the skin's action colour), Daily #N, a line for where it stands (ready, going, solved, lost), the Hard and Guided switches, and Play (Continue once a game is on). After the daily it offers Play again and See result, titles the switches "Level for your next puzzle", and counts down to the next one on the right of its line ("Next daily in" over the time). The user picked a card with the switches on it over starting a game straight away.
-- **Decided — How to play:** the play page's intro, above the play card and always open: the 時間 example with a legend of the three colours. (It was under the card and folded after the first game; the user asked for it on top.)
+- **Decided — How to play, animated (2026-11-10):** the user asked for a simple, clean animation of how to play, prominent on the first visit and folded once one or more games are played. `js/howto.js` plays the 時間 example on a small board: three guesses typed part by part and revealed in the player's own tile reveal, a line under the board for each step, then 時間 appears and it starts again. It's a `<details>`: open for a player with no games in history, folded to its title after that. It plays only while open and on screen; under reduced motion it shows the three rows at once. The text above it says the same for screen readers. (Before: a still example, always open on top.)
+- **Proposed — Where it sits:** open, it's on top of the play card; folded, it moves under the card, so a returning player sees Play first.
+- **Decided — Every game played (2026-11-10):** the user asked for a full history under the play card. `js/history.js` lists every game, newest first: the answer with its reading and first meaning, how it ended (solved in n, not solved, gave up), the level, the day, and a square per cell per guess in the colours it scored. Totals head it (played, solved).
+- **Proposed — History details:** 20 games at a time, with Show more. The squares are scored again from the saved guesses (`scoreOrder()`), so a game whose guesses no longer fit the answer's parts (the parts data changed, or the retired Easy) lists without them.
 - **Decided — The Points page (`js/points.js`):** the wallet, big, with how points are earned and three counts (hints held, win streak, achievements earned). Then Looks: the current look on five tiles, colour swatches drawn in each skin's own colours on its own page colour, and the same cards for tile reveal and win effect, each with an example that plays, locked or not: the reveal on three tiles, the effect over a solved row. An example plays the first time it's on screen, and again when it's tapped, hovered or picked. A locked one opens its details under its row (price, or the achievement and how far along you are) with Buy; a bought look goes on at once. Then Hints & powers, each with what it does, when it can be used, how many you hold and Buy. Then Achievements with progress. Buy opens a modal that names the price and what's left (the user asked for a modal over the confirm in place).
-- **Decided — Settings:** Language (English / 日本語) and Appearance (Auto / Light / Dark; a one-scheme skin fixes it, with a note why), then Add Kanjiru to your home screen (until it's installed, "Saving and devices"), then Move your progress, then Debug, then About, a button to the About page (step 8b).
+- **Decided — Settings:** Language (English / 日本語) and Appearance (Auto / Light / Dark; a one-scheme skin fixes it, with a note why), then Add Kanjiru to your home screen (until it's installed, "Saving and devices"), then Move your progress, then Start over, then Debug, then About, a button to the About page (step 8b).
+- **Decided — Start over (2026-11-10):** the user asked to reset achievement progress, and to reset all data with three rounds of checks. Settings has both (`js/confirm.js` asks):
+  - **Reset achievements:** one ask. Every achievement goes back to unearned and only games played after the reset count toward them (`save.resets.achievements`, `stats(history, { since })`). Games, points, hints and looks bought stay.
+  - **Proposed — no second rewards:** an achievement's reward pays once ever, so a reset can't farm points; earned again, it shows without a reward. Looks an achievement unlocked lock again until it's earned again, and one in use goes back to the default.
+  - **Delete all data:** three asks. 1: what goes, with this save's counts (games, points, hints, achievements, looks). 2: "Are you sure?", with how to keep a copy (the save text). 3: type DELETE (削除 in Japanese; DELETE works in either) to turn on Delete everything. Then the save starts fresh, 150 pts and all; only the language and light or dark stay.
 - **Decided — Debug mode, on the live site too:** a switch in Settings (`settings.debug`). On, every key whose part is in the answer shows numbered dots, the answer's cells that part fills in writing order, so the dots spell the whole answer in order. It also adds an "Add 500 pts" button (`ECONOMY.debugPoints`), which writes a ledger entry of kind `debug`, so the points merge and count like any other. The user chose to show the switch everywhere rather than on test servers only.
 - **Decided — Controls (`js/dom.js`):** `switchRow()` is a checkbox with `role="switch"`, drawn as a sliding toggle (a `layout.switch` track, a 16 px knob inset 4 px); the whole row toggles it. `segmented()` is a row of buttons with `aria-pressed` for one of a few.
 - **Proposed — Two buttons in a row:** side by side when each fits on one line, otherwise stacked full width (the play card, the result card).
@@ -190,7 +197,11 @@ The user asked for a layout overhaul: the header holds only Points and Settings,
 
 ## The game screen (steps 3 and 4)
 
-- **Reveal:** each new row flips tile by tile (`settings.tiles`; Flip for now, step 6 adds the rest). Off under reduced motion.
+- **Reveal:** each new row reveals tile by tile in the player's tile reveal (`settings.tiles`, all eight built: "Skins"). Off under reduced motion.
+- **Decided — Crossed-off keys (2026-11-10):** the user asked for a subtle diagonal line across keys not in the answer, so they read as crossed off. A thin line runs corner to corner over grey keys (`.palette-tile.is-miss::after`).
+- **Decided — End a game at any time (2026-11-10):** the user asked to reset or end the current game at any time. A flag in the game's head opens an ask (`js/confirm.js`) with two choices: **Give up** shows the answer and records a loss (it ends the win streak and pays the parts found, like any loss; `engine.giveUp()`, logged as `{ giveUp: true }` so it replays, and the history entry has `gaveUp: true`), and **New puzzle**, in a game that isn't a daily, drops this one without recording it (`session.skipPractice()`) and starts another, never the same answer. Hints used on a skipped game stay used.
+- **Proposed — No end from the play card:** Continue opens the game, where the flag is; the card has no end button of its own.
+- **Decided — Win effects play in the game (2026-11-10):** once a won game's last row has revealed, the player's win effect (`settings.effect`) plays over the board while the result card comes in (`js/play/effects.js`; none under reduced motion).
 - **Hints:** the bar of powers, with the count held and the points to spend, floats just above the keyboard (step 5). It's open before the first guess, so the before-the-game powers are easy to find, and closes after a guess or a power used; the Hints button in the head opens it again and shows how many hints are held. Clues already found stay on show under the head. Tapping a power opens a sheet that says what it does and why it can't be used now, if so; when you hold none, Buy takes Use's place (Buy, then a confirm that names the price), and Use comes back after, with the focus on it. Using one spends it. Parts it shows fill their cells on the board too ("Levels", "Hints under the new rules").
 - **Saving:** the game on the go is saved as its start and log after every move (`save.playing`), so a reload carries on. A finished daily is recorded to history and can't be played again; its result shows until the next daily.
 - **Points:** paid once, when a game ends: what `engine.points()` gives, then the streak rewards a win reaches, a bonus hint (`engine.rollDrop()`) and any achievements (`js/play/rewards.js`, step 5). Each is a ledger entry ("Saving and devices").
@@ -216,19 +227,32 @@ The user asked for a layout overhaul: the header holds only Points and Settings,
 - **Decided — Base rules:** only the Meaning hint shows the meaning ("Levels"). (The retired Easy showed it free after guess 3.)
 - **Decided — Honest sharing:** the share text marks a game that used a power with 💡 (step 3).
 - **Decided — Buying (step 5, moved 2026-11-08):** the Points page sells hints and locked looks ("Screens and menus"); step 5's shop sheet is gone, and `js/shop.js` keeps only the rules (`powerOffer()`, `skinOffer()`, `buyPower()`, `buySkin()`). A power's sheet in a game sells one too. Every purchase takes two taps, Buy then a confirm with the price and what's left: a modal on the Points page, in place in a game's power sheet. Prices and hold limits come from `powers.js` and `skins.js`.
-- **Decided — Achievements (step 5):** checked after every game and when the page opens, each paid once with its reward (points, a hint, or the look it unlocks), shown as a toast and listed on the Points page with progress. A hint reward may take you past the hold limit. Full set (every daily mode in a day) meant only a daily won with one mode, so it's retired (`retired: true`: never earned again, saves keep it) and **Hard win** (solve with Hard on, 200 pts) takes its place.
+- **Decided — Achievements (step 5):** checked after every game and when the page opens (counting only games since their last reset, "Screens and menus", Start over), each paid once with its reward (points, a hint, or the look it unlocks), shown as a toast and listed on the Points page with progress. A hint reward may take you past the hold limit. Full set (every daily mode in a day) meant only a daily won with one mode, so it's retired (`retired: true`: never earned again, saves keep it) and **Hard win** (solve with Hard on, 200 pts) takes its place.
 - **Open — Japanese mode:** the 意味 (Meaning) hint shows the English gloss, because the dictionary data is English only. For native speakers, the reading or example words may suit better.
 
 ## Skins
 
 - **Decided — Tiers:** basic skins first (light, dark and a few colours), then elegant ones with animations and effects.
 - **Decided — Slots:** colours (`theme`), tile reveal (`tiles`) and win effect (`effect`), mixed freely. The catalogue is `js/config/skins.js`; the colours live in `tokens.js` `THEMES`.
+- **Decided — Eight of each (2026-11-10):** the user asked for 8 colours, 8 tile reveals and 8 win effects. All 24 are built and play in the game; nothing is `soon` now.
+- **Proposed — The new ones and their unlocks:**
+
+  | Slot | Free | Points | Achievement |
+  |---|---|---|---|
+  | Colours | Classic, Ai 藍, Matcha 抹茶, Sakura 桜, Fuji 藤 | Sumi 墨 500, Urushi 漆 800 | Kinpaku 金箔 (Unstoppable) |
+  | Tile reveal | Flip, Fade, Turn | Drop 200, Brush wipe 300, Ink bleed 400 | Shoji 障子 (Hard win), Hanko stamp (On a roll) |
+  | Win effect | None, Brush draw, Wave | Confetti 300, Petal fall 600 | Gold shine (Collector), Seal 印 (Unaided), Hanabi 花火 (Sharp eye) |
+
+  - Fuji (wisteria) and Sumi (ink greys) are `accentTheme()` skins with light and dark; both pass WCAG AA like the rest.
+  - Reveals: Fade (the colour comes up), Turn (a sideways flip), Drop (falls into its cell), Brush wipe (painted across from the left), Shoji (two paper panels slide apart). One set of rules in `styles.css` ("Tile reveal", keyed by `[data-tiles]`) plays them on the board, the Points page's preview and examples, and How to play. `js/play/screen.js` reads the reveal's `--reveal-time` to know when a row is done.
+  - Effects: Wave (the solved row's tiles hop), Confetti (paper bits in the game's colours), Gold shine (light sweeps the solved row), Seal (the game's 漢 hanko stamped on the board). `js/play/effects.js` builds each one's pieces for the board and for its example, so the examples stay true to the game.
+- **Before (to 2026-11-09):**
 - **Free:** Classic, Ai 藍, Matcha 抹茶 and Sakura 桜, each light and dark; Flip tiles; None or Brush draw effect.
 - **Locked:**
   - Urushi 漆 (800 pts, dark only) and Kinpaku 金箔 (Unstoppable: 10 wins in a row; it was a 30-day streak)
   - Ink bleed tiles (400 pts) and Hanko stamp tiles (On a roll: 5 wins in a row; it was a 7-day streak)
   - Petal fall (600 pts) and Hanabi 花火 (solve in 2 guesses)
-- **Coming soon:** Ink bleed, Hanko, Petal fall and Hanabi aren't built yet (step 6), so they're marked `soon` in `skins.js`: the Points page doesn't sell them, and an achievement that unlocks one still does, ready for when it's built. Their examples on the Points page (and Brush draw's) are sketches in `styles.css` (`tile-ink`, `tile-stamp`, `brush-draw`, `petal-fall`, `spark-out`); step 6 builds the real effects from them and keeps the examples true to them.
+- **Coming soon (replaced 2026-11-10):** Ink bleed, Hanko, Petal fall and Hanabi were marked `soon` until they were built. The field stays in `skins.js` for a look that isn't built yet.
 - **Decided — Brand colour:** vermilion 朱 (#B8331F on buttons).
 
 ## Saving and devices
@@ -251,6 +275,7 @@ The user asked for a layout overhaul: the header holds only Points and Settings,
 | Points and hints held (`ledger`) | Both sets of entries kept, joined by id, so each game, reward and purchase counts once and points add up exactly. A device's starting points join only when neither has progress |
 | Looks, language and level (`settings`) | This device's stay |
 | Games on the go (`playing`) | This device's stay; a daily the other device finished is in history, which wins |
+| Resets (`resets`, 2026-11-10) | The later reset wins, and achievements dated before it go (`dropReset()`) |
 
 - **Rule:** a new top-level key in the save needs a merge rule; `validate()` warns when one is missing.
 - **Decided — Ledger (step 5):** points and hints held are a ledger (`js/ledger.js`, save v2): every gain and spend is an entry with its own random id (`why`: start, game, streak, drop, achievement, buy, use, debug for points added in debug mode, or v1 for what a v1 save held), and the balance is their sum, never below 0. Merging joins the entries, so it's exact and safe to repeat. A v1 save's wallet and hints become one `v1` entry; two devices that each had one keep the higher, as v1 merges did.

@@ -85,7 +85,7 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
   const node = el('section', { class: 'card result', 'aria-labelledby': 'result-title' },
     el('header', { class: 'result-head' },
       el('h2', { class: `result-title${won ? ' is-won' : ''}`, id: 'result-title' },
-        won ? t('result.won', { n: state.guesses.length }) : t('result.lost')),
+        won ? t('result.won', { n: state.guesses.length }) : state.gaveUp ? t('result.gaveUp') : t('result.lost')),
       el('span', { class: 'pill' }, t(`level.${state.level}.name`))),
 
     el('div', { class: 'answer' },
