@@ -310,6 +310,10 @@
       // spacing.md, inset by spacing.xs).
       seal:      s[56],
       switch:    s[40],
+      // The header's controls (points, gear, flag, hints, Close): one height,
+      // and the icon in them.
+      headBtn:   s[40],
+      headIcon:  s[20],
       // A hint's card over the board (js/play/reveal.js): the square a
       // kanji's layout splits, and the width of a meaning.
       hintBox:   s[80]

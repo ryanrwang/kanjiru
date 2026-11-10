@@ -1,6 +1,6 @@
 /*
  * The About page (#about, opened from Settings and the result card; the
- * header shows 漢 › About): what Kanjiru is, where your progress is kept,
+ * header shows 漢 › About, and Close, which goes back): what Kanjiru is, where your progress is kept,
  * and the credits.
  *
  *   const page = openAbout(root);

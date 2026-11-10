@@ -1,5 +1,6 @@
 /*
- * Settings panel, opened from the gear in the header.
+ * Settings, a page of its own (#settings), opened from the gear in the
+ * header; Close in the header goes back where you came from (app.js).
  *
  *   Language    the interface language (follows the device until picked)
  *   Appearance  light, dark, or the device's (a skin with one scheme fixes it)
@@ -24,9 +25,12 @@
  * (rules in MERGE, js/store.js). The choice comes before the code is used,
  * so cancelling doesn't waste it.
  *
- * openSettings({ onChange }) calls onChange() after anything changes the
- * save (a save arrives, the language, the scheme, debug), so the page can
- * redraw.
+ *   const page = openSettings(root, { onChange });
+ *   page.destroy();
+ *
+ * onChange() runs after anything changes the save (a save arrives, the
+ * language, the scheme, debug), so the header can take it; then the page
+ * redraws itself, in the language now set.
  */
 import { t, has, lang, LANGUAGES } from './i18n.js';
 import { ECONOMY, SKINS, ACHIEVEMENTS } from './registry.js';
@@ -38,14 +42,12 @@ import { isUnlocked } from './shop.js';
 import { ask as confirm } from './confirm.js';
 import { games } from './engine/stats.js';
 
-const ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
-
-let dialog = null;
+let page = null;
 let onChange = () => {};
 let timer = null;
 let countdown = null;
 
-// What the panel shows; render() draws it from here.
+// What the page shows; render() draws it from here.
 const ui = {
   send: { busy: false, code: null, expiresAt: 0 },
   receive: { code: '', busy: false },
@@ -54,42 +56,34 @@ const ui = {
   status: {}                         // section → { kind: 'ok' | 'error', text }
 };
 
-export function openSettings(options = {}) {
-  if (options.onChange) onChange = options.onChange;
-  if (!dialog) {
-    dialog = el('dialog', { class: 'sheet', 'aria-labelledby': 'settings-title' });
-    // A click on the backdrop lands on the dialog itself: close.
-    dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
-    dialog.addEventListener('close', stopCountdown);
-    document.body.append(dialog);
-    onInstallChange(() => { if (dialog.open) render(); });
-  }
+export function openSettings(root, options = {}) {
+  onChange = options.onChange || (() => {});
+  page = el('section', { class: 'page settings-page', 'aria-labelledby': 'settings-title' });
+  root.replaceChildren(page);
   ui.status = {};
   ui.ask = null;
+  const off = onInstallChange(() => render());
   render();
-  dialog.showModal();
+  return {
+    refresh: () => render(),
+    destroy() {
+      off();
+      stopCountdown();
+      page = null;
+    }
+  };
 }
 
 // ── Drawing ──────────────────────────────────────────────────────────
 
 function render() {
-  if (!dialog) return;
-  const focused = document.activeElement && dialog.contains(document.activeElement)
+  if (!page) return;
+  const focused = document.activeElement && page.contains(document.activeElement)
     ? document.activeElement.dataset.id : null;
-  const scrolled = dialog.scrollTop;
+  const scrolled = window.scrollY;
 
-  const close = el('button', {
-    class: 'icon-btn', type: 'button', 'data-id': 'close',
-    'aria-label': t('settings.close'), title: t('settings.close'),
-    onclick: () => dialog.close()
-  });
-  close.innerHTML = ICON_CLOSE;
-
-  dialog.replaceChildren(el('div', { class: 'sheet-body' },
-    el('header', { class: 'sheet-head' },
-      el('h2', { class: 'sheet-title', id: 'settings-title' }, t('settings.title')),
-      close
-    ),
+  // Named by the header's crumb, 漢 › Settings (app.js).
+  page.replaceChildren(el('div', { class: 'card sheet-body settings-card' },
     renderLanguage(),
     renderScheme(),
     renderHints(),
@@ -108,16 +102,16 @@ function render() {
 
   // Keep the scroll and keyboard focus where they were; when the choice
   // appears, move to it.
-  dialog.scrollTop = scrolled;
+  window.scrollTo(0, scrolled);
   const target = ui.ask
-    ? dialog.querySelector('.ask-option')
-    : focused && dialog.querySelector(`[data-id="${focused}"]`);
-  if (target) target.focus();
+    ? page.querySelector('.ask-option')
+    : focused && page.querySelector(`[data-id="${focused}"]`);
+  if (target) target.focus({ preventScroll: !ui.ask });
   startCountdown();
 }
 
-// A change to the save: the page redraws, then the panel, in the language
-// now set.
+// A change to the save: the header takes it (app.js), then this page
+// redraws, in the language now set.
 function changed() {
   onChange();
   render();
@@ -194,10 +188,8 @@ function renderInstall() {
 function renderAbout() {
   return el('section', { class: 'sheet-section sheet-row', 'aria-labelledby': 'about-link-title' },
     el('h3', { class: 'sheet-section-title', id: 'about-link-title' }, t('about.title')),
-    el('a', {
-      class: 'btn btn-secondary btn-small', href: '#about', 'data-id': 'about',
-      onclick: () => dialog.close()
-    }, t('about.open')));
+    // app.js opens it as a page, so Close there comes back here.
+    el('a', { class: 'btn btn-secondary btn-small', href: '#about', 'data-id': 'about' }, t('about.open')));
 }
 
 // ── Starting over ────────────────────────────────────────────────────
@@ -323,7 +315,7 @@ function renderStatus(id) {
 // Updates one section's message without redrawing (keeps text selected).
 function setStatus(id, status) {
   ui.status[id] = status;
-  const node = dialog && dialog.querySelector(`[data-status="${id}"]`);
+  const node = page && page.querySelector(`[data-status="${id}"]`);
   if (!node) return;
   node.className = `transfer-status${status ? ` is-${status.kind}` : ''}`;
   node.textContent = status ? status.text : '';
@@ -454,7 +446,7 @@ function renderText() {
           ui.status.text = null;
           ui.ask = null;
           render();
-          dialog.querySelector('.save-text').focus();
+          page.querySelector('.save-text').focus();
         }
       }, t('transfer.text.paste'))
     ),
@@ -485,7 +477,7 @@ async function doCopy() {
   ui.status.text = null;
   ui.ask = null;
   render();
-  const area = dialog.querySelector('.save-text');
+  const area = page && page.querySelector('.save-text');
   let copied = false;
   // The clipboard API needs https; on plain http fall back to the old way.
   try {

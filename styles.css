@@ -139,9 +139,59 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .header-actions {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-sm);
 }
+
+/* Every control in the header looks alike: a bordered pill, layout.headBtn
+   high, round when it holds an icon alone. The points and the gear on the
+   play page; End game's flag, the hints held and the gear in a game; Close
+   on Points, Settings and About (app.js). */
+.head-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  min-width: var(--layout-headBtn);
+  height: var(--layout-headBtn);
+  padding: 0 var(--spacing-md) 0 var(--spacing-sm);
+  border: var(--stroke-thin) solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-tight);
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast) var(--transition-ease),
+    border-color var(--transition-fast) var(--transition-ease);
+}
+
+.head-btn.is-icon {
+  width: var(--layout-headBtn);
+  padding: 0;
+  color: var(--color-text-secondary);
+}
+
+.head-btn:hover {
+  border-color: var(--color-border-default);
+  background: var(--color-interactive-hover);
+  color: var(--color-text-primary);
+}
+.head-btn:active { background: var(--color-interactive-active); }
+.head-btn[hidden] { display: none; }
+
+.head-btn svg {
+  width: var(--layout-headIcon);
+  height: var(--layout-headIcon);
+}
+
+.head-icon { display: inline-flex; }
+.head-icon.is-accent { color: var(--color-text-accent); }
 
 /* On phones there's room for one name only: the one in the page's language. */
 @media (max-width: 419px) {
@@ -313,7 +363,7 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .play-level-title,
 .sheet-section-title,
-.howto-title,
+.fold-title,
 .history-title {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
@@ -349,16 +399,18 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   text-align: end;
 }
 
-/* ── Play page: how to play (js/howto.js) ─────────────────────────── */
+/* ── Play page: folds (How to play, the install tip) ──────────────── */
 
-/* A <details>: open for a new player, folded to its title after a game. */
-.howto {
+/* A <details> card that folds to its title: How to play (open for a new
+   player, folded after a game; js/howto.js) and the install tip (always
+   folded at first; app.js). */
+.fold {
   display: flex;
   flex-direction: column;
   padding: 0;
 }
 
-.howto-summary {
+.fold-summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -369,10 +421,11 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   border-radius: inherit;
 }
 
-.howto-summary::-webkit-details-marker { display: none; }
-.howto-summary:hover { background: var(--color-interactive-hover); }
+.fold-summary::-webkit-details-marker { display: none; }
+.fold-summary:hover { background: var(--color-interactive-hover); }
 
-.howto-chevron {
+.fold-chevron {
+  flex: 0 0 auto;
   width: var(--spacing-sm);
   height: var(--spacing-sm);
   border-right: var(--stroke-thick) solid var(--color-text-muted);
@@ -381,14 +434,16 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   transition: transform var(--transition-fast) var(--transition-ease);
 }
 
-.howto[open] .howto-chevron { transform: rotate(-135deg); }
+.fold[open] .fold-chevron { transform: rotate(-135deg); }
 
-.howto-body {
+.fold-body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
   padding: 0 var(--spacing-lg) var(--spacing-lg);
 }
+
+/* ── Play page: how to play (js/howto.js) ─────────────────────────── */
 
 .howto-lead {
   font-size: var(--font-size-lg);
@@ -660,7 +715,14 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
   gap: var(--spacing-sm);
 }
 
-/* ── Settings panel ────────────────────────────────────────────────── */
+/* ── Settings page, and the modals (.sheet) ──────────────────────── */
+
+/* Settings (js/settings.js): one card of sections, each under a rule but
+   the first. */
+.settings-card > .sheet-section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
 
 /* A native <dialog>: showModal() puts it in the top layer, so no z-index. */
 .sheet {
@@ -1613,7 +1675,11 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   --reveal: tile-flip;
   --reveal-time: var(--transition-reveal);
   --reveal-ease: var(--transition-ease);
+  --reveal-stagger: var(--transition-base);
 }
+/* How to play's little board reveals at twice the pace (js/howto.js reads
+   both times to know when a row is done). */
+.demo[data-tiles] { --reveal-stagger: var(--transition-fast); }
 [data-tiles="fade"]  { --reveal: tile-fade; }
 [data-tiles="turn"]  { --reveal: tile-turn; }
 [data-tiles="drop"]  { --reveal: tile-drop; --reveal-ease: var(--transition-bounce); }
@@ -1626,7 +1692,7 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   position: relative;
   isolation: isolate;
   animation: var(--reveal) var(--reveal-time) var(--reveal-ease) both;
-  animation-delay: calc(var(--i, 0) * var(--transition-base));
+  animation-delay: calc(var(--i, 0) * var(--reveal-stagger));
 }
 
 .board-row.is-new .row-kanji {
@@ -1826,7 +1892,7 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   border-radius: inherit;
   background: var(--mark-bg);
   animation: ink-spread var(--reveal-time) var(--transition-ink) both;
-  animation-delay: calc(var(--i, 0) * var(--transition-base));
+  animation-delay: calc(var(--i, 0) * var(--reveal-stagger));
 }
 
 :is([data-tiles="wipe"] :is(.board-row, .demo-row).is-new, [data-tiles="wipe"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::before {
@@ -1847,7 +1913,7 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   background: var(--color-tile-bg);
   box-shadow: inset calc(var(--stroke-thin) * -1) 0 0 var(--color-tile-border);
   animation: shoji-left var(--reveal-time) var(--transition-ease) both;
-  animation-delay: calc(var(--i, 0) * var(--transition-base));
+  animation-delay: calc(var(--i, 0) * var(--reveal-stagger));
 }
 
 :is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::after {
@@ -2722,59 +2788,14 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 
 /* ── Points: the header's wallet, and "+50" rising from a total ───── */
 
-.wallet-btn {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--spacing-2xl);
-  border-radius: var(--radius-full);
-  color: var(--color-text-primary);
-  text-decoration: none;
-}
-
-.wallet-btn:hover { color: var(--color-text-primary); }
-.wallet-btn:focus-visible { border-radius: var(--radius-full); }
-
+/* The header's points (a .head-btn): the coin, then the total. */
 .wallet-amount {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
-  min-height: var(--spacing-xl);
-  padding: 0 var(--spacing-md) 0 var(--spacing-sm);
-  border: var(--stroke-thin) solid var(--color-border-subtle);
-  border-radius: var(--radius-full);
-  background: var(--color-bg-surface);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
-  white-space: nowrap;
-  transition:
-    background-color var(--transition-fast) var(--transition-ease),
-    border-color var(--transition-fast) var(--transition-ease);
 }
 
 .wallet-icon { font-size: var(--font-size-md); }
-
-.wallet-btn[hidden] { display: none; }
-
-/* In a game on the go, the hints held, in the points' place: they open the
-   hints modal (js/play/hints.js). */
-.hints-pill { cursor: pointer; }
-.hints-pill .wallet-amount { font-size: var(--font-size-md); }
-
-.hints-pill-icon {
-  display: inline-flex;
-  color: var(--color-text-accent);
-}
-
-.hints-pill-icon svg {
-  width: var(--spacing-md);
-  height: var(--spacing-md);
-}
-
-.wallet-btn:hover .wallet-amount { border-color: var(--color-border-default); }
-.wallet-btn[aria-current="page"] .wallet-amount {
-  border-color: var(--color-border-focus);
-  background: var(--color-interactive-selected);
-}
 
 .has-bump { position: relative; }
 
@@ -3491,18 +3512,7 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 
 /* ── Home-screen tip (app.js) and steps (js/install.js) ────────────── */
 
-.install-tip {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-lg);
-}
-
-.install-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--font-lineHeight-snug);
-}
+.install-body { gap: var(--spacing-sm); }
 
 .install-why { color: var(--color-text-secondary); }
 
@@ -3523,7 +3533,7 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   color: var(--color-text-secondary);
 }
 
-.install-tip .btn-row { margin-top: var(--spacing-xs); }
+.install-body .btn-row { margin-top: var(--spacing-xs); }
 
 /* ── About page (js/about.js) ──────────────────────────────────────── */
 

@@ -15,7 +15,9 @@ export default {
     points: 'Points',
     wallet: 'Your points: {amount}. Open Points',
     game: 'Play',
-    hints: 'Hints: you have {n}. Open hints'
+    hints: 'Hints: you have {n}. Open hints',
+    // Points, Settings and About: back where you came from.
+    close: 'Close'
   },
 
   currency: {
@@ -335,7 +337,6 @@ export default {
   settings: {
     open: 'Settings',
     title: 'Settings',
-    close: 'Close',
     language: 'Language',
     scheme: {
       title: 'Appearance',

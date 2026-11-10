@@ -72,6 +72,11 @@ const DELETE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const rank = (mark) => MARKS.indexOf(mark);
 
+// The row being typed when the screen last closed (Settings or Points opened
+// from the header, which are pages of their own): back in the same game at
+// the same guess, it's still there.
+let draft = null;
+
 // callbacks: onHome(), onPractice() (daily → keep playing), onWallet()
 // (points or hints held changed, or the game ended: the header redraws,
 // asking head()), onReload() (a new day: open the route again).
@@ -84,6 +89,12 @@ export function openGame(root, ctx) {
 
   let game = open();
   let ui = freshUi();
+  const draftKey = () => `${mode.id}/${kind}/${game.start.answer}/${game.state.guesses.length}/${ui.cells.length}`;
+  if (game && draft && draft.key === draftKey()) {
+    ui.cells = draft.cells;
+    ui.active = draft.active;
+  }
+  draft = null;
   let timer = null;
   let resultTimer = null;
   let frameTimer = null;
@@ -1216,6 +1227,7 @@ export function openGame(root, ctx) {
     openHints: pickHints,
     endGame,
     destroy() {
+      if (playing() && ui.cells.some(Boolean)) draft = { key: draftKey(), cells: ui.cells.slice(), active: ui.active };
       clearInterval(timer); clearTimeout(resultTimer); clearTimeout(frameTimer); closeHints(); closeAsk(); stopFx();
       if (card) card.dismiss();
       cancelAnimationFrame(resizeFrame);
