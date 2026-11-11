@@ -4,7 +4,7 @@ A kanji word puzzle in the spirit of Wordle: guess the word (1–4 kanji, 4–6 
 
 ## Start here
 - **`docs/DESIGN.md`**: every game decision so far, marked Decided, Proposed or Open, with the reasons. Confirm anything Proposed with the user before building on it.
-- **`docs/ROADMAP.md`**: the steps to launch, their order, and the prompt that starts each one. Tick a step off when it merges, and update both docs when a decision changes.
+- **`docs/ROADMAP.md`**: the steps to launch, their order, and the prompt that starts each one. Tick a step off when it merges, and update both docs when a decision changes. Next up: step 9, the audit follow-ups, planned in full there (agreed 2026-11-11).
 - **Threads share this folder.** Two sessions here at once will switch each other's Git branches, so run one at a time or give each its own worktree.
 
 ## Tech Stack

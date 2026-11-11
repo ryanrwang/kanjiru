@@ -2,7 +2,7 @@
 
 The big steps from here to launch, in order, each with a prompt to start its own thread in `D:\Dropbox\Clearful\apps\kanjiru`. Tick a step off here when it merges.
 
-Last updated: 2026-11-10.
+Last updated: 2026-11-11.
 
 ## Done
 
@@ -20,6 +20,7 @@ Last updated: 2026-11-10.
 - [x] **Hint overhaul:** a hints pill in the header (漢 › Play in a game) opens a modal: each hint, how many you hold and Use, with one more confirm. Every hint plays its own animation (正 tally strokes, a splitting layout, a brush-written meaning, parts dropping into cells, a sweep across the keys). One kanji guide frame per kanji holds strokes, layout and solved kanji; new rows show revealed parts faintly instead of filling them in. End game moves to the header flag. Meaning in Japanese for all 460 answers. Reading retired, Head start folded into Reveal a part (any time). The Points page lists hints one per row with Buy and Don't ask again (2026-11-10)
 - [x] **Header and pages (2026-11-10):** 漢 and Back to start work again (a variable hid `window.history`); every header control is the same bordered pill; Points and Settings are pages with Close at the top right; How to play always above the play card and about a third quicker; the install tip folded at the bottom of the play page
 - [x] **Parts audit (2026-11-10, PR #17):** after native players' feedback, every tile mapped to its Kangxi radical, display forms such as 𠆢 and 丷, 12 new tiles (263), and 273 kanji re-split (`docs/PARTS-AUDIT.md`). Adds `tools/build_data.py --parts-only`
+- [x] **Audit fixes (2026-11-11):** a full audit (web app practice, accessibility, tokens, phones and desktop, saving, security). Fixed: two tabs writing over each other's save (`store.sync()`), an unreadable save kept aside, the browser asked to keep the save only after a game, page moves that set the tab title, tell screen readers and carry the keyboard's focus, tiles that keep their colours in Windows' contrast themes, Settings heading levels, look cards named by their text, 24 px credit links, a no-JavaScript line, notch gutters, iOS text sizing, a dangling token, an idle timer, and a tighter `api/transfer.php` (IPv6 /64 rate limit, a 50 MB cap, same-site only, stricter saves). The follow-ups are step 9
 - [x] **Screens and menus:** the header holds only Points and Settings. The play page is home: a play card with the Hard and Guided switches, then How to play. The Points page holds the wallet, Looks with previews, Hints & powers and Achievements, and replaces the shop sheet. Settings gains Language, Appearance and a Debug mode (answer dots on the keys, add points) (2026-11-08)
 
 ## Order
@@ -38,6 +39,7 @@ You: review words  (any time; the game only uses words marked Keep)
   2. The Apps page card (item 4 of step 8b): it needs an 800 × 600 screenshot uploaded by FTP.
   3. Check the install on a real iPhone and Android phone once it's live.
   Tune the numbers (rows, keys, hint prices, points) after real play, not before.
+- **Next: step 9, the audit follow-ups (agreed 2026-11-11).** Four PRs, planned in full below. On hold until the user's weekly usage resets; start with 9.1 when the user says go.
 - **No dailies (2026-11-09):** the user chose random puzzles only, as many as you like, so there's no launch date (docs/DESIGN.md, "No dailies").
 - **Words:** 460 answers from 603 Keep words are enough for launch. More can be added any time on the review page, then `tools/compile_game.py`. 114 Keep words with loose strokes come back as their kanji are fixed.
 
@@ -228,6 +230,77 @@ Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first (step 8a's notes are un
 5. Launch day: ask me the date. On that day, set EPOCH in tools/compile_game.py to it, run python -I -X utf8 tools/compile_game.py, commit data/game/ and deploy (before the epoch there is no daily). Testers' earlier dailies become keep-playing games on their next visit (settleDailies() in js/store.js). Check the live site shows Daily #1.
 
 Done when the About screen credits every source, it passes the accessibility checks, it's listed on /apps/, and puzzle 1 is live on launch day.
+```
+
+---
+
+## 9. Audit follow-ups
+
+**Agreed with the user on 2026-11-11; on hold until their weekly usage resets.** The audit's fixes are live (Done, above). Its report is a private artifact, https://claude.ai/artifact/4KrHMoktFtiApEfMzZjoaN (read it with the Artifact tool); everything needed to do the work is here. Four PRs, in order: 9.1, 9.2, 9.3, 9.4. Each starts from `main` after the one before it merges.
+
+**Decided:**
+- Colour-blind mode: both colours and marks. Marks show only with the mode on, unless the user says otherwise.
+- Undo: a replaced or deleted save is kept for 7 days.
+- A 14 px type step is allowed off the 4 px grid, for type only. Update the rule in CLAUDE.md, "Design Tokens".
+- No lost-device backup: too much for a simple app. Kept as a possible feature (docs/DESIGN.md, "Saving and devices").
+- The CSP is a `<meta>` tag, shipped enforced after testing; no report-only week (9.4 says why).
+
+**Every PR:**
+- **Self-checks before asking for a merge:** `node --test` and `python -I -X utf8 -m unittest discover -s tools`, with new tests for new logic. Then Playwright (preinstalled in cloud sessions) at 320 × 568, 390 × 844, 844 × 390 and 1440 × 900, light and dark, on the play page, Settings, Points, About, a game, the hints, the end-of-game ask and the result. axe-core on each (WCAG 2.2 AA and best practice; `npm i axe-core` in a scratch folder), and its colour-contrast rule in all 8 skins in both schemes. No sideways scroll, no console errors, no `[kanjiru config]` warnings. A code-review pass on the diff. The docs updated: CLAUDE.md's key files, DESIGN.md's decisions, and this step ticked.
+- **Merging:** Claude squash-merges 9.1 and 9.2 once its checks and CI pass. The user merges 9.3 and 9.4 after their review.
+- **Model:** the most capable one for 9.3 and 9.4, the judgement-heavy steps; 9.1 and 9.2 are routine.
+- **Only Chromium runs in the cloud.** Safari, iOS and Firefox are the user's to check, where a step says so.
+
+### 9.1 Foundations
+
+1. **Tests before every deploy:** a test job (both suites) that runs on every pull request and on push to `main`; the deploy job in `.github/workflows/deploy.yml` needs it. Pin each action to a commit, like the existing ones.
+2. **The data loads once:** measured 2026-11-11 in Chromium, a first visit makes 3 requests for the 3 JSON files; every later visit, with the service worker in control, makes 6, and logs "A preload for '…' is found, but is not used because it is a cross-world service worker resource mismatch" (Chromium's `Resource::CanReuse` won't reuse a preload a service worker answered for a script's fetch). Replace the three `<link rel="preload" as="fetch">` in `index.html` with a small classic script file in `<head>` that starts the three fetches and hands the promises to `loadData()` (`js/engine/data.js`). Not an inline script: the CSP in 9.4 forbids those. Update `tests/head.test.js`. Measure first and repeat visits before and after; the first visit must stay as fast (step 8a got it to 1.6 s).
+3. **Hover only where it exists:** 21 of the 22 `:hover` selectors in `styles.css` sit outside a hover media query, so a tapped button keeps its hover look on a phone. Wrap them in `@media (hover: hover)` where they stand, so the cascade order doesn't change.
+4. **A test that every CSS variable used is defined:** every `var(--x)` in `styles.css` and the JS must be defined by `tokens.js`, `styles.css` or the JS. Allow fallbacks (`var(--g, …)`) and the built name `--color-hint-badge-<id>`. It would have caught `--font-size-sm`.
+5. **Docs:** turn the audit's Proposed entries in docs/DESIGN.md (dated 2026-11-11) into Decided; the user approved them.
+
+### 9.2 Undo and toasts
+
+1. **Undo for every action that replaces the save:** Replace and Merge (Settings, moving devices), Reset achievements and Delete all data. Before each, keep the whole save under its own localStorage key with the date. One copy at a time, the latest; it goes on the first load after 7 days.
+2. **Where to undo:** in the toast that follows the action, and in Settings (Start over) until the copy expires, beside a "Delete for good" button that removes the copy at once. Restoring writes the save through `js/store.js`, so other tabs take it (`sync()`).
+3. **Delete all data's asks:** they say it can be undone for 7 days (English and Japanese), since a copy now stays.
+4. **Toasts (`js/toast.js`):** today each toast is one button that dismisses itself after 5 s (`transition.toast`). Make it text, an optional action (Undo) and a dismiss; pause the timer while it's hovered or focused (WCAG 2.2.1); and show a finished game's rewards in one toast (`renderResultCard()` in `js/play/screen.js`, `endFromCard()` in `app.js`).
+5. **Tests:** keeping a copy, restoring it, and expiry.
+
+### 9.3 Look
+
+1. **Colour-blind mode.** Simulated with the Machado 2009 matrices, the green (#4C8B3F) and yellow (#B07F12) tiles have a contrast of 1.00 to 1 under protanopia and 1.29 to 1 under deuteranopia (the audit's own calculation).
+   - A switch in Settings, Appearance. A new key in `settings` needs no migration.
+   - In `tokens.js`, a third setting beside skin and light or dark: an attribute on `<html>`, applied before first paint from the save (`savedLook()`), and in `resolve()`, because the Points page reads tile colours from it in JS (`points.js`, `c.feedback`).
+   - Colours: orange for right spot, blue for wrong spot. White text on them at 3:1 or more, and still apart under protanopia, deuteranopia and tritanopia.
+   - Marks: a different small shape on right-spot and wrong-spot tiles, through all 8 tile reveals.
+   - Everywhere a mark shows: board tiles, the keys, history squares, How to play and its legend, the kanji guide's green parts, the result card's answer, the Points page's examples, and the share squares (`rules.js` `share.marks` → 🟧🟦).
+   - Text in English and Japanese.
+2. **Type scale.** 62 of 108 `font-size` rules use 12 px; the next step is 16. Add 14 px. Notes, descriptions and secondary lines move to it; tags, eyebrows and uppercase labels stay at 12. Running text moves to rem. Glyphs inside tiles, keys and frames stay in px, tied to the cell size, or a larger browser text setting would overflow the fixed cells.
+3. **One side-by-side game layout** for phones on their side and desktops from 960 px: the board on the left, the keyboard on the right, and the result card taking the keyboard's column when the game ends. At 844 × 390 today, six rows at the smallest cell (24 px) don't fit between the header and the keyboard, so the last rows slide under the keys. `fitBoard()` in `js/play/screen.js` sizes by height with the keyboard below; it needs a width split. `showResult()`, `glideToResult()` and `scrollGoal()` follow the end-of-game sequence the user shaped (the board held as played, the card in the keyboard's place, one glide), so keep its feel in the new layout.
+4. **Desktop width:** every page is a 560 px column today, and the Points page is 2,901 px tall at 1440 px wide. From 960 px: looks 8 across, hints and achievements side by side, and the play page using the width.
+5. **Review:** before merging, a screenshot page for the user: phone, phone on its side and desktop, light and dark, the mode on and off. The user merges, then checks a game on their iPhone held sideways.
+
+### 9.4 Fonts and CSP
+
+1. **The source fonts:** the full Noto Serif CJK JP and Noto Sans CJK JP from https://github.com/notofonts/noto-cjk (`Serif/OTF/Japanese/NotoSerifCJKjp-<Weight>.otf`, `Sans/OTF/Japanese/NotoSansCJKjp-<Weight>.otf`). Pin a release; downloads go to `tools/sources/`.
+   - Static CFF fonts, one per weight. Build only the weights the app uses: Serif 700 and 900, and the Sans weights between 400 and 700 that `styles.css` uses.
+   - Licence: OFL 1.1, © Adobe, no Reserved Font Name, but "Noto is a trademark of Google Inc.", so the modified copies get their own family names (for example Kanjiru Serif and Kanjiru Sans). Credit them in `data/ATTRIBUTION.md` and the About page (`js/about.js`).
+2. **Why it fixes the missing parts:** checked 2026-11-11 with fontTools. Google's Noto Sans JP and Noto Serif JP have 17,933 code points each and lack five part glyphs: 㐄 U+3404, 业 U+4E1A, 龵 U+9FB5, 龶 U+9FB6 and 𢆉 U+22189. Today the game draws those from KanjiVG strokes (`svg` on their forms in `data/parts.json`, drawn by `js/play/glyph.js`). The full CJK fonts have 44,777 (Serif Bold) and 44,810 (Sans Regular) code points, including 㐄 业 龵 龶, but not 𢆉.
+3. **𢆉** (in 執 報 幸 摯) is the lower half of 幸: cut its outlines from Noto's own 幸 into our copies, and show it beside today's drawing in the screenshots. If it looks wrong, keep the drawing. Jigmo (CC0, from GlyphWiki) covers every CJK character, but it's a lighter Mincho that wouldn't match; its site was blocked in the cloud session.
+4. **`tools/make_fonts.py`** (dev only, needs fontTools and brotli). Subset both families to the kanji in `data/game/kanji.json`, every part glyph and form in `data/parts.json`, kana, Latin and punctuation, and every character in `js/i18n/*.js` and the meanings in `data/game/answers.json`. Split them by character range, as Google does (it serves the two families as 248 files today), as WOFF2 with versioned names.
+5. **Ship only if it's no heavier:** compare the bytes a first visit downloads (the play page, then a game) against Google's today.
+6. **`tools/build_data.py`** decides which parts need drawings from Google's stylesheet (around lines 287 and 1025). Make it read our fonts instead, or the next rebuild brings the drawings back. Then the forms the fonts cover lose their `svg`; `glyph.js` keeps drawing any that still have one.
+7. **Wiring:** `index.html` drops the Google Fonts links and preconnects; `@font-face` rules in `styles.css`. `sw.js`: same-origin font files cache first, since their names are versioned. `.htaccess`: the WOFF2 type and a long cache for the font files. `js/coin.js` is unaffected: its 金 is a stored outline.
+8. **The CSP as a `<meta http-equiv="Content-Security-Policy">`**, first in `<head>`, before any script: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'`. `'unsafe-inline'` styles are needed because `tokens.js` injects a `<style>`; every `innerHTML` in the app is fixed SVG (checked in the audit).
+   - `frame-ancestors 'none'` only works as a header: one line in `.htaccess`.
+   - Why a meta tag: without a reporting endpoint, a report-only header only logs to visitors' own consoles. A meta tag also applies under `php -S`, which ignores `.htaccess`, so the user can test it locally.
+9. **Needs the user:** their site-root `.htaccess` (in the Clearful folder) before starting, since a CSP set there applies too and both must pass. Before merging, they test the play page, a game, Settings, Points and a transfer code in Safari and Firefox on the Mac under `php -S`, with the console open.
+
+```
+Kanjiru step 9.<n>: <title from docs/ROADMAP.md, step 9>.
+
+Read CLAUDE.md, docs/DESIGN.md and docs/ROADMAP.md first; step 9 holds the agreed plan for this PR, its decisions and its checks. Work on a new branch from main. Follow "Every PR" in step 9: the self-checks, the docs, and who merges. Ask me only where step 9 says the user is needed.
 ```
 
 ---
