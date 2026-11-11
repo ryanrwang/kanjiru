@@ -15,6 +15,7 @@ import { t } from '../i18n.js';
 import { stats, newAchievements, streakRewards } from '../engine/stats.js';
 import * as ledger from '../ledger.js';
 import { textIcon } from './hint-art.js';
+import { coin } from '../coin.js';
 
 const oneOf = (power) => (power ? { [power]: 1 } : null);
 
@@ -99,5 +100,5 @@ export function describe(entry) {
       body: body.length ? body.join(sep) : (a ? t(`achievement.${a.id}.desc`) : '')
     };
   }
-  return { icon: ECONOMY.currency.icon, title: amounts(entry).join(sep), body: '' };
+  return { icon: coin(), title: amounts(entry).join(sep), body: '' };
 }

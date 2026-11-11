@@ -32,6 +32,7 @@ import { stats, progress } from './engine/stats.js';
 import { localDate } from './engine/daily.js';
 import { amounts, skinsFor, achievementStats } from './play/rewards.js';
 import { bump } from './toast.js';
+import { coin } from './coin.js';
 import { hintRow, priceButton } from './play/hints.js';
 import { hintIcon } from './play/hint-art.js';
 import { example as effectExample } from './play/effects.js';
@@ -198,7 +199,7 @@ export function openPoints(root, ctx) {
     return el('section', { class: 'card wallet-hero', 'aria-labelledby': 'wallet-title' },
       el('p', { class: 'wallet-label', id: 'wallet-title' }, t('points.wallet')),
       el('p', { class: 'wallet-total' },
-        el('span', { class: 'wallet-coin', 'aria-hidden': 'true' }, ECONOMY.currency.icon),
+        el('span', { class: 'wallet-coin', 'aria-hidden': 'true' }, coin()),
         el('span', { class: 'wallet-number' }, String(store.points(save))),
         el('span', { class: 'wallet-unit' }, t('currency.unit'))),
       el('dl', { class: 'wallet-stats' },

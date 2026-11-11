@@ -4,8 +4,9 @@
  * Each mode's `points` multiplier (modes.js) applies on top.
  */
 export const ECONOMY = {
-  // 小判, the old gold coin. Its name and "{n} pts" wording are in js/i18n/*.js.
-  currency: { icon: '🪙' },
+  // The points are 小判 (koban), the old gold coin: its name and "{n} pts"
+  // wording are in js/i18n/*.js, and its picture is drawn in js/coin.js, so
+  // it looks the same on every phone (it was the 🪙 emoji until 2026-11-11).
 
   // Shown on the toasts and the result card for each kind of reward.
   rewardIcons: { streak: '🔥', drop: '🎁', achievement: '🏅' },

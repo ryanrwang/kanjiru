@@ -92,6 +92,8 @@
         50: '#FBF6E9', 100: '#F4EBD3', 300: '#DCC383', 500: '#B8923A',
         700: '#7A5C1C', 800: '#5E4615', 900: '#3B2D0D', 950: '#221A07'
       },
+      // 小判 koban: the points' coin, a brighter gold than kin's (js/coin.js).
+      koban: { face: '#EDC453', line: '#C9A13E', shine: '#FFF8E1' },
       urushi: {   // 漆 lacquer
         500: '#B8321F', 700: '#8E2418', 800: '#2A1210', 900: '#1F0D0B', 950: '#140807'
       },
@@ -240,6 +242,14 @@
       // badge: the Badge hint icons' circles (js/play/hint-art.js), one per
       // hint (powers.js badge), the same in every skin. White on each
       // clears 3:1; near and hit are the tiles' own yellow and green.
+      // The points' coin (js/coin.js), a koban, the same in every skin:
+      // its face, its hammered lines, the glint and the rim.
+      coin: {
+        face:  c.koban.face,
+        line:  c.koban.line,
+        shine: c.koban.shine,
+        rim:   c.kin[700]
+      },
       hint: {
         bulb:  c.kin[300],
         glint: c.white,
