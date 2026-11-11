@@ -7,16 +7,19 @@
  * after the same confirm the Points page has, unless the player turned it off.
  *
  * Clue icons are the icons of the powers that reveal them (js/config/powers.js),
- * so nothing here names a power.
+ * drawn in the player's icons look (js/play/hint-art.js), so nothing here
+ * names a power.
  */
 import { POWERS, OFFERED_POWERS, ECONOMY } from '../registry.js';
 import { t, lang } from '../i18n.js';
 import { el } from '../dom.js';
 import { bump } from '../toast.js';
+import { hintIcon } from './hint-art.js';
 
 const pts = (n) => t('currency.amount', { n });
 
-const iconOf = (effect) => (POWERS.find((p) => p.effect === effect) || {}).icon || '';
+// The power behind a clue, for its icon (js/play/hint-art.js).
+const powerOf = (effect) => POWERS.find((p) => p.effect === effect) || null;
 
 const CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>';
 
@@ -78,7 +81,7 @@ function chip({ effects, card = effects, body, extra = '', icon = true, onOpen =
   const attrs = { class: `${extra}`, 'data-effects': effects };
   if (onOpen) Object.assign(attrs, { type: 'button', 'data-id': `clue-${card}`, title: t('game.clue.again'), onclick: () => onOpen(card) });
   return el(onOpen ? 'button' : 'span', attrs,
-    icon ? el('span', { class: 'clue-chip-icon', 'aria-hidden': 'true' }, iconOf(effects)) : null,
+    icon ? el('span', { class: 'clue-chip-icon' }, hintIcon(powerOf(effects))) : null,
     icon ? el('span', { class: 'visually-hidden' }, t(TITLES[effects] || 'game.clue.meaning')) : null,
     body,
     onOpen ? el('span', { class: 'visually-hidden' }, t('game.clue.again')) : null);
@@ -134,7 +137,7 @@ export function whyNot(engine, state, power, held) {
 export function hintRow({ power, held, free = false, off = false, action = null, line = null, key = power.id }) {
   const heldText = free ? t('game.powers.freeLabel') : t('game.powers.held', { n: held });
   return el('li', { class: `hint-row${off ? ' is-off' : ''}`, 'data-key': key },
-    el('span', { class: 'hint-icon', 'aria-hidden': 'true' }, power.icon),
+    el('span', { class: 'hint-icon' }, hintIcon(power)),
     el('p', { class: 'hint-name' }, t(`power.${power.id}.name`)),
     el('span', {
       class: `hint-held${held || free ? ' is-held' : ''}`, title: heldText, 'aria-label': heldText
@@ -241,7 +244,7 @@ export function openHints({ powers, read, ask, onBuy, onUse }) {
     const { held, free, points } = read(p.id);
     return [head(t('game.powers.title'), points),
       el('div', { class: 'hint-confirm' },
-        el('span', { class: 'hint-confirm-icon', 'aria-hidden': 'true' }, p.icon),
+        el('span', { class: 'hint-confirm-icon' }, hintIcon(p, { size: 'lg' })),
         el('h3', { class: 'hint-confirm-title' }, t('game.powers.confirmUse', { name: name(p) })),
         el('p', { class: 'hint-desc' }, t(`power.${p.id}.desc`)),
         el('p', { class: 'sheet-note' }, free ? t('game.powers.freeNote') : t('game.powers.left', { n: held, left: held - 1 }))),
@@ -259,7 +262,7 @@ export function openHints({ powers, read, ask, onBuy, onUse }) {
     const never = el('input', { type: 'checkbox', id: 'hints-never', 'data-id': 'never' });
     return [head(t('game.powers.title'), points),
       el('div', { class: 'hint-confirm' },
-        el('span', { class: 'hint-confirm-icon', 'aria-hidden': 'true' }, p.icon),
+        el('span', { class: 'hint-confirm-icon' }, hintIcon(p, { size: 'lg' })),
         el('h3', { class: 'hint-confirm-title' }, t('shop.confirmTitle', { name: name(p) })),
         el('p', {}, t('shop.confirm', { cost: p.cost, have: points, left: points - p.cost, name: name(p) })),
         el('label', { class: 'check-row', for: 'hints-never' }, never, el('span', {}, t('shop.dontAsk')))),

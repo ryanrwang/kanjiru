@@ -279,7 +279,7 @@ export default {
 
   looks: {
     title: 'Looks',
-    note: 'Mix colours, tiles and effects',
+    note: 'Mix colours, tiles, effects and icons',
     lockPoints: '{cost} pts',
     lockAchievement: '{name}',
     locked: 'Locked',
@@ -576,7 +576,8 @@ export default {
   slot: {
     theme: 'Colours',
     tiles: 'Tile reveal',
-    effect: 'Win effect'
+    effect: 'Win effect',
+    icons: 'Hint icons'
   },
 
   skin: {
@@ -609,6 +610,12 @@ export default {
       glow: 'Gold shine',
       seal: 'Seal 印',
       hanabi: 'Hanabi 花火'
+    },
+    icons: {
+      emoji: 'Emoji',
+      badge: 'Badge',
+      seal: 'Seal',
+      illustrated: 'Illustrated'
     }
   },
 
