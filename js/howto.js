@@ -15,7 +15,7 @@
  * screen readers.
  */
 import { t } from './i18n.js';
-import { el } from './dom.js';
+import { el, smoothFold } from './dom.js';
 
 const ANSWER = '時間';
 // Each guess: [part, mark] per cell, and the line shown after its reveal.
@@ -45,14 +45,15 @@ export function howTo({ open = true, tiles = 'flip' } = {}) {
     ['hit', 'near', 'miss'].map((state) =>
       el('li', {}, el('span', { class: `legend-dot is-${state}-bg`, 'aria-hidden': 'true' }), t(`howto.${state}`))));
 
-  const details = el('details', { class: 'card fold howto', open },
+  // It eases open and shut (js/dom.js smoothFold()).
+  const details = smoothFold(el('details', { class: 'card fold howto', open },
     el('summary', { class: 'fold-summary' },
       el('h2', { class: 'fold-title', id: 'howto-title' }, t('howto.title')),
       el('span', { class: 'fold-chevron', 'aria-hidden': 'true' })),
     el('div', { class: 'fold-body' },
       el('p', { class: 'howto-lead' }, t('howto.lead')),
       el('p', { class: 'howto-text' }, t('howto.body')),
-      el('div', { class: 'demo', 'data-tiles': tiles }, board, legend)));
+      el('div', { class: 'demo', 'data-tiles': tiles }, board, legend))));
 
   // ── The animation ──────────────────────────────────────────────────
 

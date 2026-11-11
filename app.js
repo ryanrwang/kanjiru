@@ -34,7 +34,7 @@
  */
 import { MODES, MODE, LEVEL, ECONOMY, settingsLevel, validate } from './js/registry.js';
 import { t, tIn, setLang, lang, detect, LANGUAGES } from './js/i18n.js';
-import { el, switchRow } from './js/dom.js';
+import { el, switchRow, motion, smoothFold, shrinkOut, crossfade } from './js/dom.js';
 import * as store from './js/store.js';
 import { openSettings } from './js/settings.js';
 import { openPoints } from './js/points.js';
@@ -206,9 +206,18 @@ const TIPS = {
   bonus: { anchor: () => hintsBtn, build: () => bonusCard() }
 };
 let tipAnchor = null;
+// A tip put away fades out, its dimming with it (styles.css .is-leaving).
+function leave(node) {
+  const time = motion('sheetOut');
+  if (!time) { node.remove(); return; }
+  node.classList.add('is-leaving');
+  node.removeAttribute('id');
+  setTimeout(() => node.remove(), time);
+}
+
 function renderHeadTip(which) {
   const head = document.querySelector('.app-header');
-  const was = head.querySelector('.head-tip');
+  const was = head.querySelector('.head-tip:not(.is-leaving)');
   const tip = TIPS[which] || null;
   if (tipAnchor) {
     tipAnchor.classList.remove('is-calling');
@@ -216,7 +225,7 @@ function renderHeadTip(which) {
   }
   tipAnchor = tip ? tip.anchor() : null;
   if (!tip) {
-    if (was) was.remove();
+    if (was) leave(was);
     return;
   }
   // The same tip in the same language stays put, so it doesn't come in
@@ -364,8 +373,10 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) save
 // With no saved choice, follow the device as it switches.
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   if (save.settings.scheme === null) {
-    applyLook();
-    if (view && view.refresh && page().name === 'points') view.refresh();
+    crossfade(() => {
+      applyLook();
+      if (view && view.refresh && page().name === 'points') view.refresh();
+    });
   }
 });
 
@@ -533,8 +544,11 @@ async function deleteFromHistory(g) {
   const items = played ? [...played.querySelectorAll('.history-item')] : [];
   const at = items.findIndex((node) => node.dataset.game === `${g.modeId}/${g.key}`);
   store.deleteGame(g.modeId, g.key);
-  renderHistory();
+  // The game eases shut before the list is drawn without it.
+  if (items[at]) await shrinkOut(items[at]);
   toast({ icon: '🗑️', title: t('history.deleted', { answer: g.answer }) });
+  if (page().name !== 'play') return;
+  renderHistory();
   const left = played ? [...played.querySelectorAll('.history-summary')] : [];
   const next = left[Math.min(Math.max(at, 0), left.length - 1)] || (cards && cards.querySelector('.play-actions .btn-primary'));
   if (next) next.focus();
@@ -548,7 +562,9 @@ function renderHistory() {
       const from = playedShown;
       playedShown += PAGE;
       renderHistory();
-      // The first game just listed takes the focus, so the keyboard carries on there.
+      // The games just listed fade in; the first takes the focus, so the
+      // keyboard carries on there.
+      if (played) [...played.querySelectorAll('.history-item')].slice(from).forEach((node) => node.classList.add('is-new'));
       const next = played && played.querySelectorAll('.history-item')[from];
       if (next) { next.setAttribute('tabindex', '-1'); next.focus(); }
     }
@@ -570,13 +586,14 @@ function renderHistory() {
 function installTip() {
   if (!tipDue(store.get())) return null;
   const p = platform();
-  const later = () => {
+  const later = async () => {
     store.update((s) => { s.settings.installLater = localDate(); });
+    if (tip && tip.isConnected) await shrinkOut(tip);
     renderTip();
     const next = app.querySelector('.play-actions .btn');
     if (next) next.focus();
   };
-  return el('details', { class: 'card fold install-tip' },
+  return smoothFold(el('details', { class: 'card fold install-tip' },
     el('summary', { class: 'fold-summary' },
       el('h2', { class: 'fold-title', id: 'install-tip-title' }, t('install.title')),
       el('span', { class: 'fold-chevron', 'aria-hidden': 'true' })),
@@ -586,7 +603,7 @@ function installTip() {
       el('p', { class: 'install-note' }, t('install.tipBackup')),
       el('div', { class: 'btn-row' },
         canPrompt() ? el('button', { class: 'btn btn-primary', type: 'button', onclick: () => promptInstall() }, t('install.button')) : null,
-        el('button', { class: 'btn btn-ghost', type: 'button', onclick: later }, t('install.later')))));
+        el('button', { class: 'btn btn-ghost', type: 'button', onclick: later }, t('install.later'))))));
 }
 
 let tip = null;
@@ -684,15 +701,43 @@ function closePage() {
 }
 
 // Draws the page the URL names, once per move (Back fires both popstate
-// and hashchange).
-function route() {
+// and hashchange). A move deeper slides the new page in from the right;
+// one back (Close, 漢, the browser's Back) slides it out (slide()).
+let shownDepth = depth();
+function route(event) {
   if (routed === location.hash) return;
   routed = location.hash;
   const from = document.body.dataset.page;
-  renderAll();
-  window.scrollTo(0, 0);
-  glass();   // at the top now, before the scroll event's frame
-  arrive(from);
+  const to = page().name;
+  const d = depth();
+  const way = to === from ? null
+    : d > shownDepth ? 'forward'
+    : d < shownDepth || to === 'play' ? 'back' : 'forward';
+  shownDepth = d;
+  slide(way, () => {
+    const drawn = renderAll();
+    window.scrollTo(0, 0);
+    glass();   // at the top now, before the scroll event's frame
+    arrive(from);
+    return drawn;
+  }, !!(event && event.hasUAVisualTransition));
+}
+
+// Page moves, like an iPhone (2026-11-11, the user picked it from a demo):
+// going deeper, the new page slides in from the right over the old, which
+// drifts left beneath it; going back, the page slides away to the right.
+// The header stays and its controls fade (styles.css html[data-move]).
+// Done with the View Transitions API, from pictures of both pages, so
+// nothing on either replays; a browser without it, reduced motion, or a
+// browser that animated its own swipe back (native) changes at once.
+let moves = 0;
+function slide(way, draw, native = false) {
+  if (!way || native || !motion('page') || !document.startViewTransition) { draw(); return; }
+  const root = document.documentElement;
+  const id = ++moves;
+  root.dataset.move = way;
+  const move = document.startViewTransition(draw);
+  move.finished.finally(() => { if (moves === id) delete root.dataset.move; });
 }
 
 // A move between pages, for someone who can't see it happen: a screen
@@ -769,8 +814,12 @@ function renderAll() {
   document.body.dataset.page = p.name;
   glass();
   renderHeader();
-  if (p.name === 'game') renderGame(p);
-  else if (p.name === 'points') {
+  routed = location.hash;
+  // A page move waits for the game to be drawn, when its data is in.
+  if (p.name === 'game') {
+    const drawn = renderGame(p);
+    if (game.data || game.error) return drawn;
+  } else if (p.name === 'points') {
     view = openPoints(app, {
       onLook: () => { save = store.get(); applyLook(); },
       onWallet: renderHeader
@@ -778,7 +827,7 @@ function renderAll() {
   } else if (p.name === 'settings') view = openSettings(app, { onChange: settingsChanged });
   else if (p.name === 'about') view = openAbout(app);
   else renderPlay();
-  routed = location.hash;
+  return null;
 }
 
 window.addEventListener('popstate', route);
@@ -803,9 +852,16 @@ async function askLanguage() {
     if (pick) s.settings.lang = pick;
   });
   const was = lang();
-  settingsChanged();
-  if (lang() !== was) renderAll();
+  // A new language crossfades in (js/dom.js crossfade()).
+  crossfade(() => {
+    settingsChanged();
+    if (lang() !== was) renderAll();
+  });
 }
+
+// iOS Safari shows a press (:active, styles.css) only on a page that
+// listens for touches (from memory, not checked; harmless elsewhere).
+document.addEventListener('touchstart', () => {}, { passive: true });
 
 catchUp();
 applyLook();

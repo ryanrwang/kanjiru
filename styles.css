@@ -34,9 +34,6 @@ body {
   line-height: var(--font-lineHeight-normal);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
-  transition:
-    background-color var(--transition-slow) var(--transition-ease),
-    color var(--transition-slow) var(--transition-ease);
 }
 
 h1, h2, h3, p { margin: 0; }
@@ -58,8 +55,13 @@ button:disabled { cursor: default; }
   border-radius: var(--radius-sm);
 }
 
-a { color: var(--color-link-default); }
-a:hover { color: var(--color-link-hover); }
+a {
+  color: var(--color-link-default);
+  transition: color var(--transition-hover) var(--transition-ease);
+}
+@media (hover: hover) {
+  a:hover { color: var(--color-link-hover); }
+}
 
 /* Kanji shown as kanji (tiles, the brand, example words) use the serif.
    Only marked elements: the page itself may be lang="ja" for the Japanese
@@ -110,7 +112,9 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   text-decoration: none;
 }
 
-.brand-link:hover { color: inherit; }
+@media (hover: hover) {
+  .brand-link:hover { color: inherit; }
+}
 
 .brand-kanji {
   color: var(--color-text-accent);
@@ -168,8 +172,10 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color var(--transition-fast) var(--transition-ease),
-    border-color var(--transition-fast) var(--transition-ease);
+    background-color var(--transition-hover) var(--transition-ease),
+    border-color var(--transition-hover) var(--transition-ease),
+    color var(--transition-hover) var(--transition-ease),
+    transform var(--transition-press) var(--transition-ease);
 }
 
 .head-btn.is-icon {
@@ -178,10 +184,12 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   color: var(--color-text-secondary);
 }
 
-.head-btn:hover {
-  border-color: var(--color-border-default);
-  background: var(--color-interactive-hover);
-  color: var(--color-text-primary);
+@media (hover: hover) {
+  .head-btn:hover {
+    border-color: var(--color-border-default);
+    background: var(--color-interactive-hover);
+    color: var(--color-text-primary);
+  }
 }
 .head-btn:active { background: var(--color-interactive-active); }
 .head-btn[hidden] { display: none; }
@@ -204,9 +212,11 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   background: var(--color-interactive-selected);
   box-shadow: 0 0 var(--spacing-sm) color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-faint) * 100%), transparent);
 }
-#hints-open:hover {
-  border-color: color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-soft) * 100%), transparent);
-  background: var(--color-interactive-hover);
+@media (hover: hover) {
+  #hints-open:hover {
+    border-color: color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-soft) * 100%), transparent);
+    background: var(--color-interactive-hover);
+  }
 }
 #hints-open:active { background: var(--color-interactive-active); }
 
@@ -316,8 +326,13 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   background: none;
   color: var(--color-text-secondary);
   cursor: pointer;
+  transition:
+    background-color var(--transition-hover) var(--transition-ease),
+    color var(--transition-hover) var(--transition-ease);
 }
-.head-tip-close:hover { background: var(--color-interactive-hover); color: var(--color-text-primary); }
+@media (hover: hover) {
+  .head-tip-close:hover { background: var(--color-interactive-hover); color: var(--color-text-primary); }
+}
 .head-tip-close svg { width: var(--layout-headIcon); height: var(--layout-headIcon); }
 
 /* The language tip: one line or two, at the gear. It reaches a little
@@ -463,10 +478,14 @@ body:not([data-page="play"]) .app-footer { display: none; }
   height: var(--spacing-2xl);
   border-radius: var(--radius-full);
   color: var(--color-text-secondary);
-  transition: background-color var(--transition-fast) var(--transition-ease);
+  transition:
+    background-color var(--transition-hover) var(--transition-ease),
+    transform var(--transition-press) var(--transition-ease);
 }
 
-.icon-btn:hover { background: var(--color-interactive-hover); }
+@media (hover: hover) {
+  .icon-btn:hover { background: var(--color-interactive-hover); }
+}
 .icon-btn:active { background: var(--color-interactive-active); }
 .icon-btn:disabled { opacity: var(--opacity-disabled); }
 .icon-btn svg { width: var(--spacing-lg); height: var(--spacing-lg); }
@@ -671,6 +690,7 @@ body:not([data-page="play"]) .app-footer { display: none; }
      slots its summary, so it would inherit the slot's square corners
      (the hover showed them, 2026-11-10). Open, the foot is square. */
   border-radius: calc(var(--radius-xl) - var(--stroke-thin));
+  transition: background-color var(--transition-hover) var(--transition-ease);
 }
 .fold[open] > .fold-summary {
   border-bottom-left-radius: 0;
@@ -678,7 +698,9 @@ body:not([data-page="play"]) .app-footer { display: none; }
 }
 
 .fold-summary::-webkit-details-marker { display: none; }
-.fold-summary:hover { background: var(--color-interactive-hover); }
+@media (hover: hover) {
+  .fold-summary:hover { background: var(--color-interactive-hover); }
+}
 
 .fold-chevron {
   flex: 0 0 auto;
@@ -687,11 +709,17 @@ body:not([data-page="play"]) .app-footer { display: none; }
   border-right: var(--stroke-thick) solid var(--color-text-muted);
   border-bottom: var(--stroke-thick) solid var(--color-text-muted);
   transform: rotate(45deg);
-  transition: transform var(--transition-fast) var(--transition-ease);
+  transition: transform var(--transition-fold) var(--transition-ease);
 }
 
 .fold[open] .fold-chevron,
 .sheet-fold[open] > .fold-summary .fold-chevron { transform: rotate(-135deg); }
+
+/* A fold easing shut (js/dom.js smoothFold()) is still [open] until its
+   body is gone: its chevron turns back as it starts. */
+.fold.is-shutting .fold-chevron,
+.sheet-fold.is-shutting > .fold-summary .fold-chevron,
+.history-fold.is-shutting .fold-chevron { transform: rotate(45deg); }
 
 .fold-body {
   display: flex;
@@ -861,13 +889,28 @@ body:not([data-page="play"]) .app-footer { display: none; }
   padding: var(--spacing-sm);
   border-radius: var(--radius-lg);
   list-style: none;
+  transition:
+    background-color var(--transition-hover) var(--transition-ease),
+    box-shadow var(--transition-hover) var(--transition-ease),
+    transform var(--transition-hover) var(--transition-ease);
 }
 
 div.history-summary { grid-template-columns: auto minmax(0, 1fr) auto; }
 
 summary.history-summary { cursor: pointer; }
 summary.history-summary::-webkit-details-marker { display: none; }
-summary.history-summary:hover { background: var(--color-interactive-hover); }
+/* On a mouse, a game lifts a little under the pointer (2026-11-11, the
+   user asked for a lift on cards). */
+@media (hover: hover) {
+  summary.history-summary:hover {
+    background: var(--color-interactive-hover);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(calc(var(--stroke-thick) * -1));
+  }
+}
+
+/* A game listed by Show more fades in (app.js renderHistory()). */
+.history-item.is-new { animation: motion-fade-in var(--transition-fold) var(--transition-ease) both; }
 
 /* Opened: the final board, then Delete at the foot, on the right; a gap
    above it, so the row's hover doesn't touch the board. */
@@ -1045,7 +1088,11 @@ summary.history-summary:hover { background: var(--color-interactive-hover); }
   border-radius: var(--radius-full);
   font-weight: var(--font-weight-bold);
   line-height: var(--font-lineHeight-snug);
-  transition: background-color var(--transition-fast) var(--transition-ease);
+  transition:
+    background-color var(--transition-hover) var(--transition-ease),
+    color var(--transition-hover) var(--transition-ease),
+    opacity var(--transition-hover) var(--transition-ease),
+    transform var(--transition-press) var(--transition-ease);
 }
 
 .btn:disabled { opacity: var(--opacity-disabled); }
@@ -1062,13 +1109,17 @@ summary.history-summary:hover { background: var(--color-interactive-hover); }
   background: var(--color-action-primary-bg);
   color: var(--color-action-primary-text);
 }
-.btn-primary:hover:not(:disabled) { background: var(--color-action-primary-hover); }
+@media (hover: hover) {
+  .btn-primary:hover:not(:disabled) { background: var(--color-action-primary-hover); }
+}
 
 .btn-secondary {
   background: var(--color-action-secondary-bg);
   color: var(--color-action-secondary-text);
 }
-.btn-secondary:hover:not(:disabled) { background: var(--color-action-secondary-hover); }
+@media (hover: hover) {
+  .btn-secondary:hover:not(:disabled) { background: var(--color-action-secondary-hover); }
+}
 
 /* Forced colours drop a button's fill, which is all that showed it was
    one: an edge in the text's colour takes its place (a filled button has
@@ -1080,10 +1131,14 @@ summary.history-summary:hover { background: var(--color-interactive-hover); }
 
 /* A link drawn as a button (About in Settings) keeps the button's look. */
 a.btn { text-decoration: none; }
-a.btn-secondary:hover { color: var(--color-action-secondary-text); }
+@media (hover: hover) {
+  a.btn-secondary:hover { color: var(--color-action-secondary-text); }
+}
 
 .btn-ghost { color: var(--color-text-secondary); }
-.btn-ghost:hover:not(:disabled) { background: var(--color-interactive-hover); }
+@media (hover: hover) {
+  .btn-ghost:hover:not(:disabled) { background: var(--color-interactive-hover); }
+}
 
 /* Something that can't be undone (Delete all data): outlined in the accent,
    which keeps AA contrast in every skin. */
@@ -1091,7 +1146,9 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
   color: var(--color-text-accent);
   box-shadow: inset 0 0 0 var(--stroke-thick) currentColor;
 }
-.btn-danger:hover:not(:disabled) { background: var(--color-interactive-hover); }
+@media (hover: hover) {
+  .btn-danger:hover:not(:disabled) { background: var(--color-interactive-hover); }
+}
 
 .btn-row {
   display: flex;
@@ -1122,6 +1179,43 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
 }
 
 .sheet::backdrop { background: var(--color-bg-overlay); }
+
+/* Opening, a sheet rises in as its backdrop fades; closing, the dialog
+   goes at once (so the page takes the focus as before) and a copy of it
+   fades out on top (js/dom.js closeSheet(), .sheet-ghost). Opened again
+   while its copy fades (the next step of a run of asks), it stays put and
+   only its content fades in (.is-again). */
+.sheet[open] { animation: sheet-in var(--transition-sheetIn) var(--transition-ease) both; }
+.sheet[open]::backdrop { animation: motion-fade-in var(--transition-sheetIn) var(--transition-ease) both; }
+.sheet.is-again,
+.sheet.is-again::backdrop { animation: none; }
+.sheet.is-again > *,
+.sheet-body.is-swapped { animation: motion-fade-in var(--transition-sheetOut) var(--transition-ease) both; }
+
+.sheet-ghost {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: var(--color-bg-overlay);
+  pointer-events: none;
+  animation: motion-fade-out var(--transition-sheetOut) var(--transition-exit) both;
+}
+.sheet-ghost > .sheet {
+  overflow: hidden;
+  animation: sheet-out var(--transition-sheetOut) var(--transition-exit) both;
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: var(--opacity-hidden);
+    transform: translateY(var(--spacing-sm)) scale(var(--scale-enter));
+  }
+}
+@keyframes sheet-out { to { transform: scale(var(--scale-enter)); } }
+@keyframes motion-fade-in { from { opacity: var(--opacity-hidden); } }
+@keyframes motion-fade-out { to { opacity: var(--opacity-hidden); } }
 
 .sheet-body {
   display: flex;
@@ -1259,7 +1353,9 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  transition: background-color var(--transition-fast) var(--transition-ease);
+  transition:
+    background-color var(--transition-toggle) var(--transition-ease),
+    box-shadow var(--transition-toggle) var(--transition-ease);
 }
 
 .switch::before {
@@ -1272,11 +1368,28 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
   border-radius: var(--radius-full);
   background: var(--color-border-strong);
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast) var(--transition-ease);
+  transition:
+    transform var(--transition-toggle) var(--transition-ease),
+    background-color var(--transition-toggle) var(--transition-ease);
 }
 
 .switch:checked { background: var(--color-action-primary-bg); box-shadow: none; }
 .switch:checked::before {
+  background: var(--color-action-primary-text);
+  transform: translateX(var(--spacing-md));
+}
+
+/* A switch just moved: its page drew it afresh, so it starts drawn the way
+   it was and slides from there (js/dom.js switchRow()). */
+.switch.is-from,
+.switch.is-from::before { transition: none; }
+.switch:checked.is-from {
+  background: var(--color-bg-sunken);
+  box-shadow: inset 0 0 0 var(--stroke-thin) var(--color-border-strong);
+}
+.switch:checked.is-from::before { background: var(--color-border-strong); transform: none; }
+.switch:not(:checked).is-from { background: var(--color-action-primary-bg); box-shadow: none; }
+.switch:not(:checked).is-from::before {
   background: var(--color-action-primary-text);
   transform: translateX(var(--spacing-md));
 }
@@ -1305,10 +1418,15 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-secondary);
-  transition: background-color var(--transition-fast) var(--transition-ease);
+  transition:
+    background-color var(--transition-hover) var(--transition-ease),
+    color var(--transition-hover) var(--transition-ease),
+    transform var(--transition-press) var(--transition-ease);
 }
 
-.segment:hover:not(:disabled) { color: var(--color-text-primary); }
+@media (hover: hover) {
+  .segment:hover:not(:disabled) { color: var(--color-text-primary); }
+}
 
 /* The picked one has an edge, so it stands out 3:1 from the track. */
 .segment[aria-pressed="true"] {
@@ -1439,10 +1557,21 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
   border: var(--stroke-thick) solid var(--color-border-subtle);
   background: var(--color-bg-surface);
   text-align: left;
-  transition: border-color var(--transition-fast) var(--transition-ease);
+  transition:
+    border-color var(--transition-hover) var(--transition-ease),
+    box-shadow var(--transition-hover) var(--transition-ease),
+    opacity var(--transition-hover) var(--transition-ease),
+    transform var(--transition-press) var(--transition-ease);
 }
 
-.ask-option:hover { border-color: var(--color-border-default); }
+/* On a mouse, an option lifts a little under the pointer. */
+@media (hover: hover) {
+  .ask-option:hover:not(:disabled) {
+    border-color: var(--color-border-default);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(calc(var(--stroke-thick) * -1));
+  }
+}
 
 .ask-option-name { font-weight: var(--font-weight-bold); }
 .ask-option.is-replace .ask-option-name { color: var(--color-text-accent); }
@@ -1456,7 +1585,9 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
    game, resetting achievements, deleting everything. */
 .ask-sheet .ask-options { grid-template-columns: 1fr; }
 .ask-sheet .ask-option { border-color: var(--color-border-default); }
-.ask-sheet .ask-option:hover:not(:disabled) { border-color: var(--color-border-strong); }
+@media (hover: hover) {
+  .ask-sheet .ask-option:hover:not(:disabled) { border-color: var(--color-border-strong); }
+}
 .ask-option.is-danger .ask-option-name { color: var(--color-text-accent); }
 .ask-option:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
 
@@ -1851,7 +1982,18 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
   border-style: solid;
   border-color: var(--color-border-strong);
 }
-.board-row.is-next button.tile:hover { background: var(--color-interactive-selected); }
+@media (hover: hover) {
+  .board-row.is-next button.tile:hover { background: var(--color-interactive-selected); }
+}
+.board-row.is-next button.tile {
+  transition:
+    background-color var(--transition-hover) var(--transition-ease),
+    transform var(--transition-press) var(--transition-ease);
+}
+
+/* A part just put in its cell pops (js/play/screen.js addPart()). */
+.tile.is-typed { animation: cell-pop var(--transition-press) var(--transition-ease); }
+@keyframes cell-pop { 50% { transform: scale(var(--scale-pop)); } }
 .tile.is-active {
   border-style: solid;
   border-color: var(--color-border-focus);
@@ -2521,10 +2663,14 @@ button.clue-chip {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color var(--transition-fast) var(--transition-ease);
+  transition:
+    border-color var(--transition-hover) var(--transition-ease),
+    transform var(--transition-press) var(--transition-ease);
 }
 
-button.clue-chip:hover { border-color: var(--color-border-strong); }
+@media (hover: hover) {
+  button.clue-chip:hover { border-color: var(--color-border-strong); }
+}
 
 .clue-chip.is-meaning { flex: 1 1 0; }
 .clue-chip.is-soon { font-size: var(--font-size-xs); color: var(--color-text-muted); }
@@ -3123,12 +3269,14 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 .palette-tile {
   position: relative;
   transition:
-    border-color var(--transition-fast) var(--transition-ease),
-    transform var(--transition-fast) var(--transition-ease),
-    opacity var(--transition-fast) var(--transition-ease);
+    border-color var(--transition-hover) var(--transition-ease),
+    transform var(--transition-press) var(--transition-ease),
+    opacity var(--transition-hover) var(--transition-ease);
 }
 
-.palette-tile:hover:not(:disabled) { border-color: var(--color-border-strong); }
+@media (hover: hover) {
+  .palette-tile:hover:not(:disabled) { border-color: var(--color-border-strong); }
+}
 
 .palette-tile[aria-pressed="true"] {
   border-color: var(--color-border-focus);
@@ -3776,10 +3924,20 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   border-radius: var(--radius-lg);
   border: var(--stroke-thick) solid var(--color-border-subtle);
   text-align: left;
-  transition: border-color var(--transition-fast) var(--transition-ease);
+  transition:
+    border-color var(--transition-hover) var(--transition-ease),
+    box-shadow var(--transition-hover) var(--transition-ease),
+    transform var(--transition-press) var(--transition-ease);
 }
 
-.swatch:hover { border-color: var(--color-border-default); }
+/* On a mouse, a look lifts a little under the pointer. */
+@media (hover: hover) {
+  .swatch:hover {
+    border-color: var(--color-border-default);
+    box-shadow: var(--shadow-md);
+    transform: translateY(calc(var(--stroke-thick) * -1));
+  }
+}
 .swatch.is-open { border-color: var(--color-border-strong); }
 .swatch[aria-pressed="true"] { border-color: var(--color-border-focus); }
 /* A locked look: its example dimmed until you open it to see it, a lock
@@ -4315,6 +4473,82 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   100% { clip-path: inset(0 0 0 0); }
 }
 
+/* ── Moves between states (2026-11-11) ────────────────────────────── */
+
+/* Pressed: a button, key or cell sinks in a little (tokens.js press; the
+   user asked). After the hover lifts, so a press wins over a lift. */
+.btn:active:not(:disabled),
+.head-btn:active,
+.icon-btn:active:not(:disabled),
+.segment:active:not(:disabled),
+.ask-option:active:not(:disabled),
+.swatch:active,
+button.clue-chip:active,
+.palette-tile:active:not(:disabled),
+.board-row.is-next button.tile:active { transform: scale(var(--scale-press)); }
+
+/* A tip put away fades (app.js renderHeadTip()), its dimming with it. */
+.head-tip.is-leaving {
+  pointer-events: none;
+  animation: motion-fade-out var(--transition-sheetOut) var(--transition-exit) both;
+}
+
+/* The tick on a look just picked pops in (js/points.js). */
+.swatch-badge.is-new { animation: badge-pop var(--transition-toggle) var(--transition-bounce) both; }
+@keyframes badge-pop {
+  from { opacity: var(--opacity-hidden); transform: scale(var(--scale-enter)); }
+  60%  { transform: scale(var(--scale-pop)); }
+}
+
+/* A new line of news fades in: a transfer's status, a code to send, a
+   purchase done (js/settings.js, js/points.js). */
+.transfer-status.is-new,
+.transfer-code.is-new,
+.status-line.is-new { animation: motion-fade-in var(--transition-fold) var(--transition-ease) both; }
+
+/* A change of look or language crossfades where the browser can (js/dom.js
+   crossfade()). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--transition-look);
+  animation-timing-function: var(--transition-ease);
+}
+
+/* Page moves, like an iPhone (app.js slide(); the user picked it from a
+   demo, 2026-11-11). Going deeper, the new page slides in from the right,
+   shadowed, over the old, which drifts a quarter of the way left beneath
+   it; going back, the page slides away to the right off the one beneath.
+   The header stays where it is, its controls fading (named only during a
+   move: a name would stop its glass blurring the page). */
+html[data-move] .app-header { view-transition-name: app-header; }
+html[data-move]::view-transition-old(root),
+html[data-move]::view-transition-new(root) {
+  animation-duration: var(--transition-page);
+  animation-timing-function: var(--transition-ease);
+  mix-blend-mode: normal;
+}
+html[data-move="forward"]::view-transition-old(root) { animation-name: page-drift-left; }
+html[data-move="forward"]::view-transition-new(root) {
+  animation-name: page-from-right;
+  box-shadow: var(--shadow-lg);
+}
+html[data-move="back"]::view-transition-old(root) {
+  z-index: 1;
+  animation-name: page-to-right;
+  box-shadow: var(--shadow-lg);
+}
+html[data-move="back"]::view-transition-new(root) { animation-name: page-drift-back; }
+html[data-move]::view-transition-old(app-header),
+html[data-move]::view-transition-new(app-header) {
+  animation-duration: var(--transition-hover);
+  animation-timing-function: var(--transition-ease);
+}
+
+@keyframes page-from-right { from { transform: translateX(100%); } }
+@keyframes page-to-right   { to   { transform: translateX(100%); } }
+@keyframes page-drift-left { to   { transform: translateX(-25%); } }
+@keyframes page-drift-back { from { transform: translateX(-25%); } }
+
 /* ── Reduced motion ────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -4340,6 +4574,23 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   .frame-part.is-new,
   .kanji-frame.is-new { animation: none; }
   .palette-tile[aria-pressed="true"] { transform: none; }
+  /* Lifts and presses are movement too. */
+  .btn:active:not(:disabled), .head-btn:active, .icon-btn:active:not(:disabled),
+  .segment:active:not(:disabled), .ask-option:hover:not(:disabled),
+  .ask-option:active:not(:disabled), .swatch:hover, .swatch:active,
+  button.clue-chip:active, .palette-tile:active:not(:disabled),
+  .board-row.is-next button.tile:active, summary.history-summary:hover { transform: none; }
+  .tile.is-typed,
+  .swatch-badge.is-new,
+  .history-item.is-new,
+  .sheet[open],
+  .sheet[open]::backdrop,
+  .sheet.is-again > *,
+  .sheet-body.is-swapped,
+  .head-tip.is-leaving,
+  .transfer-status.is-new,
+  .transfer-code.is-new,
+  .status-line.is-new { animation: none; }
   .points-bump,
   .toast,
   .result-points.is-new { animation: none; }

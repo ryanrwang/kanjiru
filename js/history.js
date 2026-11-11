@@ -20,7 +20,7 @@
  */
 import { LEVEL, POWER } from './registry.js';
 import { t, lang } from './i18n.js';
-import { el } from './dom.js';
+import { el, smoothFold } from './dom.js';
 import { games } from './engine/stats.js';
 import { keyTime } from './engine/daily.js';
 import { scoreOrder, nearWays } from './engine/score.js';
@@ -160,16 +160,19 @@ function item(g, data, engine, glyph, onDelete) {
         'aria-label': t('history.deleteLabel', { answer: g.answer }),
         onclick: () => onDelete(g)
       }, t('history.delete'))) : null);
-  const fold = el('details', {
+  // It eases open and shut (js/dom.js smoothFold()), its board drawn as
+  // it starts to open, so it's measured whole.
+  const draw = (node) => { if (!node.querySelector('.history-body')) node.append(body()); };
+  const fold = smoothFold(el('details', {
     class: 'history-fold', open: opened.has(id),
     ontoggle: (event) => {
       const node = event.currentTarget;
       if (node.open) {
         opened.add(id);
-        if (!node.querySelector('.history-body')) node.append(body());
+        draw(node);
       } else opened.delete(id);
     }
-  }, summary, opened.has(id) ? body() : null);
+  }, summary, opened.has(id) ? body() : null), () => draw(fold));
   return el('li', { class: `history-item${g.won ? ' is-won' : ''}`, 'data-game': id }, fold);
 }
 
