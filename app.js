@@ -760,6 +760,8 @@ async function askLanguage() {
 catchUp();
 applyLook();
 renderAll();
+// Just after Delete all data (js/settings.js), which reloads the page here.
+if (store.takeStartedOver()) toast({ icon: '🌱', title: t('reset.all.done') });
 askLanguage();
 // The play cards wait for the data. Dailies it moved to keep playing
 // (useEpoch, on the first visit after launch) change the Points page's

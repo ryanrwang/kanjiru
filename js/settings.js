@@ -266,7 +266,9 @@ async function resetAchievements() {
   changed();
 }
 
-// Three asks: what goes, are you sure, then type the word.
+// Three asks: what goes, are you sure, then type the word. The last
+// button says what follows: everything goes, and the page reloads on home,
+// where a toast says it's done (2026-11-11, the user asked).
 async function resetAll() {
   const save = store.get();
   const shown = ACHIEVEMENTS.filter((a) => !a.retired || save.achievements[a.id]);
@@ -288,7 +290,7 @@ async function resetAll() {
     step: { n: 2, of }, icon: '⚠️',
     title: t('reset.all.title2'),
     body: [t('reset.all.body2'), t('reset.all.backup')],
-    options: [{ id: 'sure', name: t('reset.all.sure'), danger: true }]
+    options: [{ id: 'sure', name: t('reset.all.sure'), desc: t('reset.all.sureDesc', { word: t('reset.all.word') }), danger: true }]
   });
   if (two !== 'sure') return;
   const word = t('reset.all.word');
@@ -296,13 +298,16 @@ async function resetAll() {
     step: { n: 3, of }, icon: '⚠️',
     title: t('reset.all.title3', { word }),
     typed: { word, also: ['DELETE'], label: t('reset.all.typeLabel'), hint: t('reset.all.typeHint', { word }) },
-    options: [{ id: 'delete', name: t('reset.all.delete'), danger: true }]
+    options: [{ id: 'delete', name: t('reset.all.delete'), desc: t('reset.all.deleteDesc'), danger: true }]
   });
   if (three !== 'delete') return;
   store.resetAll();
-  ui.send = { busy: false, code: null, expiresAt: 0 };
-  ui.status.reset = { kind: 'ok', text: t('reset.all.done') };
-  changed();
+  store.markStartedOver();
+  // Home, loaded afresh at the top: no hash, so no page of its own to come
+  // back to, and scrolled up first, since a reload keeps the scroll.
+  history.replaceState(null, '', location.pathname + location.search);
+  window.scrollTo(0, 0);
+  location.reload();
 }
 
 // ── Debug ────────────────────────────────────────────────────────────
