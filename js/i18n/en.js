@@ -484,7 +484,7 @@ export default {
       kanjidic: { name: 'KANJIDIC2', by: 'EDRDG', use: 'Each kanji’s meanings, readings, stroke count and frequency.' },
       kanjivg: { name: 'KanjiVG', by: 'Ulrich Apel and contributors', use: 'Each kanji’s parts, their places and writing order, and drawings of parts some fonts lack.' },
       waller: { name: 'JLPT lists', by: 'Jonathan Waller (JLPT Resources). JMdict links by Stephen Kraus (yomitan-jlpt-vocab)', use: 'Which kanji and words are N5 to N3, so answers stay learnable.' },
-      noto: { name: 'Noto Sans JP and Noto Serif JP', by: 'Google', use: 'The fonts.' }
+      noto: { name: 'Noto Sans JP and Noto Serif JP', by: 'Google', use: 'The fonts, and the 金 on the points’ coin.' }
     },
     link: {
       project: 'Project page',

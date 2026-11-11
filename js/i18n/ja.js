@@ -470,7 +470,7 @@ export default {
       kanjidic: { name: 'KANJIDIC2', by: 'EDRDG', use: '各漢字の意味・読み・画数・使用頻度。' },
       kanjivg: { name: 'KanjiVG', by: 'Ulrich Apelと協力者のみなさん', use: '各漢字のパーツと位置・書き順、一部のフォントにないパーツの字形。' },
       waller: { name: 'JLPTリスト', by: 'Jonathan Waller（JLPT Resources）。JMdictとの対応：Stephen Kraus（yomitan-jlpt-vocab）', use: 'N5〜N3の漢字とことば。答えを学びやすい範囲にするため。' },
-      noto: { name: 'Noto Sans JP・Noto Serif JP', by: 'Google', use: 'フォント。' }
+      noto: { name: 'Noto Sans JP・Noto Serif JP', by: 'Google', use: 'フォントと、ポイントのコインの「金」の字形。' }
     },
     link: {
       project: 'プロジェクトページ',
