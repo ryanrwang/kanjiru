@@ -313,16 +313,36 @@ export function resetAchievements(lockedNow = () => [], now = Date.now()) {
 }
 
 // Everything goes: games, points, hints, looks, achievements. The language
-// (and its first-visit answer) and light or dark stay, since they belong to
-// the device. The welcome bonus comes again, and its tip with it.
+// (its first-visit answer, and its tip at the gear) and light or dark stay,
+// since they belong to the device. The welcome bonus comes again, and its
+// tip with it.
 export function resetAll() {
   const before = get().settings;
   state = fresh();
   state.settings.lang = before.lang;
   state.settings.langAsked = !!before.langAsked;
+  state.settings.langTipSeen = !!before.langTipSeen;
   state.settings.scheme = before.scheme;
   persist();
   return state;
+}
+
+// Delete all data then reloads the page on home (js/settings.js); this
+// marks it for that one load, so app.js says it's done (2026-11-11, the
+// user asked). In sessionStorage: it's for this tab only, and never synced.
+const STARTED_OVER_KEY = 'kanjiru-started-over';
+export function markStartedOver() {
+  try { sessionStorage.setItem(STARTED_OVER_KEY, '1'); } catch (e) { /* no storage: no message */ }
+}
+// Whether this load follows Delete all data; true once only.
+export function takeStartedOver() {
+  try {
+    const was = sessionStorage.getItem(STARTED_OVER_KEY) === '1';
+    sessionStorage.removeItem(STARTED_OVER_KEY);
+    return was;
+  } catch (e) {
+    return false;
+  }
 }
 
 // ── Moving devices ───────────────────────────────────────────────────

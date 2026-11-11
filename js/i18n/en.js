@@ -424,12 +424,14 @@ export default {
       body2: 'This can’t be undone. Your progress can’t be brought back unless you have a copy.',
       backup: 'To keep a copy, cancel and use Copy save text in Move your progress first.',
       sure: 'Yes, I’m sure',
+      sureDesc: 'Last step: type {word}.',
       title3: 'Type {word} to delete',
       word: 'DELETE',
       typeLabel: 'Confirmation word',
       typeHint: 'Type {word} below',
-      delete: 'Delete everything',
-      done: 'All your progress is deleted. You’re starting fresh.'
+      delete: 'Delete everything and restart',
+      deleteDesc: 'Kanjiru reloads, and you start fresh on the home page.',
+      done: 'Everything is deleted. You’re starting fresh.'
     }
   },
 
