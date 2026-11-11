@@ -41,6 +41,7 @@ import { openPoints } from './js/points.js';
 import { openAbout } from './js/about.js';
 import { tipDue, platform, canPrompt, promptInstall, onInstallChange, installSteps } from './js/install.js';
 import { toast, bump } from './js/toast.js';
+import { coin } from './js/coin.js';
 import { ask } from './js/confirm.js';
 import { loadData } from './js/engine/data.js';
 import { createEngine } from './js/engine/game.js';
@@ -162,7 +163,7 @@ function renderHeader() {
   walletBtn.hidden = hidden;
   const now = store.points(save);
   const amount = el('span', { class: 'wallet-amount' },
-    el('span', { class: 'wallet-icon', 'aria-hidden': 'true' }, ECONOMY.currency.icon), pts(now));
+    el('span', { class: 'wallet-icon', 'aria-hidden': 'true' }, coin()), pts(now));
   walletBtn.replaceChildren(amount);
   walletBtn.title = t('header.points');
   walletBtn.setAttribute('aria-label', t('header.wallet', { amount: pts(now) }));
@@ -177,7 +178,7 @@ function renderHeader() {
   const docked = p.name === 'points';
   dockBtn.hidden = !docked;
   const dockAmount = el('span', { class: 'wallet-amount' },
-    el('span', { class: 'wallet-icon' }, ECONOMY.currency.icon), pts(now));
+    el('span', { class: 'wallet-icon' }, coin()), pts(now));
   dockBtn.replaceChildren(dockAmount);
   if (docked && dockShown !== null && now !== dockShown) bump(dockAmount, now - dockShown);
   dockShown = docked ? now : null;
@@ -263,7 +264,7 @@ function langTip() {
 // opens the hints (2026-11-11, the user asked: no blurb, no ×).
 function bonusCard() {
   return headTip({ id: 'bonus-tip', size: 'card' },
-    el('span', { class: 'bonus-coin', 'aria-hidden': 'true' }, ECONOMY.currency.icon),
+    el('span', { class: 'bonus-coin', 'aria-hidden': 'true' }, coin()),
     el('p', { class: 'bonus-title' }, t('welcome.tip.title')),
     el('p', { class: 'bonus-amount' }, pts(ECONOMY.startingPoints)),
     el('div', { class: 'bonus-actions' },

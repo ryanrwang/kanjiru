@@ -92,6 +92,12 @@
         50: '#FBF6E9', 100: '#F4EBD3', 300: '#DCC383', 500: '#B8923A',
         700: '#7A5C1C', 800: '#5E4615', 900: '#3B2D0D', 950: '#221A07'
       },
+      // The points' coin (js/coin.js): a bright, lemony gold, brighter than
+      // kin's, near the 🪙 emoji's on Android it replaced.
+      coin: {
+        50: '#FFFBE0', 100: '#FFF19A', 200: '#FFE266', 300: '#FDDC55', 400: '#FCD535',
+        500: '#EDB31C', 600: '#E9A818', 700: '#D49A16', 800: '#C28512', 900: '#A86E06'
+      },
       urushi: {   // 漆 lacquer
         500: '#B8321F', 700: '#8E2418', 800: '#2A1210', 900: '#1F0D0B', 950: '#140807'
       },
@@ -240,6 +246,27 @@
       // badge: the Badge hint icons' circles (js/play/hint-art.js), one per
       // hint (powers.js badge), the same in every skin. White on each
       // clears 3:1; near and hit are the tiles' own yellow and green.
+      // The points' coin (js/coin.js), the same in every skin. Each pair
+      // is a gradient, light to deep: the raised rim (face), the sunken
+      // field inside it, the edge below; then the lines round the field,
+      // the edge's ridges, the stamped 金 (mark, with its shadow), the dots
+      // and the glint.
+      coin: {
+        faceLight:  c.coin[100],
+        face:       c.coin[400],
+        faceDeep:   c.coin[500],
+        fieldLight: c.coin[300],
+        fieldDeep:  c.coin[600],
+        edge:       c.coin[500],
+        edgeDeep:   c.coin[800],
+        line:       c.coin[700],
+        ridge:      c.coin[900],
+        mark:       c.coin[50],
+        markDeep:   c.coin[200],
+        shadow:     c.coin[900],
+        dot:        c.coin[100],
+        shine:      c.coin[50]
+      },
       hint: {
         bulb:  c.kin[300],
         glint: c.white,

@@ -11,10 +11,11 @@
  *
  *   const card = renderResult({ ... });   // card.node (the card and its credit), card.tick()
  */
-import { RULES, LEVEL, ECONOMY } from '../registry.js';
+import { RULES, LEVEL } from '../registry.js';
 import { t, lang } from '../i18n.js';
 import { el } from '../dom.js';
 import { bump } from '../toast.js';
+import { withCoin } from '../coin.js';
 import { msToNextDaily } from '../engine/daily.js';
 import { shareText } from './share.js';
 import { readingNodes, partTile } from './hints.js';
@@ -138,7 +139,7 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
               el('span', { class: 'result-reward-title' }, r.title),
               r.body ? el('span', { class: 'result-reward-body' }, r.body) : null))))) : null,
       balance !== null ? el('p', { class: 'result-balance' },
-        el('span', { class: 'result-balance-amount' }, t('result.balance', { icon: ECONOMY.currency.icon, n: balance })),
+        el('span', { class: 'result-balance-amount' }, withCoin((icon) => t('result.balance', { icon, n: balance }))),
         el('a', { class: 'result-balance-link', href: '#points' }, t('result.spend'))) : null),
 
     RULES.share.show ? el('div', { class: 'share' },

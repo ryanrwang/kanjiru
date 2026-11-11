@@ -10,10 +10,11 @@
  * drawn in the player's icons look (js/play/hint-art.js), so nothing here
  * names a power.
  */
-import { POWERS, OFFERED_POWERS, ECONOMY } from '../registry.js';
+import { POWERS, OFFERED_POWERS } from '../registry.js';
 import { t, lang } from '../i18n.js';
 import { el } from '../dom.js';
 import { bump } from '../toast.js';
+import { coin } from '../coin.js';
 import { hintIcon } from './hint-art.js';
 
 const pts = (n) => t('currency.amount', { n });
@@ -155,7 +156,7 @@ export function priceButton({ power, disabled = false, onclick, id = null }) {
     'aria-label': t('shop.buyLabel', { name: t(`power.${power.id}.name`), cost: power.cost }),
     onclick
   },
-    el('span', { class: 'hint-price-coin', 'aria-hidden': 'true' }, ECONOMY.currency.icon),
+    el('span', { class: 'hint-price-coin', 'aria-hidden': 'true' }, coin()),
     el('span', { 'aria-hidden': 'true' }, pts(power.cost)));
 }
 
@@ -200,7 +201,7 @@ export function openHints({ powers, read, ask, onBuy, onUse }) {
       onclick: () => sheet.close()
     });
     close.innerHTML = CLOSE;
-    const pointsNode = el('span', { class: 'hints-points' }, `${ECONOMY.currency.icon} ${pts(points)}`);
+    const pointsNode = el('span', { class: 'hints-points' }, coin(), ' ', pts(points));
     if (spent) { bump(pointsNode, -spent); spent = 0; }
     return el('header', { class: 'sheet-head hints-head' },
       el('h2', { class: 'sheet-title', id: 'hints-title' }, title), pointsNode, close);
