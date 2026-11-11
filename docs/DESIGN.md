@@ -40,7 +40,7 @@ After playing step 3, the user found one kanji too short: 79% of one-kanji answe
 - **Decided — First fixes (step 4b):** 10 kanji fixed with tiles the palette already has, the way similar kanji split: 重 動 種 (𠂉 over 里, as in 毎), 産 (立 over 厂 and 生), 着 (羊 over 目), 表 (龶 衣), 平 (干 八, as in 前), 号 (口 丂), 母 (毋, as in 毎), 犯 (犭 卩, as in 危). That brought back 25 words: the daily has 453 answers, and 146 Keep words are still left out.
 - **Replaced — The rest stay out (step 4b):** the most common left-out kanji (事 13 words, 年 11, 中 8, 今 7, 以 6) are made of strokes. As whole tiles, most of their words would have under 4 parts (仕事 would have 3), so a new tile wouldn't bring them back. 事 年 中 still stay out; 今 and 以 are tiles now (below).
 - **Decided — After the parts audit (2026-11-10):** the main list has 460 answers, and 114 Keep words still have a loose stroke. 今 and 以 became tiles for accuracy, not for the count (the user agreed): 念 含 陰 hold 今, and 以 fell apart into strokes the way 不 and 北 did. That brought 今度 and 今後 back; 今日 has 2 parts and 以 left the one-kanji candidates. The rest is in "Part breakdowns".
-- **Decided — No launch date:** with no dailies there's no epoch to set (PR #14, which set one for 2026-11-10, was closed unmerged). The live URL already plays; launching is adding the card to the Apps page.
+- **Decided — No launch date:** with no dailies there's no epoch to set (PR #14, which set one for 2026-11-10, was closed unmerged). The live URL already plays; launching was adding the card to the Apps page, done 2026-11-11 (Clearful PR #11).
 
 ## Scoring (Decided, step 2)
 
@@ -426,4 +426,4 @@ Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in strok
 - **Share previews (step 8a):** Open Graph and Twitter tags in `index.html`, with `icons/share.png` (1200 × 630): the seal, 漢じる, the tagline in both languages, and two rows of the worked example.
 - **Not deployed:** `tools/`, `review/`, `tests/`, `package.json`, the data working files (`data/candidates.json`, `data/review.json`, `data/meanings-ja.json`) and `*.md`. The game loads `data/game/` and `data/parts.json`.
 - **Local:** `php -S 0.0.0.0:8095 -t D:/Dropbox/Clearful` on the PC, or `php -S 0.0.0.0:8099 -t ~/kanjiru-test` on the Mac, then open `/apps/kanjiru/`.
-- **Apps page:** not listed on `/apps/` yet; step 8b adds it on launch day.
+- **Apps page:** listed on `/apps/` since 2026-11-11 (Clearful PR #11). The card links to `kanjiru/` and shows `images/gallery/apps/kanjiru.webp`, an 800 × 600 dark screenshot of a game in progress, uploaded by FTP. Images are kept 30 days, so a new screenshot needs a new file name.

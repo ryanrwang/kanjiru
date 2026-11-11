@@ -22,6 +22,7 @@ Last updated: 2026-11-11.
 - [x] **Parts audit (2026-11-10, PR #17):** after native players' feedback, every tile mapped to its Kangxi radical, display forms such as 𠆢 and 丷, 12 new tiles (263), and 273 kanji re-split (`docs/PARTS-AUDIT.md`). Adds `tools/build_data.py --parts-only`
 - [x] **Audit fixes (2026-11-11):** a full audit (web app practice, accessibility, tokens, phones and desktop, saving, security). Fixed: two tabs writing over each other's save (`store.sync()`), an unreadable save kept aside, the browser asked to keep the save only after a game, page moves that set the tab title, tell screen readers and carry the keyboard's focus, tiles that keep their colours in Windows' contrast themes, Settings heading levels, look cards named by their text, 24 px credit links, a no-JavaScript line, notch gutters, iOS text sizing, a dangling token, an idle timer, and a tighter `api/transfer.php` (IPv6 /64 rate limit, a 50 MB cap, same-site only, stricter saves). The follow-ups are step 9
 - [x] **Screens and menus:** the header holds only Points and Settings. The play page is home: a play card with the Hard and Guided switches, then How to play. The Points page holds the wallet, Looks with previews, Hints & powers and Achievements, and replaces the shop sheet. Settings gains Language, Appearance and a Debug mode (answer dots on the keys, add points) (2026-11-08)
+- [x] **Apps page card (2026-11-11, Clearful PR #11):** Kanjiru is listed on https://www.ryanrwang.com/apps/ (and clearful.net), with an 800 × 600 dark screenshot of a game in progress, `images/gallery/apps/kanjiru.webp` (item 4 of step 8b)
 
 ## Order
 
@@ -36,7 +37,7 @@ You: review words  (any time; the game only uses words marked Keep)
 
 - **Next: the MVP launch (2026-11-10).** Left to do:
   1. Merge branch `launch-polish`: the end of a game glides to the result, the answer atop a lost game's card, the same header in a game, the back-to-apps mark on the play page only; then every save reset once (save v3), a language picker on the first visit and a tip at the gear after it, a 60-point welcome bonus card leading to the hints, a hints pill that stands out, debug mode hidden (8 taps on About's title, on or off), folds in Settings, no sideways shift, an eighth achievement, End game under the keyboard, cells grouped by kanji once the split is known, a lost game's answer at the board's tile size, the page dimmed but the hints pill while the welcome card shows, a shake and a reason under the row for a guess that can't be made, look cards of one height, and round Layout dots (docs/DESIGN.md has each).
-  2. The Apps page card (item 4 of step 8b): it needs an 800 × 600 screenshot uploaded by FTP.
+  2. ~~The Apps page card (item 4 of step 8b).~~ Done 2026-11-11 (Clearful PR #11).
   3. Check the install on a real iPhone and Android phone once it's live.
   Tune the numbers (rows, keys, hint prices, points) after real play, not before.
 - **Next: step 9, the audit follow-ups (agreed 2026-11-11).** Four PRs, planned in full below. On hold until the user's weekly usage resets; start with 9.1 when the user says go.
@@ -216,7 +217,7 @@ Step 8 was split in two, so the half that doesn't touch the screens could run wh
 1. In `tools/compile_game.py`, set `EPOCH = "YYYY-MM-DD"` to launch day, then run `python -I -X utf8 tools/compile_game.py`; on the day it prints "today is puzzle 1".
 2. Run `node --test` and `python -I -X utf8 -m unittest discover -s tools`, commit `tools/compile_game.py` and `data/game/`, and merge to `main` that day (the deploy takes under a minute).
 3. Check https://www.ryanrwang.com/apps/kanjiru/ shows Daily #1, and that `data/game/answers.json` there has the new epoch.
-4. Apps page, in the Clearful repo (read `D:\Dropbox\Clearful\.claude\github-deploy.md` first): the user uploads an 800 × 600 `images/gallery/apps/kanjiru.webp` by FTP (a dark screenshot, like the other apps' cards), then a card goes into `apps/index.html` before Return to Top: `href="kanjiru/"`, `id="kanjiru"`, alt "Kanjiru kanji puzzle app", h2 "Kanjiru 漢じる", h3 "A Kanji Word Puzzle". The file mixes CRLF and LF, so keep its endings. Compare with the server first (`verify-live`), then branch, PR and squash-merge, and check `/apps/` on both domains.
+4. **Done 2026-11-11** (Clearful PR #11, squash `2bee27f`; the card went in with h2 "Kanjiru" and alt "Kanjiru kanji word puzzle app"). Apps page, in the Clearful repo (read `D:\Dropbox\Clearful\.claude\github-deploy.md` first): the user uploads an 800 × 600 `images/gallery/apps/kanjiru.webp` by FTP (a dark screenshot, like the other apps' cards), then a card goes into `apps/index.html` before Return to Top: `href="kanjiru/"`, `id="kanjiru"`, alt "Kanjiru kanji puzzle app", h2 "Kanjiru 漢じる", h3 "A Kanji Word Puzzle". The file mixes CRLF and LF, so keep its endings. Compare with the server first (`verify-live`), then branch, PR and squash-merge, and check `/apps/` on both domains.
 
 ```
 Kanjiru step 8b: launch.
