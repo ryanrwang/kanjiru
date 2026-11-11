@@ -165,6 +165,8 @@ export function finish(engine, mode, game) {
     if (state.daily) s.playing[mode.id].daily = { start, log: state.log, done: true };
     else delete s.playing[mode.id].practice;
   });
+  // There's a game to keep now: ask the browser not to clear the save.
+  if (paid) store.keepSafe();
   return { game: { ...game, done: true }, points, paid, rewards };
 }
 

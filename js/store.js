@@ -131,6 +131,7 @@ function migrate(save) {
 let state = null;
 let memoryOnly = false;   // storage blocked (private mode etc.): play on, save nothing
 let epoch = null;         // the date of puzzle 1, once the game data says (useEpoch)
+let stored = null;        // the save's text as last read from or written to storage (sync)
 
 export function load() {
   let raw = null;
@@ -139,15 +140,38 @@ export function load() {
   } catch (e) {
     memoryOnly = true;
   }
+  stored = raw;
   let save = null;
   if (raw) {
     try { save = JSON.parse(raw); } catch (e) { save = null; }
   }
+  if (raw && !isObject(save)) keepBroken(raw);
   if (!isObject(save)) save = fresh();
   state = fillDefaults(migrate(save), fresh());
   settleDailies(state, epoch);
-  askForPersistentStorage();
   return state;
+}
+
+// A save that can't be read (cut short, or not a save at all) is about to
+// be replaced by a new one: its text is kept aside first, under its own
+// key, so it isn't lost for good. Only the latest one is kept.
+export const BROKEN_KEY = 'kanjiru-unreadable';
+function keepBroken(raw) {
+  try { localStorage.setItem(BROKEN_KEY, raw); } catch (e) { /* no room: nothing to be done */ }
+}
+
+// Another tab wrote the save since this one last read or wrote it (the
+// home-screen app counts too: on Android it shares Chrome's storage): take
+// theirs, so this tab's next change doesn't write over it with what it
+// held. Every change here is written at once (update), so there's nothing
+// of this tab's to lose. True when the save changed; app.js then redraws.
+export function sync() {
+  if (memoryOnly || !state) return false;
+  let raw = null;
+  try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
+  if (raw === stored) return false;
+  load();
+  return true;
 }
 
 // ── Dailies and the epoch ────────────────────────────────────────────
@@ -261,7 +285,9 @@ export function enter(save, why, fields) {
 function persist() {
   if (memoryOnly) return;
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    const text = JSON.stringify(state);
+    localStorage.setItem(SAVE_KEY, text);
+    stored = text;
   } catch (e) {
     memoryOnly = true;
   }
@@ -272,11 +298,20 @@ export function isPersistent() {
 }
 
 // Asks the browser not to clear the save when space runs low. Browsers may
-// say no; nothing depends on the answer.
-function askForPersistentStorage() {
+// say no; nothing depends on the answer. Firefox asks the player, so this
+// waits until there's a game to keep (js/play/session.js finish()) instead
+// of asking a first-time visitor on arrival, asks once a visit, and not at
+// all once it's granted.
+let askedToKeep = false;
+export async function keepSafe() {
+  if (askedToKeep || memoryOnly) return;
+  askedToKeep = true;
   try {
-    if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
-  } catch (e) { /* not supported */ }
+    const storage = typeof navigator !== 'undefined' ? navigator.storage : null;
+    if (!storage || !storage.persist) return;
+    if (storage.persisted && await storage.persisted()) return;
+    await storage.persist();
+  } catch (e) { /* not supported, or refused */ }
 }
 
 // ── Starting over (Settings) ─────────────────────────────────────────

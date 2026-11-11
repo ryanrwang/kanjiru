@@ -297,15 +297,16 @@ export function openPoints(root, ctx) {
     const on = save.settings[slot] === item.id;
     const name = t(`skin.${slot}.${item.id}`);
     const state = on ? t('looks.inUse') : !unlocked ? lockText(item.unlock) : item.soon ? t('shop.soon') : '';
-    const spoken = !state ? '' : !unlocked ? `${t('looks.locked')}${sep()}${state}` : state;
     const badge = on ? icon(CHECK, 'swatch-badge is-on') : !unlocked ? icon(LOCK, 'swatch-badge') : null;
     const shown = example(slot, item, key);
+    // Named by what it shows: its name and its state, so what's seen is
+    // what's said (and what a voice command can ask for). The lock is a
+    // picture, so a locked look says so in words read but not shown.
     const card = el('button', {
       class: `swatch${usable ? '' : ' is-locked'}${ui.offer === key ? ' is-open' : ''}`,
       type: 'button', 'data-key': key,
       'aria-pressed': String(on),
       'aria-expanded': usable ? null : String(ui.offer === key),
-      'aria-label': spoken ? `${name}${sep()}${spoken}` : name,
       onclick: () => {
         ui.playing = key;
         return usable ? use(slot, item) : toggle(key);
@@ -313,8 +314,9 @@ export function openPoints(root, ctx) {
     },
       shown,
       badge,
-      el('span', { class: 'swatch-name', 'aria-hidden': 'true' }, name),
-      el('span', { class: `swatch-state${on ? ' is-on' : ''}`, 'aria-hidden': 'true' },
+      el('span', { class: 'swatch-name' }, name),
+      el('span', { class: `swatch-state${on ? ' is-on' : ''}` },
+        !unlocked ? el('span', { class: 'visually-hidden' }, `${sep()}${t('looks.locked')}${sep()}`) : state ? el('span', { class: 'visually-hidden' }, sep()) : null,
         el('span', { class: 'swatch-state-text' }, state)));
     if (slot !== 'theme' && hoverable()) card.addEventListener('mouseenter', () => play(shown));
     return card;
