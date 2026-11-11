@@ -4514,6 +4514,41 @@ button.clue-chip:active,
   animation-timing-function: var(--transition-ease);
 }
 
+/* Page moves, like an iPhone (app.js slide(); the user picked it from a
+   demo, 2026-11-11). Going deeper, the new page slides in from the right,
+   shadowed, over the old, which drifts a quarter of the way left beneath
+   it; going back, the page slides away to the right off the one beneath.
+   The header stays where it is, its controls fading (named only during a
+   move: a name would stop its glass blurring the page). */
+html[data-move] .app-header { view-transition-name: app-header; }
+html[data-move]::view-transition-old(root),
+html[data-move]::view-transition-new(root) {
+  animation-duration: var(--transition-page);
+  animation-timing-function: var(--transition-ease);
+  mix-blend-mode: normal;
+}
+html[data-move="forward"]::view-transition-old(root) { animation-name: page-drift-left; }
+html[data-move="forward"]::view-transition-new(root) {
+  animation-name: page-from-right;
+  box-shadow: var(--shadow-lg);
+}
+html[data-move="back"]::view-transition-old(root) {
+  z-index: 1;
+  animation-name: page-to-right;
+  box-shadow: var(--shadow-lg);
+}
+html[data-move="back"]::view-transition-new(root) { animation-name: page-drift-back; }
+html[data-move]::view-transition-old(app-header),
+html[data-move]::view-transition-new(app-header) {
+  animation-duration: var(--transition-hover);
+  animation-timing-function: var(--transition-ease);
+}
+
+@keyframes page-from-right { from { transform: translateX(100%); } }
+@keyframes page-to-right   { to   { transform: translateX(100%); } }
+@keyframes page-drift-left { to   { transform: translateX(-25%); } }
+@keyframes page-drift-back { from { transform: translateX(-25%); } }
+
 /* ── Reduced motion ────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {

@@ -701,15 +701,43 @@ function closePage() {
 }
 
 // Draws the page the URL names, once per move (Back fires both popstate
-// and hashchange).
-function route() {
+// and hashchange). A move deeper slides the new page in from the right;
+// one back (Close, 漢, the browser's Back) slides it out (slide()).
+let shownDepth = depth();
+function route(event) {
   if (routed === location.hash) return;
   routed = location.hash;
   const from = document.body.dataset.page;
-  renderAll();
-  window.scrollTo(0, 0);
-  glass();   // at the top now, before the scroll event's frame
-  arrive(from);
+  const to = page().name;
+  const d = depth();
+  const way = to === from ? null
+    : d > shownDepth ? 'forward'
+    : d < shownDepth || to === 'play' ? 'back' : 'forward';
+  shownDepth = d;
+  slide(way, () => {
+    const drawn = renderAll();
+    window.scrollTo(0, 0);
+    glass();   // at the top now, before the scroll event's frame
+    arrive(from);
+    return drawn;
+  }, !!(event && event.hasUAVisualTransition));
+}
+
+// Page moves, like an iPhone (2026-11-11, the user picked it from a demo):
+// going deeper, the new page slides in from the right over the old, which
+// drifts left beneath it; going back, the page slides away to the right.
+// The header stays and its controls fade (styles.css html[data-move]).
+// Done with the View Transitions API, from pictures of both pages, so
+// nothing on either replays; a browser without it, reduced motion, or a
+// browser that animated its own swipe back (native) changes at once.
+let moves = 0;
+function slide(way, draw, native = false) {
+  if (!way || native || !motion('page') || !document.startViewTransition) { draw(); return; }
+  const root = document.documentElement;
+  const id = ++moves;
+  root.dataset.move = way;
+  const move = document.startViewTransition(draw);
+  move.finished.finally(() => { if (moves === id) delete root.dataset.move; });
 }
 
 // A move between pages, for someone who can't see it happen: a screen
@@ -786,8 +814,12 @@ function renderAll() {
   document.body.dataset.page = p.name;
   glass();
   renderHeader();
-  if (p.name === 'game') renderGame(p);
-  else if (p.name === 'points') {
+  routed = location.hash;
+  // A page move waits for the game to be drawn, when its data is in.
+  if (p.name === 'game') {
+    const drawn = renderGame(p);
+    if (game.data || game.error) return drawn;
+  } else if (p.name === 'points') {
     view = openPoints(app, {
       onLook: () => { save = store.get(); applyLook(); },
       onWallet: renderHeader
@@ -795,7 +827,7 @@ function renderAll() {
   } else if (p.name === 'settings') view = openSettings(app, { onChange: settingsChanged });
   else if (p.name === 'about') view = openAbout(app);
   else renderPlay();
-  routed = location.hash;
+  return null;
 }
 
 window.addEventListener('popstate', route);

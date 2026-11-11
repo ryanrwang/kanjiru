@@ -407,13 +407,14 @@
       glide:  primitives.easing.inOut,   // the page and board moving to a game's result
       linear: primitives.easing.linear,  // an even pace (the sweep's broom)
       // Moving between states (2026-11-11, the user asked for smooth but
-      // quick moves; nothing over 200 ms, and 100 ms for what's done often
-      // or is leaving). One token per kind, so each tunes in one place.
+      // quick moves; nothing over 200 ms but a page's slide, and 100 ms for
+      // what's done often or is leaving). One token per kind, so each tunes
+      // in one place.
       hover:    primitives.duration[100],   // a hover's colour, on a mouse
       press:    primitives.duration[100],   // a button, key or cell pressed in
       toggle:   primitives.duration[200],   // a switch's knob
       fold:     primitives.duration[200],   // a fold opening or shutting
-      page:     primitives.duration[200],   // a page arriving
+      page:     primitives.duration[300],   // a page sliding in or out: it crosses the screen
       look:     primitives.duration[200],   // light/dark, a skin or the language changing
       sheetIn:  primitives.duration[200],   // a modal opening
       sheetOut: primitives.duration[100],   // a modal closing, a tip leaving
