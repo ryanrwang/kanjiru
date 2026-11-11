@@ -49,6 +49,17 @@ const SEAL = (MODES.find((m) => m.listed) || MODES[0]).numeral;
 
 const hoverable = () => window.matchMedia && window.matchMedia('(hover: hover)').matches;
 
+// A look's corner: a lock (locked) or a tick (in use), 2026-11-11, the
+// user asked.
+const LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+
+function icon(svg, cls) {
+  const node = el('span', { class: cls, 'aria-hidden': 'true' });
+  node.innerHTML = svg;
+  return node;
+}
+
 function whenText(when) {
   if (when.includes('before') && when.includes('during')) return t('powers.whenBoth');
   return when.includes('before') ? t('powers.whenBefore') : t('powers.whenDuring');
@@ -267,6 +278,9 @@ export function openPoints(root, ctx) {
   }
 
   // A look: its example, its name, and whether it's in use or how to get it.
+  // Every card has the state line, empty or not, so picking a look never
+  // changes a card's height (2026-11-11, the user asked). On its corner, a
+  // lock when it's locked, a tick when it's in use.
   function lookCard(slot, item, save) {
     const key = `skin:${slot}:${item.id}`;
     const unlocked = isUnlocked(slot, item, save);
@@ -274,21 +288,25 @@ export function openPoints(root, ctx) {
     const on = save.settings[slot] === item.id;
     const name = t(`skin.${slot}.${item.id}`);
     const state = on ? t('looks.inUse') : !unlocked ? lockText(item.unlock) : item.soon ? t('shop.soon') : '';
+    const spoken = !state ? '' : !unlocked ? `${t('looks.locked')}${sep()}${state}` : state;
+    const badge = on ? icon(CHECK, 'swatch-badge is-on') : !unlocked ? icon(LOCK, 'swatch-badge') : null;
     const shown = example(slot, item, key);
     const card = el('button', {
       class: `swatch${usable ? '' : ' is-locked'}${ui.offer === key ? ' is-open' : ''}`,
       type: 'button', 'data-key': key,
       'aria-pressed': String(on),
       'aria-expanded': usable ? null : String(ui.offer === key),
-      'aria-label': state ? `${name}${sep()}${state}` : name,
+      'aria-label': spoken ? `${name}${sep()}${spoken}` : name,
       onclick: () => {
         ui.playing = key;
         return usable ? use(slot, item) : toggle(key);
       }
     },
       shown,
+      badge,
       el('span', { class: 'swatch-name', 'aria-hidden': 'true' }, name),
-      state ? el('span', { class: `swatch-state${on ? ' is-on' : ''}`, 'aria-hidden': 'true' }, state) : null);
+      el('span', { class: `swatch-state${on ? ' is-on' : ''}`, 'aria-hidden': 'true' },
+        el('span', { class: 'swatch-state-text' }, state)));
     if (slot !== 'theme' && hoverable()) card.addEventListener('mouseenter', () => play(shown));
     return card;
   }

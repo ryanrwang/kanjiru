@@ -8,18 +8,23 @@
  *   icon     optional, before the title
  *   title    the question
  *   body     optional text, or a list of lines
- *   options  [{ id, name, desc, danger }]: each a big button with what it
- *            does under its name; danger shows its name in the accent colour
+ *   options  [{ id, name, desc, danger, lang }]: each a big button with what
+ *            it does under its name; danger shows its name in the accent
+ *            colour; lang, when its words are in a language of their own
  *   typed    optional { word, also, label, hint }: then the options stay off
  *            until the word (or one in also) is typed, any case, for the
  *            last step of a reset
  *   step     optional { n, of }: "Step 2 of 3", for a run of asks
+ *   closeX   true: an × in the corner in place of the Cancel button (End
+ *            game, 2026-11-10); it cancels the same way
  *
  * One dialog serves every ask, so a run of them (the reset's three steps)
  * reads as one sheet changing.
  */
 import { t } from './i18n.js';
 import { el } from './dom.js';
+
+const CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>';
 
 let dialog = null;
 let settle = null;   // resolves the ask on show
@@ -31,7 +36,7 @@ function close(value) {
   if (done) done(value);
 }
 
-export function ask({ icon = null, title, body = null, options, typed = null, step = null, cancel = null }) {
+export function ask({ icon = null, title, body = null, options, typed = null, step = null, cancel = null, closeX = false }) {
   if (!dialog) {
     dialog = el('dialog', { class: 'sheet confirm-sheet ask-sheet', 'aria-labelledby': 'ask-sheet-title' });
     // The backdrop and Esc cancel.
@@ -51,7 +56,7 @@ export function ask({ icon = null, title, body = null, options, typed = null, st
   }) : null;
   const buttons = options.map((o) => el('button', {
     class: `ask-option${o.danger ? ' is-danger' : ''}`, type: 'button', 'data-id': `ask-${o.id}`,
-    disabled: !!typed,
+    lang: o.lang || null, disabled: !!typed,
     onclick: () => close(o.id)
   },
     el('span', { class: 'ask-option-name' }, o.name),
@@ -65,18 +70,27 @@ export function ask({ icon = null, title, body = null, options, typed = null, st
     });
   }
 
+  let x = null;
+  if (closeX) {
+    x = el('button', {
+      class: 'icon-btn ask-close', type: 'button', 'data-id': 'ask-cancel',
+      'aria-label': t('confirm.close'), title: t('confirm.close'), onclick: () => close(null)
+    });
+    x.innerHTML = CLOSE;
+  }
   dialog.replaceChildren(el('div', { class: 'sheet-body' },
     el('header', { class: 'power-sheet-head' },
       icon ? el('span', { class: 'power-icon', 'aria-hidden': 'true' }, icon) : null,
       el('div', { class: 'ask-sheet-titles' },
         step ? el('p', { class: 'ask-step' }, t('confirm.step', { n: step.n, of: step.of })) : null,
-        el('h2', { class: 'sheet-title', id: 'ask-sheet-title' }, title))),
+        el('h2', { class: 'sheet-title', id: 'ask-sheet-title' }, title)),
+      x),
     lines.map((line) => el('p', { class: 'ask-sheet-body' }, line)),
     field ? el('label', { class: 'ask-typed-row' },
       el('span', { class: 'ask-typed-hint', id: 'ask-typed-hint' }, typed.hint || typed.label),
       field) : null,
     el('div', { class: 'ask-options' }, buttons),
-    el('div', { class: 'btn-row' },
+    closeX ? null : el('div', { class: 'btn-row' },
       el('button', { class: 'btn btn-ghost', type: 'button', 'data-id': 'ask-cancel', onclick: () => close(null) },
         cancel || t('confirm.cancel')))));
 

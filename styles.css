@@ -10,6 +10,11 @@
 
 html, body { margin: 0; padding: 0; }
 
+/* The scrollbar's room is kept even on a page too short to scroll, so the
+   layout doesn't shift sideways between pages on a desktop (2026-11-10).
+   Overlay scrollbars (phones, macOS) take no room either way. */
+html { scrollbar-gutter: stable; }
+
 body {
   min-height: 100vh;
   min-height: 100dvh;
@@ -130,8 +135,8 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 /* Every control in the header looks alike: a bordered pill, layout.headBtn
    high, round when it holds an icon alone. The points and the gear on the
-   play page; End game's flag, the hints held and the gear in a game; Close
-   on Points, Settings and About (app.js). */
+   play page; the hints held and the gear in a game; Close on Points,
+   Settings and About (app.js). */
 .head-btn {
   display: inline-flex;
   align-items: center;
@@ -176,6 +181,188 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 
 .head-icon { display: inline-flex; }
 .head-icon.is-accent { color: var(--color-text-accent); }
+
+/* The hints held, in a game: the one control there that helps, so it
+   stands out (2026-11-10, the user asked): the skin's tint, a faint accent
+   edge with a soft glow round it, and a lit bulb (app.js BULB). The edge
+   is faint and the glow blurs it, so the curve reads smooth even where a
+   hairline would step (2026-11-11, the user asked). */
+#hints-open {
+  border-color: color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-disabled) * 100%), transparent);
+  background: var(--color-interactive-selected);
+  box-shadow: 0 0 var(--spacing-sm) color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-faint) * 100%), transparent);
+}
+#hints-open:hover {
+  border-color: color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-soft) * 100%), transparent);
+  background: var(--color-interactive-hover);
+}
+#hints-open:active { background: var(--color-interactive-active); }
+
+.bulb-rays { stroke: var(--color-text-accent); }
+.bulb-glass {
+  fill: var(--color-hint-bulb);
+  stroke: var(--color-text-primary);
+}
+.bulb-glint { stroke: var(--color-hint-glint); }
+.bulb-base { stroke: var(--color-text-primary); }
+
+/* The control a tip points at (app.js renderHeadTip()) sits above the
+   tip's dimming (.head-tip) and calls: a ring in the accent swells out and
+   fades, over and over; the hints' bulb glows too (2026-11-11, the user
+   asked for the pill to stand out more, then the same for every tip). */
+.head-btn.is-calling {
+  position: relative;
+  z-index: 2;
+  color: var(--color-text-primary);
+  animation: head-call calc(var(--transition-long) * 2) var(--transition-ease) infinite;
+}
+
+#hints-open.is-calling .head-icon {
+  animation: bulb-glow calc(var(--transition-long) * 2) var(--transition-ease) infinite;
+}
+
+@keyframes head-call {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-strong) * 100%), transparent); }
+  100% { box-shadow: 0 0 0 var(--spacing-md) transparent; }
+}
+
+@keyframes bulb-glow {
+  0%, 100% { filter: none; }
+  50%      { filter: drop-shadow(0 0 var(--spacing-xs) var(--color-hint-bulb)); }
+}
+
+/* The tooltip (app.js headTip(), one for every tip), hanging from the
+   header with an arrow at the control it's about (--tip-arrow: from the
+   tip's right edge to its middle): the language tip at the gear
+   (.is-small) and the first game's welcome bonus at the hints (.is-card).
+   Glass tinted with the skin's accent, so it stands off the page, with a
+   soft, thick edge (2026-11-10, the user asked for less sharp, less
+   contrasty edges). The rest of the page dims (its shadow's wide spread)
+   but the control, which sits above it (.head-btn.is-calling), so the
+   arrow's aim is plain (2026-11-11, the user asked). */
+.head-tip {
+  --tip-fill: color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-tint) * 100%), var(--color-bg-raised));
+  --tip-bg: color-mix(in srgb, var(--tip-fill) calc(var(--opacity-strong) * 100%), transparent);
+  --tip-edge: color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-faint) * 100%), transparent);
+  /* The glass as it looks on the page: the arrow's fill. */
+  --tip-solid: color-mix(in srgb, var(--tip-fill) calc(var(--opacity-strong) * 100%), var(--color-bg-page));
+  position: absolute;
+  z-index: 1;
+  top: calc(100% - var(--spacing-xs));
+  right: var(--spacing-md);
+  display: flex;
+  border: var(--stroke-thick) solid var(--tip-edge);
+  border-radius: var(--radius-xl);
+  background: var(--tip-bg);
+  box-shadow:
+    var(--shadow-lg),
+    0 0 0 100vmax color-mix(in srgb, var(--color-bg-overlay) calc(var(--opacity-soft) * 100%), transparent);
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(var(--blur-glass));
+  animation: toast-in var(--transition-slow) var(--transition-bounce) both;
+}
+
+/* The arrow: a square turned on its point, clipped to its top half, its
+   base over the tip's edge so the two read as one. Its fill is solid (the
+   glass as it looks on the page), so the edge it covers doesn't show
+   through it (2026-11-11, the user saw a line in it). */
+.head-tip::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--spacing-md) / -2);
+  right: calc(var(--tip-arrow, var(--spacing-xl)) - var(--spacing-md) / 2 - var(--stroke-thick));
+  width: var(--spacing-md);
+  height: var(--spacing-md);
+  border-top: var(--stroke-thick) solid var(--tip-edge);
+  border-left: var(--stroke-thick) solid var(--tip-edge);
+  background: var(--tip-solid);
+  transform: rotate(45deg);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.head-tip-close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--spacing-xl);
+  height: var(--spacing-xl);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.head-tip-close:hover { background: var(--color-interactive-hover); color: var(--color-text-primary); }
+.head-tip-close svg { width: var(--layout-headIcon); height: var(--layout-headIcon); }
+
+/* The language tip: one line or two, at the gear. */
+.head-tip.is-small {
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: min(var(--layout-tip), calc(100% - var(--spacing-md) * 2));
+  padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) var(--spacing-md);
+}
+
+.head-tip-icon { font-size: var(--font-size-lg); }
+
+.head-tip-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: var(--font-lineHeight-snug);
+}
+
+/* A card the width of the page, its parts stacked and centred: the
+   welcome bonus, about the top third of a phone's screen (the user asked,
+   2026-11-10): a glowing coin, the bonus, and Maybe later beside Buy a
+   hint, which opens the hints. */
+.head-tip.is-card {
+  left: var(--spacing-md);
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+  text-align: center;
+}
+
+.bonus-coin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--layout-hintBox);
+  height: var(--layout-seal);
+  font-size: var(--font-size-3xl);
+  line-height: var(--font-lineHeight-tight);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--color-hint-bulb) calc(var(--opacity-soft) * 100%), transparent), transparent);
+}
+
+.bonus-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--font-tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-accent);
+}
+
+.bonus-amount {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-black);
+  line-height: var(--font-lineHeight-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.bonus-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .head-btn.is-calling,
+  #hints-open.is-calling .head-icon,
+  .head-tip { animation: none; }
+}
 
 /* On every page (app.js glass()): the header sticks to the top and turns
    to glass as the page slides under it (--glass): a floating bar, inset
@@ -235,6 +422,11 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   padding-top: var(--spacing-lg);
   padding-bottom: var(--spacing-lg);
 }
+
+/* The footer holds only the back-to-apps mark, which shows on the play
+   page alone (2026-11-10, the user asked): not in a game, nor on Points,
+   Settings or About. app.js sets data-page. */
+body:not([data-page="play"]) .app-footer { display: none; }
 
 /* ── Buttons and pills ─────────────────────────────────────────────── */
 
@@ -480,7 +672,8 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  padding: 0 var(--spacing-lg) var(--spacing-lg);
+  /* A gap under the title's hover, so it never touches the content. */
+  padding: var(--spacing-sm) var(--spacing-lg) var(--spacing-lg);
 }
 
 /* ── Play page: how to play (js/howto.js) ─────────────────────────── */
@@ -629,11 +822,12 @@ summary.history-summary { cursor: pointer; }
 summary.history-summary::-webkit-details-marker { display: none; }
 summary.history-summary:hover { background: var(--color-interactive-hover); }
 
-/* Opened: the final board, then Delete at the foot, on the right. */
+/* Opened: the final board, then Delete at the foot, on the right; a gap
+   above it, so the row's hover doesn't touch the board. */
 .history-body {
   display: flex;
   flex-direction: column;
-  padding-bottom: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
 }
 .history-actions {
   display: flex;
@@ -898,20 +1092,30 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
 
 .sheet-row-note { flex-basis: 100%; }
 
-/* A section that folds to its title (Add Kanjiru to your home screen):
-   the title is the fold's summary, its hover the width of the card's
-   content. */
+/* A section that folds to its title (Home screen, Move your progress,
+   Start over; js/settings.js fold()): the title row is the toggle, reaching
+   a spacing-md beyond the title on every side, so it's easy to tap; the
+   body starts a little below its hover, so the two never touch. */
 .sheet-fold { gap: 0; }
 .sheet-fold > .fold-summary {
-  margin: calc(var(--spacing-sm) * -1);
-  padding: var(--spacing-sm);
+  margin: calc(var(--spacing-md) * -1);
+  padding: var(--spacing-md);
   border-radius: var(--radius-lg);
 }
 .sheet-fold-body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
-  padding-top: var(--spacing-md);
+  padding-top: var(--spacing-lg);
+}
+
+/* About's title: tapped quickly enough times, it turns debug mode on
+   (js/settings.js). No text selection or double-tap zoom in the way. */
+.about-title {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Parts of a section (send, receive, save text). */
@@ -1185,9 +1389,16 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
 .ask-option:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
 
 .ask-sheet-titles {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
+}
+
+/* An × in place of Cancel (End game's ask). */
+.ask-close {
+  flex: 0 0 auto;
+  align-self: flex-start;
 }
 
 .ask-step {
@@ -1343,29 +1554,36 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
   --frame-solved: var(--font-size-2xl);
 }
 
-.board[data-cell="xs"] {
+/* The result card's answer row takes the board's cell size too
+   (js/play/screen.js sizeResult()). */
+.game-result {
+  --board-cell: var(--layout-cell);
+  --board-font: var(--font-size-lg);
+}
+
+:is(.board, .game-result)[data-cell="xs"] {
   --board-cell: var(--layout-cellXs);
   --board-font: var(--font-size-md);
   --board-kanji: var(--font-size-lg);
 }
 
-.board[data-cell="sm"] {
+:is(.board, .game-result)[data-cell="sm"] {
   --board-cell: var(--layout-cellSm);
   --board-kanji: var(--font-size-xl);
 }
 
-.board[data-cell="md"] {
+:is(.board, .game-result)[data-cell="md"] {
   --board-cell: var(--layout-cellMd);
   --board-font: var(--font-size-xl);
 }
 
-.board[data-cell="lg"] {
+:is(.board, .game-result)[data-cell="lg"] {
   --board-cell: var(--layout-cellLg);
   --board-font: var(--font-size-2xl);
   --board-kanji: var(--font-size-3xl);
 }
 
-.board[data-cell="xl"] {
+:is(.board, .game-result)[data-cell="xl"] {
   --board-cell: var(--layout-cellXl);
   --board-font: var(--font-size-2xl);
   --board-kanji: var(--font-size-3xl);
@@ -1450,11 +1668,13 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
 .board.is-parts .board-grid { align-items: flex-start; }
 .board.is-parts .board-row { min-height: var(--board-cell); }
 
-/* Each kanji's cells stay together; a wider gap between kanji. Rows too
-   wide for the screen wrap between kanji (data-wrap), all alike. */
+/* Grouped by kanji (Guided, or once Layout is used): each kanji's cells
+   stay close together, with a wide gap between kanji (fitBoard() counts
+   spacing.lg). Rows too wide for the screen wrap between kanji
+   (data-wrap), all alike. */
 .board.is-parts .row-tiles {
   flex-wrap: nowrap;
-  gap: var(--spacing-xs) var(--spacing-md);
+  gap: var(--spacing-xs) var(--spacing-lg);
 }
 
 .board[data-wrap] .row-tiles { flex-wrap: wrap; }
@@ -1493,6 +1713,56 @@ a.btn-secondary:hover { color: var(--color-action-secondary-text); }
 
 /* The next guess, not scored yet. */
 .tile.is-pending { border-style: dashed; }
+
+/* A guess that can't be made (js/play/screen.js sayRow()): the row being
+   entered shakes, its cells edged red, and why shows under it, over the
+   row below, so nothing moves (2026-11-11, the user asked). */
+.board-row.is-next { position: relative; }
+
+.board-row.is-error .tile.is-pending {
+  border-style: solid;
+  border-color: var(--color-status-danger);
+}
+
+.board-row.is-error .tile.is-pending.is-active {
+  box-shadow: 0 0 0 var(--stroke-thick) var(--color-status-danger);
+}
+
+.board-row.is-shake .row-tiles {
+  animation: row-shake var(--transition-slow) var(--transition-ease);
+}
+
+@keyframes row-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(calc(var(--spacing-sm) * -1)); }
+  40%, 80% { transform: translateX(var(--spacing-sm)); }
+}
+
+.row-error {
+  position: absolute;
+  top: calc(100% + var(--spacing-xs));
+  left: 50%;
+  z-index: 3;
+  width: max-content;
+  max-width: calc(100vw - var(--spacing-md) * 2);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: var(--stroke-thin) solid var(--color-border-default);
+  border-left: var(--stroke-thick) solid var(--color-status-danger);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-raised);
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  color: var(--color-text-primary);
+  translate: -50% 0;
+  pointer-events: none;
+  animation: toast-in var(--transition-base) var(--transition-ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-row.is-shake .row-tiles,
+  .row-error { animation: none; }
+}
 
 /* An empty cell where a hint showed a part: the part faintly, as a
    reminder; tapping the selected cell puts it in. */
@@ -1613,12 +1883,15 @@ button.frame-slot { cursor: pointer; }
 }
 
 /* A place: a dashed box, strong enough to read (3:1) since on Layout's
-   frames the places are the whole clue. */
+   frames the places are the whole clue. Its parts wrap into another line
+   when they don't fit, so a crowded place stays a neat cluster. */
 .frame-zone {
   z-index: 1;
   display: flex;
   flex-direction: column;
+  flex-wrap: wrap;
   align-items: center;
+  align-content: center;
   justify-content: center;
   min-width: 0;
   min-height: 0;
@@ -1650,14 +1923,46 @@ button.frame-slot { cursor: pointer; }
   font-size: var(--frame-inner);
 }
 
-.frame-part { display: inline-flex; }
+/* Holding two or more, the inner box takes more of the frame, so its
+   parts fit (2026-11-11, the user saw its dots squashed). */
+.kanji-frame.has-outer .frame-zone.is-inner:not([data-n="1"]) {
+  margin: calc(var(--frame-inset) / 2);
+}
 
+.frame-part {
+  flex: none;
+  display: inline-flex;
+}
+
+/* A part still hidden: the room its glyph would take (the place's font
+   size, which shrinks as the place fills), with a round dot in the middle.
+   Never squeezed, so a dot stays round (2026-11-11, the user saw them
+   squashed into dashes and bars). */
 .frame-part.is-hidden {
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+}
+
+.frame-part.is-hidden::before {
+  content: '';
   width: var(--spacing-sm);
   height: var(--spacing-sm);
-  margin: var(--spacing-xs);
   border-radius: var(--radius-full);
   background: var(--color-border-strong);
+}
+
+/* History's frames are the smallest: in a crowded place (3 parts or
+   more), the dots and their room are half the size, so they stay in it. */
+.history-board .frame-zone:is([data-n="3"], [data-n="4"]) .frame-part.is-hidden {
+  width: var(--spacing-sm);
+  height: var(--spacing-sm);
+}
+
+.history-board .frame-zone:is([data-n="3"], [data-n="4"]) .frame-part.is-hidden::before {
+  width: var(--spacing-xs);
+  height: var(--spacing-xs);
 }
 
 .kanji-frame.is-solved {
@@ -1705,6 +2010,40 @@ button.frame-slot { cursor: pointer; }
 }
 
 .picker.is-keyboard .picker-choices { gap: var(--spacing-xs); }
+
+/* Under the keys, End game (js/play/screen.js renderPicker()): a quiet
+   button, muted, as it's rarely wanted. The keyboard's foot is a little
+   shorter to make room. On a phone it's a full touch target; with a mouse
+   it sits well apart from the keys (2026-11-11, the user asked). The room
+   above it (the keyboard's gap, spacing.sm, and the foot's top) matches
+   the room below it (the foot's bottom, clear of a phone's home bar), so
+   it sits in the middle (the user asked, the same day). */
+.picker.is-keyboard { padding-bottom: 0; }
+
+.picker-foot {
+  display: flex;
+  justify-content: center;
+  padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom, 0px));
+}
+
+.picker-end {
+  gap: var(--spacing-xs);
+  min-height: var(--layout-headBtn);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  color: var(--color-text-muted);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .picker-foot {
+    padding-top: var(--spacing-md);
+    padding-bottom: calc(var(--spacing-lg) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.picker-end svg {
+  width: var(--spacing-md);
+  height: var(--spacing-md);
+}
 
 /* The game is over: the keyboard fades where it is before the result card
    takes its place (showResult() in js/play/screen.js), so nothing jumps. */
@@ -1774,15 +2113,12 @@ button.frame-slot { cursor: pointer; }
   height: var(--spacing-lg);
 }
 
-/* A game fills the screen like Wordle: the site header is slimmer (漢 ›
-   Play, the hints and the gear), and while the keyboard is up the footer
-   and the page's bottom padding step aside, which fitBoard() in
-   js/play/screen.js doesn't leave room for. The result card gets them back. */
-body.is-game .app-header {
-  padding-top: var(--spacing-sm);
-  padding-bottom: var(--spacing-sm);
-}
-body.is-game:has(.picker.is-keyboard) .app-footer { display: none; }
+/* A game fills the screen like Wordle: while the keyboard is up the page's
+   bottom padding steps aside, which fitBoard() in js/play/screen.js doesn't
+   leave room for. The result card gets it back. (A game has no footer: the
+   back-to-apps mark is on the play page only.) The site header keeps the
+   spacing it has on every other page (2026-11-10, the user asked; it was
+   slimmer in a game). */
 body.is-game:has(.picker.is-keyboard) .app-main { padding-bottom: 0; }
 
 /* With the keyboard up the game fills the screen under the header (the
@@ -1808,11 +2144,13 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
 /* Tile reveal (settings.tiles, js/config/skins.js). The same rules play a
    new row on the board (.board-row.is-new), the Points page's preview
    (.look-preview.is-new) and each look's example (.reveal-stage.is-playing).
-   The play page's How to play (.demo-row.is-new) plays it too.
+   The play page's How to play (.demo-row.is-new) and the answer's row on
+   the result card (.result-solution.is-new) play it too.
    [data-tiles] on the board, the preview or the example picks the reveal:
    its keyframes (--reveal), how long one tile takes (--reveal-time, which
    js/play/screen.js reads to know when a row is done) and its easing.
-   Each tile waits its turn (--i, set in js/play/screen.js and js/points.js).
+   Each tile waits its turn (--i, set in js/play/screen.js and js/points.js),
+   after --reveal-wait, if the row has one.
    Every reveal goes from the tile's own colours to its mark's (--mark-bg). */
 [data-tiles] {
   --reveal: tile-flip;
@@ -1831,11 +2169,11 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
 [data-tiles="shoji"] { --reveal: tile-shoji; --reveal-time: var(--transition-long); }
 [data-tiles="stamp"] { --reveal: tile-stamp; --reveal-ease: var(--transition-bounce); }
 
-:is(.board-row.is-new, .demo-row.is-new, .look-preview.is-new, .reveal-stage.is-playing) .tile {
+:is(.board-row.is-new, .demo-row.is-new, .look-preview.is-new, .result-solution.is-new, .reveal-stage.is-playing) .tile {
   position: relative;
   isolation: isolate;
   animation: var(--reveal) var(--reveal-time) var(--reveal-ease) both;
-  animation-delay: calc(var(--i, 0) * var(--reveal-stagger));
+  animation-delay: calc(var(--reveal-wait, 0s) + var(--i, 0) * var(--reveal-stagger));
 }
 
 .board-row.is-new .row-kanji {
@@ -2026,8 +2364,8 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
 
 /* The layers some reveals draw under the glyph: ink's spreading colour,
    the brush's painted stroke, and the shoji's two panels. */
-:is([data-tiles="ink"] :is(.board-row, .demo-row).is-new, [data-tiles="ink"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::before,
-:is([data-tiles="wipe"] :is(.board-row, .demo-row).is-new, [data-tiles="wipe"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::before {
+:is([data-tiles="ink"] :is(.board-row, .demo-row).is-new, [data-tiles="ink"]:is(.look-preview.is-new, .result-solution.is-new, .reveal-stage.is-playing)) .tile::before,
+:is([data-tiles="wipe"] :is(.board-row, .demo-row).is-new, [data-tiles="wipe"]:is(.look-preview.is-new, .result-solution.is-new, .reveal-stage.is-playing)) .tile::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -2035,17 +2373,17 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   border-radius: inherit;
   background: var(--mark-bg);
   animation: ink-spread var(--reveal-time) var(--transition-ink) both;
-  animation-delay: calc(var(--i, 0) * var(--reveal-stagger));
+  animation-delay: calc(var(--reveal-wait, 0s) + var(--i, 0) * var(--reveal-stagger));
 }
 
-:is([data-tiles="wipe"] :is(.board-row, .demo-row).is-new, [data-tiles="wipe"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::before {
+:is([data-tiles="wipe"] :is(.board-row, .demo-row).is-new, [data-tiles="wipe"]:is(.look-preview.is-new, .result-solution.is-new, .reveal-stage.is-playing)) .tile::before {
   animation-name: wipe-across;
 }
 
-:is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile { overflow: hidden; }
+:is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .result-solution.is-new, .reveal-stage.is-playing)) .tile { overflow: hidden; }
 
-:is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::before,
-:is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::after {
+:is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .result-solution.is-new, .reveal-stage.is-playing)) .tile::before,
+:is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .result-solution.is-new, .reveal-stage.is-playing)) .tile::after {
   content: '';
   position: absolute;
   top: 0;
@@ -2056,10 +2394,10 @@ body.is-game:has(.picker.is-keyboard) .board.is-parts {
   background: var(--color-tile-bg);
   box-shadow: inset calc(var(--stroke-thin) * -1) 0 0 var(--color-tile-border);
   animation: shoji-left var(--reveal-time) var(--transition-ease) both;
-  animation-delay: calc(var(--i, 0) * var(--reveal-stagger));
+  animation-delay: calc(var(--reveal-wait, 0s) + var(--i, 0) * var(--reveal-stagger));
 }
 
-:is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .reveal-stage.is-playing)) .tile::after {
+:is([data-tiles="shoji"] :is(.board-row, .demo-row).is-new, [data-tiles="shoji"]:is(.look-preview.is-new, .result-solution.is-new, .reveal-stage.is-playing)) .tile::after {
   left: 50%;
   box-shadow: inset var(--stroke-thin) 0 0 var(--color-tile-border);
   animation-name: shoji-right;
@@ -2764,6 +3102,37 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   padding: var(--spacing-lg);
 }
 
+/* A game not solved: the answer atop the card, its parts as the row the
+   board never got (js/play/result.js), on the page's colour like the
+   Points page's preview. Its tiles are the board's size (sizeResult() in
+   js/play/screen.js), so it runs to the card's edges as a band across its
+   top, room for the row the board fits. Each kanji's parts keep together,
+   with the board's wide gap between kanji; a long answer wraps between
+   them. Just finished, the row waits for the card to rise in and the page
+   to glide down to it, then plays the tile reveal in use. */
+.result-solution {
+  --reveal-wait: var(--transition-long);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-sm) var(--spacing-lg);
+  margin: calc(var(--spacing-lg) * -1) calc(var(--spacing-lg) * -1) 0;
+  padding: var(--spacing-lg) var(--spacing-sm);
+  border-radius: calc(var(--radius-xl) - var(--stroke-thin)) calc(var(--radius-xl) - var(--stroke-thin)) 0 0;
+  background: var(--color-bg-page);
+}
+
+.result-solution-kanji {
+  display: inline-flex;
+  gap: var(--spacing-xs);
+}
+
+.result-solution .tile.is-cell {
+  width: var(--board-cell);
+  height: var(--board-cell);
+  font-size: var(--board-font);
+}
+
 .result-head {
   display: flex;
   align-items: center;
@@ -3228,13 +3597,18 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   color: var(--color-text-secondary);
 }
 
+/* Every card in a slot is the same height (each row as tall as the
+   tallest), and each has its state line, so picking one moves nothing
+   (2026-11-11, the user asked). */
 .swatch-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--layout-swatch), 1fr));
+  grid-auto-rows: 1fr;
   gap: var(--spacing-sm);
 }
 
 .swatch {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
@@ -3249,13 +3623,50 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 .swatch:hover { border-color: var(--color-border-default); }
 .swatch.is-open { border-color: var(--color-border-strong); }
 .swatch[aria-pressed="true"] { border-color: var(--color-border-focus); }
-/* A locked look's example is dimmed until you open it to see it. */
-.swatch.is-locked:not(.is-open) .swatch-preview { opacity: var(--opacity-soft); }
+/* A locked look: its example dimmed until you open it to see it, a lock
+   on its corner, and its card on the page's colour, a step back from the
+   ones you can pick (2026-11-11, the user asked for locked to read
+   plainer). The look in use has a tick there instead, filled with the
+   selected edge's colour. */
+.swatch.is-locked { background: var(--color-bg-page); }
+.swatch.is-locked:not(.is-open) .swatch-preview { opacity: var(--opacity-disabled); }
 
-/* Three tiles in the skin's own colours, on its own page colour. */
+.swatch-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--layout-headIcon);
+  height: var(--layout-headIcon);
+  border: var(--stroke-thin) solid var(--color-border-default);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-raised);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text-secondary);
+  transform: translate(var(--spacing-xs), calc(var(--spacing-xs) * -1));
+}
+
+.swatch-badge.is-on {
+  border-color: transparent;
+  background: var(--color-border-focus);
+  color: var(--color-bg-surface);
+}
+
+.swatch-badge svg {
+  width: var(--font-size-xs);
+  height: var(--font-size-xs);
+}
+
+/* Three tiles in the skin's own colours, on its own page colour. One
+   height for every example (a tile's, and its padding), whatever it holds,
+   so every card is as tall. */
 .swatch-preview {
   display: flex;
+  align-items: center;
   justify-content: center;
+  height: calc(var(--layout-cellXs) + var(--spacing-sm) * 2 + var(--stroke-thin) * 2);
   gap: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-xs);
   border: var(--stroke-thin) solid transparent;
@@ -3283,8 +3694,29 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 }
 
 .swatch-name { font-weight: var(--font-weight-bold); }
-.swatch-state { color: var(--color-text-muted); }
+
+/* In use, the price or the achievement, in a line of its own; empty on a
+   look you could pick, but there, so every card is as tall. (The lock or
+   tick is on the corner.) */
+.swatch-state {
+  display: flex;
+  align-items: center;
+  min-height: var(--spacing-md);
+  margin-top: auto;
+  color: var(--color-text-muted);
+}
+
 .swatch-state.is-on { color: var(--color-text-accent); font-weight: var(--font-weight-bold); }
+
+/* One line each, cut short with an ellipsis where a name runs long (the
+   card's label and its open details say it all). */
+.swatch-name,
+.swatch-state-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* The examples of a tile reveal or a win effect: the current colours, on
    the page colour. Each plays when it gets .is-playing (js/points.js). */
@@ -3732,6 +4164,9 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   .look-preview.is-new .tile,
   .look-preview.is-new .tile::before,
   .look-preview.is-new .tile::after,
+  .result-solution.is-new .tile,
+  .result-solution.is-new .tile::before,
+  .result-solution.is-new .tile::after,
   .board-row.is-new .row-kanji,
   .demo-row.is-new .tile,
   .demo-cell.is-typed,

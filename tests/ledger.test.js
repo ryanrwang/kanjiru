@@ -72,16 +72,29 @@ test('a new save has only its starting points, and no progress', () => {
   assert.ok(!('wallet' in save) && !('inventory' in save));
 });
 
-test('a v1 save becomes one ledger entry with its points and hints', () => {
-  const v1 = { v: 1, settings: { theme: 'ai' }, wallet: { points: 420 }, inventory: { sweep: 2, layout: 0 }, history: {}, playing: {}, unlocked: {}, achievements: {} };
-  const save = readSave(JSON.stringify(v1));
-  assert.equal(save.v, VERSION);
-  assert.equal(points(save), 420);
-  assert.deepEqual(held(save), { sweep: 2 });
-  assert.ok(!('wallet' in save) && !('inventory' in save));
-  assert.deepEqual(Object.keys(save.ledger), [ledger.V1_ID], 'no starting points on top');
-  assert.equal(save.settings.theme, 'ai');
-  assert.equal(save.settings.tiles, 'flip', 'missing settings filled in');
+test('a save from before the launch (v1 or v2) starts afresh, keeping its language and light or dark', () => {
+  const v1 = { v: 1, settings: { theme: 'ai', lang: 'ja', scheme: 'dark' }, wallet: { points: 420 }, inventory: { sweep: 2, layout: 0 }, history: {}, playing: {}, unlocked: {}, achievements: {} };
+  const v2 = fresh();
+  v2.v = 2;
+  v2.settings = { ...v2.settings, theme: 'ai', debug: true, langAsked: undefined, lang: null };
+  ledger.add(v2.ledger, 'debug', { pts: 500 });
+  v2.history = { main: { p1: { date: '2026-11-09', guesses: [], won: true, powers: [] } } };
+  v2.achievements = { 'first-win': '2026-11-09' };
+  [v1, v2].forEach((old) => {
+    const save = readSave(JSON.stringify(old));
+    assert.equal(save.v, VERSION);
+    assert.equal(points(save), ECONOMY.startingPoints);
+    assert.deepEqual(held(save), {});
+    assert.equal(hasProgress(save), false);
+    assert.ok(!('wallet' in save) && !('inventory' in save));
+    assert.equal(save.settings.theme, fresh().settings.theme, 'looks start afresh');
+    assert.equal(save.settings.debug, false);
+  });
+  const fromV1 = readSave(JSON.stringify(v1));
+  assert.equal(fromV1.settings.lang, 'ja');
+  assert.equal(fromV1.settings.scheme, 'dark');
+  assert.equal(fromV1.settings.langAsked, true, 'a language picked counts as asked');
+  assert.equal(readSave(JSON.stringify(v2)).settings.langAsked, false, 'following the device: asked on the next visit');
 });
 
 test('loading never adds starting points to a ledger that has entries', () => {
@@ -115,12 +128,17 @@ test('merge: a device that never played adds no points', () => {
   assert.equal(points(merged), points(played));
 });
 
+// v1 saves start afresh at the launch (v3), so their entries are made
+// straight from the ledger here; the merge rule for them stays.
 test('merge: two v1 entries keep the higher, as v1 did', () => {
-  const a = readSave(JSON.stringify({ v: 1, wallet: { points: 500 }, inventory: { sweep: 1 } }));
-  const b = readSave(JSON.stringify({ v: 1, wallet: { points: 300 }, inventory: {} }));
+  const a = fresh();
+  Object.assign(a.ledger, ledger.fromV1({ points: 500 }, { sweep: 1 }));
+  const b = fresh();
+  Object.assign(b.ledger, ledger.fromV1({ points: 300 }, {}));
   ledger.add(b.ledger, 'game', { pts: 50 });
   const merged = mergeSaves(a, b);
-  assert.equal(points(merged), 550);
+  // The higher v1 entry, b's game, and each device's own start.
+  assert.equal(points(merged), 500 + 50 + 2 * ECONOMY.startingPoints);
   assert.deepEqual(held(merged), { sweep: 1 });
 });
 

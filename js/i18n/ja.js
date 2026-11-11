@@ -184,11 +184,10 @@ export default {
     end: {
       open: 'ゲームを終える',
       title: 'このゲームを終えますか？',
-      body: '{rows}回中{n}回回答済み。',
       giveUp: 'あきらめる',
-      giveUpDesc: '答えを見ます。負けとして記録され、連勝が止まります。見つけたパーツのポイントはもらえます。',
+      giveUpDesc: '答えを見ます。負けになります。',
       new: '新しい問題',
-      newDesc: '別のことばにします。この問題は勝ち負けとも記録されません。使ったヒントは戻りません。',
+      newDesc: 'この問題は記録されません。',
       skipped: '新しい問題です。前の問題は記録されません。',
       gaveUp: 'あきらめました。答えはこちら。'
     },
@@ -273,9 +272,10 @@ export default {
   looks: {
     title: 'きせかえ',
     note: '色・タイル・演出を組み合わせよう',
-    lockPoints: '🔒 {cost}pt',
-    lockAchievement: '🔒 {name}',
-    inUse: '✓ 使用中'
+    lockPoints: '{cost}pt',
+    lockAchievement: '{name}',
+    locked: 'ロック中',
+    inUse: '使用中'
   },
 
   powers: {
@@ -334,6 +334,7 @@ export default {
   // 取り消せない操作の前の確認
   confirm: {
     cancel: 'キャンセル',
+    close: '閉じる',
     step: 'ステップ {n}/{of}'
   },
 
@@ -360,9 +361,26 @@ export default {
     debug: {
       title: 'デバッグ',
       name: 'デバッグモード',
-      body: 'テスト用：ゲームのキーに番号付きの点で答えを書き順に表示し、ゲーム中のヒントはすべて無料、ポイントも追加できます。',
-      add: '{n}ptを追加',
-      added: '{n}ptを追加しました。所持{total}pt。'
+      body: 'テスト用：ゲームのキーに番号付きの点で答えを書き順に表示し、ゲーム中のヒントはすべて無料になります。',
+      unlocked: 'デバッグモードをオンにしました。',
+      locked: 'デバッグモードをオフにしました。'
+    }
+  },
+
+  welcome: {
+    lang: {
+      title: 'Language · 言語',
+      play: '日本語で遊ぶ',
+      later: 'あとで'
+    },
+    langTip: {
+      body: '言語はいつでも設定から変えられます。',
+      close: '案内を閉じる'
+    },
+    tip: {
+      title: 'ウェルカムボーナス',
+      button: 'ヒントを買う',
+      later: 'あとで'
     }
   },
 
@@ -625,6 +643,7 @@ export default {
 
   achievement: {
     'first-win': { name: 'はじめの一字', desc: '初めてパズルを解く。' },
+    regular: { name: '常連', desc: '25問解く。' },
     'streak-7': { name: '一週間', desc: 'デイリーを7日連続で解く。' },
     'streak-30': { name: '一か月', desc: 'デイリーを30日連続で解く。' },
     'win-run-5': { name: '好調', desc: '5問続けて解く。' },

@@ -42,6 +42,16 @@ export function t(key, params = {}) {
   return text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
 }
 
+// Text in a given language, whatever the page's: the first visit's
+// language picker offers each language in its own words (app.js).
+export function tIn(langId, key, params = {}) {
+  const language = LANGUAGES.find((l) => l.id === langId) || BASE;
+  let text = lookup(language.strings, key);
+  if (typeof text !== 'string') text = lookup(BASE.strings, key);
+  if (typeof text !== 'string') return key;
+  return text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
+}
+
 export function has(langId, key) {
   const language = LANGUAGES.find((l) => l.id === langId);
   return !!language && typeof lookup(language.strings, key) === 'string';

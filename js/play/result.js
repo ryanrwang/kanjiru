@@ -1,5 +1,6 @@
 /*
- * The result card at the end of a game: the answer with its meanings,
+ * The result card at the end of a game: on a game not solved, the answer's
+ * parts on top as the row the board never got; the answer with its meanings,
  * readings and parts; then the points, in a box of their own: what the
  * game paid, the streak (wins in a row), its rewards (streak, bonus hint,
  * achievements: js/play/rewards.js describe()) and the points you have
@@ -56,7 +57,19 @@ async function shareOut(text) {
   return (await copy(text)) ? 'copied' : 'failed';
 }
 
-export function renderResult({ engine, data, mode, game, points, streak, glyph, rewards = [], balance = null, fresh = false, onPractice, onHome }) {
+// A game not solved: the answer atop the card, its parts as the row the
+// board never got, in green (2026-11-10, the user asked). Each kanji's
+// parts keep together, as on the board. reveal: just finished, so the
+// row plays the tile reveal in use (tiles, settings.tiles) once the card
+// is in. Screen readers have the answer from the card itself.
+function solutionRow(answer, data, glyph, tiles, reveal) {
+  let i = 0;
+  return el('div', { class: `result-solution${reveal ? ' is-new' : ''}`, 'data-tiles': tiles, 'aria-hidden': 'true' },
+    [...answer].map((ch) => el('span', { class: 'result-solution-kanji' },
+      data.kanji[ch].parts.map((p) => el('span', { class: 'tile is-cell is-hit', lang: 'ja', style: { '--i': i++ } }, glyph(p.form || p.el))))));
+}
+
+export function renderResult({ engine, data, mode, game, points, streak, glyph, rewards = [], balance = null, fresh = false, tiles = null, reveal = false, onPractice, onHome }) {
   const { state } = game;
   const won = state.status === 'won';
   const info = engine.answerInfo(state.answer);
@@ -90,6 +103,7 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
     el('p', { class: 'result-why' }, t('result.pointsWhy', { parts: points.parts, solve: points.solve, mult: points.multiplier }))) : null;
 
   const card = el('section', { class: 'card result', 'aria-labelledby': 'result-title' },
+    won ? null : solutionRow(state.answer, data, glyph, tiles, reveal),
     el('header', { class: 'result-head' },
       el('h2', { class: `result-title${won ? ' is-won' : ''}`, id: 'result-title' },
         won ? t('result.won', { n: state.guesses.length }) : state.gaveUp ? t('result.gaveUp') : t('result.lost')),

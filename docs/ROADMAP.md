@@ -19,6 +19,7 @@ Last updated: 2026-11-10.
 - [x] **Players' feedback, round 1 (2026-11-10):** end a game at any time (Give up, or New puzzle), reset achievements, delete all data behind three asks, a diagonal line across keys not in the answer, an animated How to play (open for a new player, folded after a game), every game played under the play card, and 8 colours, 8 tile reveals and 8 win effects, all playing in the game (this was step 6)
 - [x] **Hint overhaul:** a hints pill in the header (漢 › Play in a game) opens a modal: each hint, how many you hold and Use, with one more confirm. Every hint plays its own animation (正 tally strokes, a splitting layout, a brush-written meaning, parts dropping into cells, a sweep across the keys). One kanji guide frame per kanji holds strokes, layout and solved kanji; new rows show revealed parts faintly instead of filling them in. End game moves to the header flag. Meaning in Japanese for all 460 answers. Reading retired, Head start folded into Reveal a part (any time). The Points page lists hints one per row with Buy and Don't ask again (2026-11-10)
 - [x] **Header and pages (2026-11-10):** 漢 and Back to start work again (a variable hid `window.history`); every header control is the same bordered pill; Points and Settings are pages with Close at the top right; How to play always above the play card and about a third quicker; the install tip folded at the bottom of the play page
+- [x] **Parts audit (2026-11-10, PR #17):** after native players' feedback, every tile mapped to its Kangxi radical, display forms such as 𠆢 and 丷, 12 new tiles (263), and 273 kanji re-split (`docs/PARTS-AUDIT.md`). Adds `tools/build_data.py --parts-only`
 - [x] **Screens and menus:** the header holds only Points and Settings. The play page is home: a play card with the Hard and Guided switches, then How to play. The Points page holds the wallet, Looks with previews, Hints & powers and Achievements, and replaces the shop sheet. Settings gains Language, Appearance and a Debug mode (answer dots on the keys, add points) (2026-11-08)
 
 ## Order
@@ -32,10 +33,13 @@ Last updated: 2026-11-10.
 You: review words  (any time; the game only uses words marked Keep)
 ```
 
-- **Next:** the parts audit from native players' feedback (some parts shown as a look-alike, such as 人 for 𠆢, and splits that don't make sense, such as 狭 as 大 人 人 大), on its own branch; then the rest of step 8b: the Apps page card (it needs a screenshot) and checking the install on real phones. Tune the numbers (rows, keys, hint prices, points) after real play, not before.
+- **Next: the MVP launch (2026-11-10).** Left to do:
+  1. Merge branch `launch-polish`: the end of a game glides to the result, the answer atop a lost game's card, the same header in a game, the back-to-apps mark on the play page only; then every save reset once (save v3), a language picker on the first visit and a tip at the gear after it, a 60-point welcome bonus card leading to the hints, a hints pill that stands out, debug mode hidden (8 taps on About's title, on or off), folds in Settings, no sideways shift, an eighth achievement, End game under the keyboard, cells grouped by kanji once the split is known, a lost game's answer at the board's tile size, the page dimmed but the hints pill while the welcome card shows, a shake and a reason under the row for a guess that can't be made, look cards of one height, and round Layout dots (docs/DESIGN.md has each).
+  2. The Apps page card (item 4 of step 8b): it needs an 800 × 600 screenshot uploaded by FTP.
+  3. Check the install on a real iPhone and Android phone once it's live.
+  Tune the numbers (rows, keys, hint prices, points) after real play, not before.
 - **No dailies (2026-11-09):** the user chose random puzzles only, as many as you like, so there's no launch date (docs/DESIGN.md, "No dailies").
 - **Words:** 460 answers from 603 Keep words are enough for launch. More can be added any time on the review page, then `tools/compile_game.py`. 114 Keep words with loose strokes come back as their kanji are fixed.
-- **Parts audit (2026-11-10, branch `claude/radical-audit`):** after native players' feedback, every tile mapped to its Kangxi radical, display forms such as 𠆢 and 丷, 12 new tiles (263), and 273 kanji re-split (`docs/PARTS-AUDIT.md`; Proposed in docs/DESIGN.md, "Part breakdowns"). Adds `tools/build_data.py --parts-only`. Tick it into Done when it merges.
 
 **Running threads at the same time:** every thread shares this one folder, and Git can only have one branch checked out in it. Two threads in the same folder will switch each other's branches. So either run one thread at a time, or start each one in its own worktree (the app's worktree option when you start a session).
 

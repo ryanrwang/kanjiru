@@ -10,14 +10,12 @@ export const ECONOMY = {
   // Shown on the toasts and the result card for each kind of reward.
   rewardIcons: { streak: '🔥', drop: '🎁', achievement: '🏅' },
 
-  // A new save's points. Each device starts with these, and a merge adds
+  // A new save's points: a welcome bonus, enough for one hint (Layout, 60;
+  // powers.js), which the first game's tip points to (2026-11-10, the user
+  // asked; it was 150). Each device starts with these, and a merge adds
   // both devices' points (js/ledger.js), so a device that never played adds
   // nothing.
-  startingPoints: 150,
-
-  // Debug mode (Settings) adds this many each tap, as a 'debug' ledger
-  // entry, so test points can be told apart from earned ones.
-  debugPoints: 500,
+  startingPoints: 60,
 
   // Earned during a game, for each part of the answer a guess marks for the
   // first time. A part that goes from one mark to a better one later pays
