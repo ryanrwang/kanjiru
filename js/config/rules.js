@@ -30,6 +30,19 @@ export const RULES = {
   // many days. iOS clears an unvisited site's saves after 7.
   installTip: { laterDays: 14 },
 
+  // Typing parts on a physical keyboard (js/play/keys.js): the keyboard's
+  // rows of keys, by position (KeyboardEvent.code, so any layout works).
+  // The game's keys take them row by row, in the same places: at a
+  // desktop's 11 keys a row, Q to [, A to ', Z to N (2026-11-11, the user
+  // agreed). A key past the end of its row has no letter.
+  typing: {
+    rows: [
+      ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP', 'BracketLeft', 'BracketRight'],
+      ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon', 'Quote'],
+      ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM', 'Comma', 'Period', 'Slash']
+    ]
+  },
+
   // Debug mode is hidden (2026-11-10, the user asked): tapping About's
   // title in Settings this many times within `within` ms shows its section
   // and turns it on (js/settings.js).

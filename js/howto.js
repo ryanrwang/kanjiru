@@ -53,7 +53,9 @@ export function howTo({ open = true, tiles = 'flip' } = {}) {
     el('div', { class: 'fold-body' },
       el('p', { class: 'howto-lead' }, t('howto.lead')),
       el('p', { class: 'howto-text' }, t('howto.body')),
-      el('div', { class: 'demo', 'data-tiles': tiles }, board, legend))));
+      el('div', { class: 'demo', 'data-tiles': tiles }, board, legend),
+      // With a mouse, the keys can be typed too (styles.css .howto-keys).
+      el('p', { class: 'howto-keys' }, t('howto.keys')))));
 
   // ── The animation ──────────────────────────────────────────────────
 

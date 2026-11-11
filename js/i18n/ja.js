@@ -30,6 +30,7 @@ export default {
     hit: '位置も正解',
     near: '位置ちがい',
     miss: '答えにない',
+    keys: 'キーボードでは、キーに書かれた文字を押してパーツを入力できます。',
     // ミニゲームの下の説明（一段階ずつ）
     step: {
       type: 'パーツをタップして書き順に入れます。',
@@ -115,7 +116,12 @@ export default {
     guess: '回答',
     delete: '消す',
     palette: 'パーツ',
-    keysHelp: '矢印キーでパーツを選び、EnterかSpaceでマスに入れます。Backspaceで消します。',
+    keysHelp: '矢印キーでパーツを選び、EnterかSpaceでマスに入れます。Backspaceで消します。キーボードでは、キーの文字を押すとそのパーツを入力できます。',
+    key: {
+      enter: 'Enter',
+      esc: 'Esc'
+    },
+    frameOpen: '漢字カードを開く',
     cellsHelp: '左右の矢印キーでマスを選びます。',
     debugCells: '答えの{cells}マス目',
     soon: 'このモードは近日公開です（単語の確認待ち）。',
