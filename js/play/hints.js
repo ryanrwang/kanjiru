@@ -12,7 +12,7 @@
  */
 import { POWERS, OFFERED_POWERS } from '../registry.js';
 import { t, lang } from '../i18n.js';
-import { el } from '../dom.js';
+import { el, openSheet, closeSheet, dismissable } from '../dom.js';
 import { bump } from '../toast.js';
 import { coin } from '../coin.js';
 import { hintIcon } from './hint-art.js';
@@ -182,7 +182,7 @@ let view = null;   // { name: 'list' | 'use' | 'buy', id, focus }
 export function openHints({ powers, read, ask, onBuy, onUse }) {
   if (!sheet) {
     sheet = el('dialog', { class: 'sheet hints-sheet', 'aria-labelledby': 'hints-title' });
-    sheet.addEventListener('click', (event) => { if (event.target === sheet) sheet.close(); });
+    dismissable(sheet, { esc: false });
     document.body.append(sheet);
   }
   const power = (id) => powers.find((p) => p.id === id);
@@ -190,15 +190,18 @@ export function openHints({ powers, read, ask, onBuy, onUse }) {
   let note = null;   // { id, text }: a line under a row after buying
   let spent = 0;     // points to show falling, once
 
+  // Esc steps back to the list first, then closes, fading.
   sheet.oncancel = (event) => {
-    if (view && view.name !== 'list') { event.preventDefault(); show('list', view.id); }
+    event.preventDefault();
+    if (view && view.name !== 'list') show('list', view.id);
+    else closeSheet(sheet);
   };
 
   function head(title, points) {
     const close = el('button', {
       class: 'icon-btn', type: 'button', 'data-id': 'hints-close',
       'aria-label': t('game.powers.close'), title: t('game.powers.close'),
-      onclick: () => sheet.close()
+      onclick: () => closeSheet(sheet)
     });
     close.innerHTML = CLOSE;
     const pointsNode = el('span', { class: 'hints-points' }, coin(), ' ', pts(points));
@@ -252,7 +255,7 @@ export function openHints({ powers, read, ask, onBuy, onUse }) {
       el('div', { class: 'btn-row' },
         el('button', {
           class: 'btn btn-primary', type: 'button', 'data-id': 'confirm-use',
-          onclick: () => { sheet.close(); onUse(p.id); }
+          onclick: () => { closeSheet(sheet); onUse(p.id); }
         }, t('game.powers.confirmUseYes')),
         el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => show('list', p.id) }, t('game.powers.back')))];
   }
@@ -286,10 +289,12 @@ export function openHints({ powers, read, ask, onBuy, onUse }) {
   // Draws a view; the focus goes to its first button, or back to the row
   // it came from.
   function show(name, id = null, focus = null) {
+    // From one view to another in the open sheet, the new one fades in.
+    const swapped = sheet.open && view && view.name !== name;
     view = { name, id };
     const p = id ? power(id) : null;
     const body = name === 'use' ? useView(p) : name === 'buy' ? buyView(p) : listView();
-    sheet.replaceChildren(el('div', { class: 'sheet-body' }, body));
+    sheet.replaceChildren(el('div', { class: `sheet-body${swapped ? ' is-swapped' : ''}` }, body));
     const target = (focus && sheet.querySelector(`[data-id="${focus}"]:not(:disabled)`))
       || (name === 'list' && id && sheet.querySelector(`[data-key="${id}"] button:not(:disabled)`))
       || (name !== 'list' && sheet.querySelector('.btn-row .btn-primary'))
@@ -300,10 +305,10 @@ export function openHints({ powers, read, ask, onBuy, onUse }) {
   }
 
   show('list');
-  sheet.showModal();
+  openSheet(sheet);
   show('list');   // again, so the focus lands now that it's open
 }
 
 export function closeHints() {
-  if (sheet && sheet.open) sheet.close();
+  if (sheet && sheet.open) closeSheet(sheet);
 }

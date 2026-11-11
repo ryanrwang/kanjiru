@@ -165,8 +165,12 @@
       emphasized: 'cubic-bezier(0.3, 0, 0, 1.3)',
       ink:        'cubic-bezier(0.6, 0, 0.2, 1)',   // slow start, quick finish, like a brush
       inOut:      'cubic-bezier(0.65, 0, 0.35, 1)',   // eases in and out alike
+      accelerate: 'cubic-bezier(0.3, 0, 1, 1)',      // speeds up as it goes: something leaving
       linear:     'linear'
     },
+
+    // Sizes something takes as it moves (a pressed button, a modal coming in).
+    scale: { 96: '0.96', 97: '0.97', 100: '1', 108: '1.08' },
 
     opacity: { 0: '0', 15: '0.15', 25: '0.25', 40: '0.4', 60: '0.6', 80: '0.8', 100: '1' }
   };
@@ -401,7 +405,27 @@
       bounce: primitives.easing.emphasized,
       ink:    primitives.easing.ink,
       glide:  primitives.easing.inOut,   // the page and board moving to a game's result
-      linear: primitives.easing.linear   // an even pace (the sweep's broom)
+      linear: primitives.easing.linear,  // an even pace (the sweep's broom)
+      // Moving between states (2026-11-11, the user asked for smooth but
+      // quick moves; nothing over 200 ms, and 100 ms for what's done often
+      // or is leaving). One token per kind, so each tunes in one place.
+      hover:    primitives.duration[100],   // a hover's colour, on a mouse
+      press:    primitives.duration[100],   // a button, key or cell pressed in
+      toggle:   primitives.duration[200],   // a switch's knob
+      fold:     primitives.duration[200],   // a fold opening or shutting
+      page:     primitives.duration[200],   // a page arriving
+      look:     primitives.duration[200],   // light/dark, a skin or the language changing
+      sheetIn:  primitives.duration[200],   // a modal opening
+      sheetOut: primitives.duration[100],   // a modal closing, a tip leaving
+      exit:     primitives.easing.accelerate
+    },
+
+    // How far a move scales (styles.css): a press, a modal coming in, a
+    // part popping into its cell.
+    scale: {
+      press: primitives.scale[97],
+      enter: primitives.scale[96],
+      pop:   primitives.scale[108]
     },
 
     // Glass (the Points page's header once the page slides under it): how

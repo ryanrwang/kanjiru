@@ -25,7 +25,7 @@
  */
 import { OFFERED_POWERS, SLOTS, SKINS, ECONOMY, ACHIEVEMENTS, ACHIEVEMENT, MODES } from './registry.js';
 import { t } from './i18n.js';
-import { el } from './dom.js';
+import { el, openSheet, closeSheet, dismissable, growIn, shrinkOut, crossfade } from './dom.js';
 import * as store from './store.js';
 import { isUnlocked, powerOffer, skinOffer, buyPower, buySkin } from './shop.js';
 import { stats, progress } from './engine/stats.js';
@@ -100,14 +100,13 @@ const miniTiles = (tiles) => tiles.map(([part, mark], i) => {
 let confirmSheet = null;
 function confirmBuy({ icon, name, cost, have, onYes, never = false }) {
   if (!confirmSheet) {
-    confirmSheet = el('dialog', { class: 'sheet confirm-sheet', 'aria-labelledby': 'confirm-title' });
-    confirmSheet.addEventListener('click', (event) => { if (event.target === confirmSheet) confirmSheet.close(); });
+    confirmSheet = dismissable(el('dialog', { class: 'sheet confirm-sheet', 'aria-labelledby': 'confirm-title' }));
     document.body.append(confirmSheet);
   }
   const box = never ? el('input', { type: 'checkbox', id: 'confirm-never', 'data-id': 'never' }) : null;
   const yes = el('button', {
     class: 'btn btn-primary', type: 'button',
-    onclick: () => { confirmSheet.close(); onYes(!!(box && box.checked)); }
+    onclick: () => { closeSheet(confirmSheet); onYes(!!(box && box.checked)); }
   }, t('shop.confirmYes', { cost }));
   confirmSheet.replaceChildren(el('div', { class: 'sheet-body' },
     el('header', { class: 'power-sheet-head' },
@@ -116,8 +115,8 @@ function confirmBuy({ icon, name, cost, have, onYes, never = false }) {
     el('p', {}, t('shop.confirm', { cost, have, left: have - cost, name })),
     box ? el('label', { class: 'check-row', for: 'confirm-never' }, box, el('span', {}, t('shop.dontAsk'))) : null,
     el('div', { class: 'btn-row' }, yes,
-      el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => confirmSheet.close() }, t('shop.cancel')))));
-  confirmSheet.showModal();
+      el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => closeSheet(confirmSheet) }, t('shop.cancel')))));
+  openSheet(confirmSheet);
   yes.focus();
 }
 
@@ -125,7 +124,7 @@ export function openPoints(root, ctx) {
   // offer: the locked look whose details show; done: { key, text } after
   // a purchase or a change; playing: the look whose example plays on the
   // next draw.
-  const ui = { offer: null, done: null, playing: null };
+  const ui = { offer: null, done: null, playing: null, picked: null };
   const page = el('section', { class: 'page points-page', 'aria-labelledby': 'points-title' });
   let replay = false;   // the preview plays its tile reveal on the next draw
 
@@ -172,6 +171,7 @@ export function openPoints(root, ctx) {
     page.replaceChildren(wallet(save, values), looks(save, earning), powers(save), achievements(save, earning));
     dock();
     ui.playing = null;
+    ui.picked = null;
     if (watcher) {
       watcher.disconnect();
       page.querySelectorAll('[data-play]').forEach((stage) => {
@@ -227,25 +227,49 @@ export function openPoints(root, ctx) {
     return '';
   }
 
-  const doneLine = (key) => (ui.done && ui.done.key === key
-    ? el('p', { class: 'status-line is-ok', role: 'status' }, ui.done.text) : null);
+  // A purchase done, under its section; it fades in when it's news.
+  let doneShown = null;
+  const doneLine = (key) => {
+    if (!ui.done || ui.done.key !== key) return null;
+    const fresh = ui.done !== doneShown;
+    doneShown = ui.done;
+    return el('p', { class: `status-line is-ok${fresh ? ' is-new' : ''}`, role: 'status' }, ui.done.text);
+  };
 
   // ── Looks ──────────────────────────────────────────────────────────
 
+  // A colour crossfades to the next (js/dom.js crossfade()); its tick pops
+  // in (ui.picked).
   function use(slot, item) {
-    store.update((s) => { s.settings[slot] = item.id; });
-    ui.offer = null;
-    ui.done = null;
-    if (slot === 'theme') ctx.onLook();
-    if (slot === 'tiles') replay = true;
-    render(`skin:${slot}:${item.id}`);
+    const key = `skin:${slot}:${item.id}`;
+    const change = () => {
+      store.update((s) => { s.settings[slot] = item.id; });
+      ui.offer = null;
+      ui.done = null;
+      ui.picked = key;
+      if (slot === 'theme') ctx.onLook();
+      if (slot === 'tiles') replay = true;
+      render(key);
+    };
+    if (slot === 'theme') crossfade(change);
+    else change();
   }
 
-  // A locked look: its details open under its row (offer), or close.
+  // A locked look: its details open under its row (offer), or close. They
+  // ease open where none were open, and ease shut before they go.
   function toggle(key) {
+    const was = ui.offer;
     ui.offer = ui.offer === key ? null : key;
     ui.done = null;
+    const open = was && page.querySelector(`.offer[data-key="${was}"]`);
+    if (open && !ui.offer) {
+      // Drawn after, unless another look opened meanwhile (and drew).
+      shrinkOut(open).then(() => { if (!ui.offer) render(key); });
+      return;
+    }
     render(key);
+    const panel = !was && ui.offer && page.querySelector(`.offer[data-key="${ui.offer}"]`);
+    if (panel) growIn(panel);
   }
 
   // The current look on a few tiles; picking a tile reveal plays it here.
@@ -297,7 +321,7 @@ export function openPoints(root, ctx) {
     const on = save.settings[slot] === item.id;
     const name = t(`skin.${slot}.${item.id}`);
     const state = on ? t('looks.inUse') : !unlocked ? lockText(item.unlock) : item.soon ? t('shop.soon') : '';
-    const badge = on ? icon(CHECK, 'swatch-badge is-on') : !unlocked ? icon(LOCK, 'swatch-badge') : null;
+    const badge = on ? icon(CHECK, `swatch-badge is-on${ui.picked === key ? ' is-new' : ''}`) : !unlocked ? icon(LOCK, 'swatch-badge') : null;
     const shown = example(slot, item, key);
     // Named by what it shows: its name and its state, so what's seen is
     // what's said (and what a voice command can ask for). The lock is a
@@ -334,14 +358,19 @@ export function openPoints(root, ctx) {
     let action = null;
     const pay = () => {
       if (!buySkin(slot.id, item.id)) return;
-      store.update((s) => { s.settings[slot.id] = item.id; });
-      ui.offer = null;
-      ui.playing = key;
-      ui.done = { key: `slot:${slot.id}`, text: t('shop.boughtSkin', { name, left: store.points() }) };
-      if (slot.id === 'theme') ctx.onLook();
-      if (slot.id === 'tiles') replay = true;
-      render(key);
-      paid(unlock.cost);
+      const change = () => {
+        store.update((s) => { s.settings[slot.id] = item.id; });
+        ui.offer = null;
+        ui.playing = key;
+        ui.picked = key;
+        ui.done = { key: `slot:${slot.id}`, text: t('shop.boughtSkin', { name, left: store.points() }) };
+        if (slot.id === 'theme') ctx.onLook();
+        if (slot.id === 'tiles') replay = true;
+        render(key);
+        paid(unlock.cost);
+      };
+      if (slot.id === 'theme') crossfade(change);
+      else change();
     };
     if (offer.owned) lines.push(item.soon ? t('shop.ownedSoon') : t('shop.owned'));
     else if (unlock.type === 'achievement' && ACHIEVEMENT[unlock.id]) {
@@ -464,7 +493,7 @@ export function openPoints(root, ctx) {
     refresh: () => render(),
     destroy() {
       if (watcher) watcher.disconnect();
-      if (confirmSheet && confirmSheet.open) confirmSheet.close();
+      if (confirmSheet && confirmSheet.open) closeSheet(confirmSheet);
       cancelAnimationFrame(dockFrame);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);

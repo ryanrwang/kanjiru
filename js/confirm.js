@@ -19,10 +19,11 @@
  *            game, 2026-11-10); it cancels the same way
  *
  * One dialog serves every ask, so a run of them (the reset's three steps)
- * reads as one sheet changing.
+ * reads as one sheet changing: its content fades from one step to the next
+ * (js/dom.js openSheet()).
  */
 import { t } from './i18n.js';
-import { el } from './dom.js';
+import { el, openSheet, closeSheet } from './dom.js';
 
 const CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>';
 
@@ -32,15 +33,17 @@ let settle = null;   // resolves the ask on show
 function close(value) {
   const done = settle;
   settle = null;
-  if (dialog && dialog.open) dialog.close();
+  // At once, so the page takes the focus as before; a copy fades out.
+  if (dialog && dialog.open) closeSheet(dialog);
   if (done) done(value);
 }
 
 export function ask({ icon = null, title, body = null, options, typed = null, step = null, cancel = null, closeX = false }) {
   if (!dialog) {
     dialog = el('dialog', { class: 'sheet confirm-sheet ask-sheet', 'aria-labelledby': 'ask-sheet-title' });
-    // The backdrop and Esc cancel.
+    // The backdrop and Esc cancel, fading like the buttons do.
     dialog.addEventListener('click', (event) => { if (event.target === dialog) close(null); });
+    dialog.addEventListener('cancel', (event) => { event.preventDefault(); close(null); });
     // The close event comes a moment later: by then the next ask of a run
     // may have opened the dialog again, and that one stays.
     dialog.addEventListener('close', () => { if (!dialog.open) close(null); });
@@ -96,7 +99,7 @@ export function ask({ icon = null, title, body = null, options, typed = null, st
 
   return new Promise((resolve) => {
     settle = resolve;
-    if (!dialog.open) dialog.showModal();
+    openSheet(dialog);
     (field || buttons[0]).focus();
   });
 }

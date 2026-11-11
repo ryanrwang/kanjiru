@@ -41,7 +41,7 @@
 import { t, has, lang, LANGUAGES } from './i18n.js';
 import { ECONOMY, SKINS, ACHIEVEMENTS, RULES } from './registry.js';
 import { toast } from './toast.js';
-import { el, switchRow, segmented } from './dom.js';
+import { el, switchRow, segmented, smoothFold, crossfade } from './dom.js';
 import * as store from './store.js';
 import { sendSave, receiveSave, normalizeCode } from './transfer.js';
 import { installed, platform, canPrompt, promptInstall, onInstallChange, installSteps } from './install.js';
@@ -130,16 +130,17 @@ function changed() {
 }
 
 // A section folded to its title until opened, the whole title row its
-// toggle. ui.open keeps each one as it was across redraws.
+// toggle; it eases open and shut (js/dom.js smoothFold()). ui.open keeps
+// each one as it was across redraws.
 function fold(id, titleKey, ...body) {
-  return el('details', {
+  return smoothFold(el('details', {
     class: 'sheet-section sheet-fold', open: !!ui.open[id],
     ontoggle: (event) => { ui.open[id] = event.currentTarget.open; }
   },
   el('summary', { class: 'fold-summary', 'data-id': `${id}-fold` },
     el('h2', { class: 'sheet-section-title', id: `${id}-title` }, t(titleKey)),
     el('span', { class: 'fold-chevron', 'aria-hidden': 'true' })),
-  el('div', { class: 'sheet-fold-body' }, body));
+  el('div', { class: 'sheet-fold-body' }, body)));
 }
 
 // ── Language and appearance ──────────────────────────────────────────
@@ -150,7 +151,7 @@ function renderLanguage() {
     segmented({
       id: 'lang', label: t('settings.language'), value: lang(),
       options: LANGUAGES.map((l) => ({ id: l.id, label: l.name, lang: l.id })),
-      onPick: (id) => { store.update((s) => { s.settings.lang = id; s.settings.langAsked = true; }); changed(); }
+      onPick: (id) => crossfade(() => { store.update((s) => { s.settings.lang = id; s.settings.langAsked = true; }); changed(); })
     }));
 }
 
@@ -165,7 +166,7 @@ function renderScheme() {
       id: 'scheme', label: t('settings.scheme.title'), disabled: fixed,
       value: fixed ? look.scheme : saved || 'auto',
       options: ['auto', 'light', 'dark'].map((id) => ({ id, label: t(`settings.scheme.${id}`) })),
-      onPick: (id) => { store.update((s) => { s.settings.scheme = id === 'auto' ? null : id; }); changed(); }
+      onPick: (id) => crossfade(() => { store.update((s) => { s.settings.scheme = id === 'auto' ? null : id; }); changed(); })
     }),
     fixed ? el('p', { class: 'sheet-note sheet-row-note' }, t('settings.scheme.fixed', { name: t(`skin.theme.${look.theme}`) })) : null);
 }
@@ -340,10 +341,20 @@ function section(id, ...content) {
   );
 }
 
+// A section's message; it fades in when it's news (the text each
+// section last showed).
+const news = { status: {}, code: null };
+
+function statusClass(id, status) {
+  const fresh = !!status && news.status[id] !== status.text;
+  news.status[id] = status ? status.text : null;
+  return `transfer-status${status ? ` is-${status.kind}` : ''}${fresh ? ' is-new' : ''}`;
+}
+
 function renderStatus(id) {
   const status = ui.status[id];
   return el('p', {
-    class: `transfer-status${status ? ` is-${status.kind}` : ''}`,
+    class: statusClass(id, status),
     'data-status': id, role: 'status', 'aria-live': 'polite'
   }, status ? status.text : '');
 }
@@ -353,7 +364,9 @@ function setStatus(id, status) {
   ui.status[id] = status;
   const node = page && page.querySelector(`[data-status="${id}"]`);
   if (!node) return;
-  node.className = `transfer-status${status ? ` is-${status.kind}` : ''}`;
+  node.className = '';
+  void node.offsetWidth;   // so its fade starts again
+  node.className = statusClass(id, status);
   node.textContent = status ? status.text : '';
 }
 
@@ -369,9 +382,12 @@ function renderSend() {
   const live = !!s.code && Date.now() < s.expiresAt;
   const half = s.code ? Math.ceil(s.code.length / 2) : 0;
   countdown = live ? el('p', { class: 'transfer-countdown' }) : null;
+  // A new code fades in; the same one drawn again stays still.
+  const fresh = live && news.code !== s.code;
+  news.code = live ? s.code : null;
   return section('send',
     live ? el('p', {
-      class: 'transfer-code', lang: 'en',
+      class: `transfer-code${fresh ? ' is-new' : ''}`, lang: 'en',
       'aria-label': t('transfer.send.codeLabel', { code: s.code.split('').join(' ') })
     }, el('span', {}, s.code.slice(0, half)), el('span', {}, s.code.slice(half))) : null,
     countdown,

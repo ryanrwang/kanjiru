@@ -391,7 +391,7 @@ export function openGame(root, ctx) {
       const ghost = !id && shown.has(i) ? shown.get(i) : null;
       const label = known ? 'game.cellShown' : id ? 'game.cellFilled' : ghost ? 'game.cellGhost' : 'game.cellEmpty';
       return el('button', {
-        class: `tile is-cell is-pending ${known ? 'is-hit' : id ? 'is-filled' : `is-empty${ghost ? ' is-ghost' : ''}`}${i === ui.active ? ' is-active' : ''}`,
+        class: `tile is-cell is-pending ${known ? 'is-hit' : id ? 'is-filled' : `is-empty${ghost ? ' is-ghost' : ''}`}${i === ui.active ? ' is-active' : ''}${id && i === ui.typed ? ' is-typed' : ''}`,
         type: 'button', lang: 'ja', 'data-id': `cell-${i}`, 'data-index': i,
         tabindex: i === ui.active ? '0' : '-1',
         'aria-pressed': String(i === ui.active),
@@ -910,7 +910,10 @@ export function openGame(root, ctx) {
     }
     say(null, '');
     live.textContent = t('game.cellFilled', { cell: cellName(filled), part: id });
+    // The part pops into its cell (styles.css .is-typed), in this draw only.
+    ui.typed = filled;
     keepFocus(() => { renderBoard(); renderChoices(); });
+    ui.typed = null;
   }
 
   // Tapping the selected cell again puts in the part a hint showed there.
