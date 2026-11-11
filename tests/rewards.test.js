@@ -6,8 +6,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { payGame, earnAchievements, describe, skinsFor } from '../js/play/rewards.js';
-import { fresh, points, held } from '../js/store.js';
-import { ECONOMY, ACHIEVEMENT, ACHIEVEMENTS, SKINS } from '../js/registry.js';
+import { fresh, points, held, get } from '../js/store.js';
+import { ECONOMY, ACHIEVEMENT, ACHIEVEMENTS, SKINS, POWER } from '../js/registry.js';
+import { t } from '../js/i18n.js';
 import { stats } from '../js/engine/stats.js';
 
 const win = (date, extra = {}) => ({ date, guesses: ['x', 'y', 'z'], won: true, powers: ['sweep'], answer: '明', level: 'normal', ...extra });
@@ -95,5 +96,19 @@ test('describe: each reward reads with its icon and what it gave', () => {
   assert.ok(a.body.length > 0, 'names the look it unlocks');
   const d = describe({ why: 'drop', hints: { sweep: 1 } });
   assert.equal(d.icon, ECONOMY.rewardIcons.drop);
-  assert.ok(d.body.includes('🧹'));
+  assert.ok(d.body.includes(t('power.sweep.name')));
+});
+
+test('describe: a hint’s emoji shows in the text only in the Emoji icons look', () => {
+  const settings = get().settings;
+  const before = settings.icons;
+  const emoji = POWER.sweep.icon;
+  try {
+    settings.icons = SKINS.icons.find((item) => item.style !== 'emoji').id;
+    assert.ok(!describe({ why: 'drop', hints: { sweep: 1 } }).body.includes(emoji));
+    settings.icons = SKINS.icons.find((item) => item.style === 'emoji').id;
+    assert.ok(describe({ why: 'drop', hints: { sweep: 1 } }).body.includes(emoji));
+  } finally {
+    settings.icons = before;
+  }
 });

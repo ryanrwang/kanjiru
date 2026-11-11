@@ -33,6 +33,7 @@ import { localDate } from './engine/daily.js';
 import { amounts, skinsFor, achievementStats } from './play/rewards.js';
 import { bump } from './toast.js';
 import { hintRow, priceButton } from './play/hints.js';
+import { hintIcon } from './play/hint-art.js';
 import { example as effectExample } from './play/effects.js';
 
 const pts = (n) => t('currency.amount', { n });
@@ -46,6 +47,8 @@ const SOLVED = [['日', 'hit'], ['土', 'hit'], ['寸', 'hit']];
 const DRAWN = '時';   // the answer Brush draw writes out
 // The seal stamped by the Seal effect: the game's own (modes.js numeral).
 const SEAL = (MODES.find((m) => m.listed) || MODES[0]).numeral;
+// How many hints an icons look's example draws: two fit a card at 32px.
+const ICON_EXAMPLES = 2;
 
 const hoverable = () => window.matchMedia && window.matchMedia('(hover: hover)').matches;
 
@@ -258,7 +261,12 @@ export function openPoints(root, ctx) {
 
   // A look's example. Colours: three tiles in the skin's own colours, on
   // its own page colour. A reveal or effect: the current colours, moving.
+  // Hint icons: the first hints, drawn that way.
   function example(slot, item, key) {
+    if (slot === 'icons') {
+      return el('span', { class: 'swatch-preview icons-preview', 'aria-hidden': 'true' },
+        OFFERED_POWERS.filter((p) => p.art).slice(0, ICON_EXAMPLES).map((p) => hintIcon(p, { look: item.id })));
+    }
     if (slot === 'theme') {
       const c = window.TOKENS.resolve(item.id, window.TOKENS.look().scheme).color;
       return el('span', { class: 'swatch-preview', 'aria-hidden': 'true', style: { background: c.bg.page, borderColor: c.border.subtle } },
@@ -399,7 +407,7 @@ export function openPoints(root, ctx) {
       action: p.cost === null ? null : priceButton({
         power: p, disabled: !!offer.why,
         onclick: () => (ask
-          ? confirmBuy({ icon: p.icon, name, cost: p.cost, have: offer.have, onYes: pay, never: true })
+          ? confirmBuy({ icon: hintIcon(p, { size: 'lg' }), name, cost: p.cost, have: offer.have, onYes: pay, never: true })
           : pay(false))
       }),
       line

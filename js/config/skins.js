@@ -5,6 +5,7 @@
  *   theme   colours — the palette itself lives in tokens.js THEMES (same id)
  *   tiles   how a guessed tile reveals its colour
  *   effect  what plays when you solve the puzzle
+ *   icons   how hints and powers are drawn (js/play/hint-art.js)
  *
  * Adding a skin = one entry in the right slot, its name under
  * skin.<slot>.<id> in js/i18n/*.js, plus for a theme its colours in
@@ -28,7 +29,8 @@ const FREE = { type: 'free' };
 export const SLOTS = [
   { id: 'theme',  icon: '🎨' },
   { id: 'tiles',  icon: '🔲' },
-  { id: 'effect', icon: '✨' }
+  { id: 'effect', icon: '✨' },
+  { id: 'icons',  icon: '💡' }
 ];
 
 // Eight of each (2026-11-10): the user asked for 8 colours, 8 tile reveals
@@ -68,8 +70,21 @@ export const SKINS = {
     { id: 'glow',     tier: 'fancy', unlock: { type: 'achievement', id: 'collector-50' } },
     { id: 'seal',     tier: 'fancy', unlock: { type: 'achievement', id: 'unaided' } },
     { id: 'hanabi',   tier: 'fancy', unlock: { type: 'achievement', id: 'sharp-eye' } }
+  ],
+
+  // Hint icons (2026-11-11): four, the user asked for an even number,
+  // Emoji free and the drawn ones to earn: two to buy, one an achievement
+  // unlocks. style: how js/play/hint-art.js draws them, 'emoji' (the
+  // power's emoji), 'illustrated' (in the game's colours), 'seal' (white on
+  // a square in the skin's accent) or 'badge' (white on a circle in the
+  // hint's own colour, powers.js badge).
+  icons: [
+    { id: 'emoji',       tier: 'basic', unlock: FREE, style: 'emoji' },
+    { id: 'badge',       tier: 'fancy', unlock: { type: 'points', cost: 200 }, style: 'badge' },
+    { id: 'seal',        tier: 'fancy', unlock: { type: 'points', cost: 300 }, style: 'seal' },
+    { id: 'illustrated', tier: 'fancy', unlock: { type: 'achievement', id: 'regular' }, style: 'illustrated' }
   ]
 };
 
 // What a brand-new player starts with.
-export const DEFAULT_LOOK = { theme: 'default', tiles: 'flip', effect: 'draw' };
+export const DEFAULT_LOOK = { theme: 'default', tiles: 'flip', effect: 'draw', icons: 'emoji' };

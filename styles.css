@@ -2457,7 +2457,7 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 .clue-chip.is-meaning { flex: 1 1 0; }
 .clue-chip.is-soon { font-size: var(--font-size-xs); color: var(--color-text-muted); }
 
-.clue-chip-icon { flex: 0 0 auto; }
+.clue-chip-icon { display: flex; flex: 0 0 auto; }
 
 .clue-chip-body {
   min-width: 0;
@@ -2535,12 +2535,60 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   list-style: none;
 }
 
+/* Hint icons (js/play/hint-art.js), in the look picked in Points › Looks:
+   the hint's emoji; Illustrated, its drawing in the game's own colours;
+   Seal, in white on a square in the skin's accent; or Badge, in white on a
+   circle in the hint's own colour (tokens.js hint.badge). 32px in rows,
+   chips and card titles (the user's smallest, 2026-11-11), 48px in
+   confirms. */
+.hint-art {
+  --art-size: var(--spacing-xl);
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: var(--art-size);
+  height: var(--art-size);
+  font-size: var(--font-size-xl);
+  line-height: var(--font-lineHeight-tight);
+  vertical-align: middle;
+}
+.hint-art.is-lg { --art-size: var(--spacing-2xl); font-size: var(--font-size-3xl); }
+.hint-art svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.hint-art.is-illustrated { --art-ink: var(--color-text-primary); }
+.hint-art.is-seal { --plate: var(--color-action-primary-bg); --art-ink: var(--color-action-primary-text); }
+.hint-art.is-badge { --plate: var(--badge); --art-ink: var(--color-hint-glint); }
+.hint-art .plate { fill: var(--plate); }
+.hint-art .rim,
+.hint-art .line,
+.hint-art .soft { stroke: var(--art-ink); }
+.hint-art .fill,
+.hint-art .t-ink { fill: var(--art-ink); }
+.hint-art .cut { stroke: var(--plate); }
+.hint-art .kan { font-family: var(--font-family-kanji); font-weight: var(--font-weight-black); }
+.hint-art .num { font-family: var(--font-family-ui); font-weight: var(--font-weight-bold); }
+
+/* Illustrated's colours: the tiles', the bulb's gold and the accent. Text
+   on a tile is the tiles' text colour; on gold, the accent, which reads in
+   both schemes. */
+.hint-art .accent { stroke: var(--color-text-accent); }
+.hint-art .on { stroke: var(--color-feedback-text); }
+.hint-art .f-paper { fill: var(--color-tile-bg); }
+.hint-art .f-gold { fill: var(--color-hint-bulb); }
+.hint-art .f-hit { fill: var(--color-feedback-hit); }
+.hint-art .f-near { fill: var(--color-feedback-near); }
+.hint-art .f-accent { fill: var(--color-action-primary-bg); }
+.hint-art .f-spark { fill: var(--color-text-accent); }
+.hint-art .t-on { fill: var(--color-feedback-text); }
+.hint-art .t-gold { fill: var(--color-action-primary-bg); }
+
 /* One hint per row: its icon, name, how many you hold and the button on
    the first line; what it does, and why not or what just happened, under
    them across the row. */
 .hint-row {
   display: grid;
-  grid-template-columns: var(--spacing-lg) minmax(0, 1fr) auto auto;
+  grid-template-columns: var(--spacing-xl) minmax(0, 1fr) auto auto;
   grid-template-areas:
     "icon name held action"
     ".    desc desc desc"
@@ -2557,9 +2605,7 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 
 .hint-icon {
   grid-area: icon;
-  font-size: var(--font-size-lg);
-  line-height: var(--font-lineHeight-snug);
-  text-align: center;
+  display: flex;
 }
 
 .hint-row.is-off .hint-icon { opacity: var(--opacity-disabled); filter: grayscale(1); }
@@ -2614,10 +2660,7 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 
 .hint-confirm + .btn-row { justify-content: center; }
 
-.hint-confirm-icon {
-  font-size: var(--font-size-3xl);
-  line-height: var(--font-lineHeight-tight);
-}
+.hint-confirm-icon { display: flex; }
 
 .hint-confirm-title {
   font-size: var(--font-size-lg);
@@ -2693,7 +2736,7 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   color: var(--color-text-secondary);
 }
 
-.hint-show-icon { font-size: var(--font-size-lg); letter-spacing: normal; }
+.hint-show-icon { display: flex; letter-spacing: normal; }
 .hint-show-icon:not(:first-child) { margin-left: var(--spacing-sm); }
 
 .hint-show-done { align-self: stretch; }
@@ -2867,8 +2910,7 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   position: absolute;
   top: 50%;
   right: 0;
-  font-size: var(--font-size-2xl);
-  line-height: var(--font-lineHeight-tight);
+  display: flex;
   translate: 50% -50%;
   animation: broom-brush var(--transition-slow) var(--transition-ease) infinite alternate;
 }
@@ -3673,6 +3715,12 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   border-radius: var(--radius-md);
 }
 
+/* Hint icons: two hints, 32px, so less padding keeps the same height. */
+.icons-preview {
+  gap: var(--spacing-sm);
+  padding-block: var(--spacing-xs);
+}
+
 .swatch-tile {
   flex: 0 1 var(--layout-cellXs);
   min-width: 0;
@@ -4066,11 +4114,12 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
 .power-rows { padding: var(--spacing-md); }
 
 .power-icon {
+  display: flex;
   flex: 0 0 auto;
-  width: var(--spacing-lg);
+  justify-content: center;
+  min-width: var(--spacing-lg);
   font-size: var(--font-size-lg);
   line-height: var(--font-lineHeight-snug);
-  text-align: center;
 }
 
 /* Achievements */

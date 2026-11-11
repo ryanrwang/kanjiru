@@ -48,6 +48,10 @@ export const KNOWN_EFFECTS = [
   'revealStrokes', 'revealLayout', 'revealMeaning', 'revealReading',
   'revealParts', 'eliminateParts', 'addGuesses', 'revealKanji', 'pointNear'
 ];
+// The hint drawings js/play/hint-art.js has (ART), for powers.js art, and
+// the ways an icons look can draw them (skins.js style).
+export const KNOWN_ART = ['tally', 'split', 'book', 'arrows', 'broom', 'part', 'plus-one', 'kanji'];
+export const ICON_STYLES = ['emoji', 'illustrated', 'seal', 'badge'];
 export const KNOWN_STATS = [
   'wins', 'bestStreak', 'fastestWin', 'cleanWins', 'collected', 'hardWins', 'fullSetDays'
 ];
@@ -135,6 +139,9 @@ export function validate() {
       say(`${slot} skin "${item.id}" unlocks with retired achievement "${u.id}", which can't be earned`);
     }
   }));
+  (SKINS.icons || []).forEach((item) => {
+    if (!ICON_STYLES.includes(item.style)) say(`icons skin "${item.id}" needs style: ${ICON_STYLES.join(', ')}`);
+  });
   Object.entries(DEFAULT_LOOK).forEach(([slot, id]) => {
     const item = skin(slot, id);
     if (!item) say(`default ${slot} "${id}" doesn't exist`);
@@ -152,6 +159,8 @@ export function validate() {
 
   // Powers
   checkIds(POWERS, 'power');
+  const semantic = window.TOKENS && window.TOKENS.semantic;
+  const badges = semantic ? semantic.color.hint.badge : null;   // tests have no tokens
   POWERS.forEach((p) => {
     if (!KNOWN_EFFECTS.includes(p.effect)) say(`power "${p.id}" uses unknown effect "${p.effect}"`);
     if (!Array.isArray(p.when) || !p.when.length || p.when.some((w) => !WHEN.includes(w))) {
@@ -162,6 +171,9 @@ export function validate() {
     if (!(p.drop >= 0)) say(`power "${p.id}" needs a drop weight of 0 or more`);
     if ('retired' in p && typeof p.retired !== 'boolean') say(`power "${p.id}" needs retired: true or false`);
     if (p.retired && (p.drop || p.cost !== null)) say(`retired power "${p.id}" can't drop or be bought: drop 0, cost null`);
+    if (p.art !== undefined && !KNOWN_ART.includes(p.art)) say(`power "${p.id}" uses unknown art "${p.art}"`);
+    if (!p.retired && !p.art) say(`power "${p.id}" needs art: its drawing in js/play/hint-art.js`);
+    if (p.art && (badges ? !badges[p.badge] : typeof p.badge !== 'string')) say(`power "${p.id}" needs badge: a colour in tokens.js hint.badge`);
     if (p.becomes && (!p.retired || !POWER[p.becomes.id] || POWER[p.becomes.id].retired || !(p.becomes.n >= 1))) {
       say(`power "${p.id}" becomes: only a retired power becomes n (1 or more) of a power still offered`);
     }

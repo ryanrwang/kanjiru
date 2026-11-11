@@ -81,3 +81,19 @@ test('the Settings switches pick an offered level for each mix', () => {
   });
   assert.ok(!LEVEL.easy.offered, 'Easy is retired');
 });
+
+test('every hint has a drawing, a badge colour, and each drawing is known', async () => {
+  const { ART } = await import('../js/play/hint-art.js');
+  const { KNOWN_ART, OFFERED_POWERS } = await import('../js/registry.js');
+  assert.deepEqual(Object.keys(ART).sort(), [...KNOWN_ART].sort());
+  // tokens.js is a browser script, so read its hint.badge names from the source.
+  const tokens = readFileSync(new URL('../tokens.js', import.meta.url), 'utf8');
+  const block = tokens.match(/badge: \{([^}]*)\}/);
+  assert.ok(block, 'tokens.js has hint.badge');
+  const badges = [...block[1].matchAll(/^\s*([\w-]+):/gm)].map((m) => m[1]);
+  OFFERED_POWERS.forEach((p) => {
+    assert.ok(KNOWN_ART.includes(p.art), `${p.id} has art`);
+    assert.ok(badges.includes(p.badge), `${p.id}'s badge "${p.badge}" is in tokens.js`);
+  });
+  assert.ok(SKINS.icons.some((item) => item.style === 'emoji' && item.unlock.type === 'free'), 'the emoji look is free');
+});

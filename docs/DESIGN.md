@@ -275,8 +275,9 @@ The user asked for a layout overhaul: the header holds only Points and Settings,
 ## Skins
 
 - **Decided — Tiers:** basic skins first (light, dark and a few colours), then elegant ones with animations and effects.
-- **Decided — Slots:** colours (`theme`), tile reveal (`tiles`) and win effect (`effect`), mixed freely. The catalogue is `js/config/skins.js`; the colours live in `tokens.js` `THEMES`.
+- **Decided — Slots:** colours (`theme`), tile reveal (`tiles`), win effect (`effect`) and hint icons (`icons`, 2026-11-11), mixed freely. The catalogue is `js/config/skins.js`; the colours live in `tokens.js` `THEMES`.
 - **Decided — Eight of each (2026-11-10):** the user asked for 8 colours, 8 tile reveals and 8 win effects. All 24 are built and play in the game; nothing is `soon` now.
+- **Decided — Hint icons, a fourth slot (2026-11-11):** each hint has its own drawing in place of its emoji, picked by the user on the dev page `review/hint-art.html` from a few ideas per hint: Stroke count 正 (the tally), Layout a frame split into its places, Meaning an open dictionary, Arrows a double arrow, Sweep a bamboo broom, Reveal a part 氵, Extra guess +1, Reveal a kanji 字. The user liked **Seal** best (white on a rounded square in the skin's accent, with a thin inner rim, like a hanko) and kept **Badge** (white on a circle in the hint's own colour, `tokens.js` `hint.badge`, each passing 3:1 for white) and **Emoji** as choices, so they're the `icons` slot in Points › Looks. Then the user asked for an even four, Emoji first and free (the default) and the rest to earn: **Badge** 200 pts, **Seal** 300 pts, and **Illustrated** (the drawings outlined and filled with the game's own colours: the tiles' green, yellow and grey, the bulb's gold and the skin's accent) unlocked by Regular, solve 25 puzzles, the one achievement no look used. Seal and Badge use plate drawings made for the plate (strokes 1.9 on a 24 grid, no hairlines), each centred by its ink, not its box, and about 88% of the plate; Illustrated uses the fuller drawings (a yellow tile with its arrows, a green tile with 氵 or 字, a gold +1 tile). Never smaller than 32px (the user's minimum): 32px in hint rows, clue chips, card titles and the Sweep's broom, 48px in confirms. In a line of text (toasts, the result card's rewards) only the Emoji look shows an icon; the others name the hint alone. Code: `js/play/hint-art.js` (`hintIcon()`, `textIcon()`); each power names its drawing (`art`) and badge colour (`badge`) in `powers.js`, and each look its `style` in `skins.js`.
 - **Proposed — The new ones and their unlocks:**
 
   | Slot | Free | Points | Achievement |
@@ -284,6 +285,7 @@ The user asked for a layout overhaul: the header holds only Points and Settings,
   | Colours | Classic, Ai 藍, Matcha 抹茶, Sakura 桜, Fuji 藤 | Sumi 墨 500, Urushi 漆 800 | Kinpaku 金箔 (Unstoppable) |
   | Tile reveal | Flip, Fade, Turn | Drop 200, Brush wipe 300, Ink bleed 400 | Shoji 障子 (Hard win), Hanko stamp (On a roll) |
   | Win effect | None, Brush draw, Wave | Confetti 300, Petal fall 600 | Gold shine (Collector), Seal 印 (Unaided), Hanabi 花火 (Sharp eye) |
+  | Hint icons (2026-11-11) | Emoji | Badge 200, Seal 300 | Illustrated (Regular) |
 
   - Fuji (wisteria) and Sumi (ink greys) are `accentTheme()` skins with light and dark; both pass WCAG AA like the rest.
   - Reveals: Fade (the colour comes up), Turn (a sideways flip), Drop (falls into its cell), Brush wipe (painted across from the left), Shoji (two paper panels slide apart). One set of rules in `styles.css` ("Tile reveal", keyed by `[data-tiles]`) plays them on the board, the Points page's preview and examples, and How to play. `js/play/screen.js` reads the reveal's `--reveal-time` to know when a row is done.

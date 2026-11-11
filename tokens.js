@@ -237,9 +237,22 @@
       },
       // The header's hints (app.js): a lit bulb, gold in every skin, with
       // a glint on its glass.
+      // badge: the Badge hint icons' circles (js/play/hint-art.js), one per
+      // hint (powers.js badge), the same in every skin. White on each
+      // clears 3:1; near and hit are the tiles' own yellow and green.
       hint: {
         bulb:  c.kin[300],
-        glint: c.white
+        glint: c.white,
+        badge: {
+          ai:     c.ai[500],
+          fuji:   c.fuji[500],
+          sakura: c.sakura[700],
+          near:   c.feedback.near,
+          sumi:   c.sumi[500],
+          hit:    c.feedback.hit,
+          kin:    c.kin[700],
+          shu:    c.vermilion[600]
+        }
       }
     },
 

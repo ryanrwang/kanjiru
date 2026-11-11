@@ -35,12 +35,14 @@ import { POWERS } from '../registry.js';
 import { t } from '../i18n.js';
 import { el } from '../dom.js';
 import { meaningText } from './hints.js';
+import { hintIcon } from './hint-art.js';
 import { kanjiFrame, strokesLine, frameLabel, zoneCount } from './frame.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ms = (key) => parseFloat(window.TOKENS.active().transition[key]) || 0;
-const iconOf = (effect) => (POWERS.find((p) => p.effect === effect) || {}).icon || '';
+// The power behind an effect, for its icon (js/play/hint-art.js).
+const powerOf = (effect) => POWERS.find((p) => p.effect === effect) || null;
 
 // One 正 tally mark: its five strokes in writing order (top, the middle
 // down, the short bar right, the left leg, the base), in a 24 box.
@@ -132,7 +134,7 @@ function titleOf(effect, result) {
     ? [result.strokes ? 'revealStrokes' : null, result.layout ? 'revealLayout' : null].filter(Boolean)
     : [effect];
   if (!effects.length) return [el('span', {}, t('game.clue.guide'))];
-  return effects.map((e) => [el('span', { class: 'hint-show-icon', 'aria-hidden': 'true' }, iconOf(e)), el('span', {}, t(NAMES[e]))]);
+  return effects.map((e) => [el('span', { class: 'hint-show-icon' }, hintIcon(powerOf(e))), el('span', {}, t(NAMES[e]))]);
 }
 
 // Keys that leave the card up: moving the focus, and a modifier on its own.
@@ -229,7 +231,7 @@ export function playOnBoard({ effect, result, cells = [], keyOf, palette, addedR
     const streak = el('span', {
       class: 'sweep-streak', 'aria-hidden': 'true',
       style: { '--sweep-lead': `${lead}ms`, '--sweep-time': `${across}ms` }
-    }, el('span', { class: 'sweep-broom' }, iconOf(effect)));
+    }, el('span', { class: 'sweep-broom' }, hintIcon(powerOf(effect))));
     palette.append(streak);
     streak.addEventListener('animationend', (event) => { if (event.target === streak) streak.remove(); });
   } else if (effect === 'addGuesses' && addedRow) {

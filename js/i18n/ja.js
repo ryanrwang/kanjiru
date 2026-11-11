@@ -271,7 +271,7 @@ export default {
 
   looks: {
     title: 'きせかえ',
-    note: '色・タイル・演出を組み合わせよう',
+    note: '色・タイル・演出・アイコンを組み合わせよう',
     lockPoints: '{cost}pt',
     lockAchievement: '{name}',
     locked: 'ロック中',
@@ -562,7 +562,8 @@ export default {
   slot: {
     theme: 'カラー',
     tiles: 'タイルの演出',
-    effect: 'クリア演出'
+    effect: 'クリア演出',
+    icons: 'ヒントのアイコン'
   },
 
   skin: {
@@ -595,6 +596,12 @@ export default {
       glow: '金の光',
       seal: '印',
       hanabi: '花火'
+    },
+    icons: {
+      emoji: '絵文字',
+      badge: 'バッジ',
+      seal: '角印',
+      illustrated: 'イラスト'
     }
   },
 

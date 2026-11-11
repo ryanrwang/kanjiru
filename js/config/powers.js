@@ -28,7 +28,11 @@
  *
  * Fields
  *   id         stable key used in saves (never rename)
- *   icon       shown in the UI
+ *   icon       its emoji: the Emoji look's icon, and in text (js/play/hint-art.js)
+ *   art        its drawing in js/play/hint-art.js (ART), for the Seal and
+ *              Badge looks; one name in KNOWN_ART in js/registry.js. A power
+ *              without one shows its emoji in every look.
+ *   badge      its circle's colour in the Badge look: tokens.js hint.badge
  *   effect, params     what it does (above)
  *   when       'before' (before the first guess) and/or 'during'
  *   cost       price in points; null = can't be bought, only earned
@@ -42,31 +46,31 @@
  *              { id, n } (each held one is n of `id`; js/ledger.js balance)
  */
 export const POWERS = [
-  { id: 'strokes', icon: '🔢', effect: 'revealStrokes', params: {},
+  { id: 'strokes', icon: '🔢', art: 'tally', badge: 'ai', effect: 'revealStrokes', params: {},
     when: ['before', 'during'], cost: 50, hold: 5, drop: 30, minLength: 1 },
-  { id: 'layout', icon: '📐', effect: 'revealLayout', params: {},
+  { id: 'layout', icon: '📐', art: 'split', badge: 'fuji', effect: 'revealLayout', params: {},
     when: ['before', 'during'], cost: 60, hold: 5, drop: 25, minLength: 1 },
-  { id: 'meaning', icon: '💬', effect: 'revealMeaning', params: {},
+  { id: 'meaning', icon: '💬', art: 'book', badge: 'sakura', effect: 'revealMeaning', params: {},
     when: ['before', 'during'], cost: 70, hold: 5, drop: 20, minLength: 1 },
   // Arrows (2026-11-10, the user asked): for the rest of the game, each
   // yellow tile points the way to its part.
-  { id: 'arrows', icon: '🧭', effect: 'pointNear', params: {},
+  { id: 'arrows', icon: '🧭', art: 'arrows', badge: 'near', effect: 'pointNear', params: {},
     when: ['before', 'during'], cost: 70, hold: 3, drop: 15, minLength: 1 },
   // Retired: the reading as good as gives the word away.
   { id: 'reading', icon: '🔊', effect: 'revealReading', params: {},
     when: ['before', 'during'], cost: null, hold: 5, drop: 0, minLength: 1,
     retired: true, becomes: { id: 'meaning', n: 1 } },
-  { id: 'sweep', icon: '🧹', effect: 'eliminateParts', params: { count: 10 },
+  { id: 'sweep', icon: '🧹', art: 'broom', badge: 'sumi', effect: 'eliminateParts', params: { count: 10 },
     when: ['before', 'during'], cost: 80, hold: 3, drop: 15, minLength: 1 },
   // One part, at any time: Head start (2 parts, before the first guess) is
   // folded into it.
-  { id: 'reveal-part', icon: '🧩', effect: 'revealParts', params: { count: 1 },
+  { id: 'reveal-part', icon: '🧩', art: 'part', badge: 'hit', effect: 'revealParts', params: { count: 1 },
     when: ['before', 'during'], cost: 100, hold: 3, drop: 15, minLength: 1 },
   { id: 'head-start', icon: '🚀', effect: 'revealParts', params: { count: 2 },
     when: ['before'], cost: null, hold: 2, drop: 0, minLength: 1,
     retired: true, becomes: { id: 'reveal-part', n: 2 } },
-  { id: 'extra-guess', icon: '➕', effect: 'addGuesses', params: { count: 1 },
+  { id: 'extra-guess', icon: '➕', art: 'plus-one', badge: 'kin', effect: 'addGuesses', params: { count: 1 },
     when: ['before', 'during'], cost: 120, hold: 3, drop: 10, minLength: 1 },
-  { id: 'reveal-kanji', icon: '🀄', effect: 'revealKanji', params: { count: 1 },
+  { id: 'reveal-kanji', icon: '🀄', art: 'kanji', badge: 'shu', effect: 'revealKanji', params: { count: 1 },
     when: ['before', 'during'], cost: 200, hold: 2, drop: 5, minLength: 2 }
 ];

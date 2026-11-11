@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hint art · Kanjiru</title>
+  <!-- Dev-only: pick the drawn icons that replace the hints' emoji.
+       Uses the game's own tokens and styles, so every skin shows true. -->
+  <script src="../tokens.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400..700&family=Noto+Serif+JP:wght@700..900&display=swap" rel="stylesheet" crossorigin>
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* ── The icons: one drawing, five looks ─────────────────────────
+       A drawing marks each shape with a role; a style colours the roles.
+         i  ink line         a  accent line       o  line on a coloured fill
+         fa fg fh fn fm fp   fills: accent, gold, hit, near, miss, paper
+         zk za               small solid marks: ink, accent
+         ti ta to            text: ink, accent, on a coloured fill        */
+    .ico { display: block; overflow: visible; flex: none; }
+    .ico .i, .ico .a, .ico .o {
+      fill: none;
+      stroke-width: var(--sw);
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .ico .i { stroke: var(--ink); }
+    .ico .a { stroke: var(--acc); }
+    .ico .o { stroke: var(--on); }
+    .ico .hair { stroke-width: calc(var(--sw) * 0.55); }
+    .ico .thk { stroke-width: calc(var(--sw) * 1.45); }
+    .ico .dash { stroke-dasharray: 1 3; }
+    .ico .fa { fill: var(--fa); }
+    .ico .fg { fill: var(--fg); }
+    .ico .fh { fill: var(--fh); }
+    .ico .fn { fill: var(--fn); }
+    .ico .fm { fill: var(--fm); }
+    .ico .fp { fill: var(--fp); }
+    .ico .zk { fill: var(--ink); }
+    .ico .za { fill: var(--acc); }
+    .ico text { stroke: none; }
+    .ico .ti { fill: var(--ink); }
+    .ico .ta { fill: var(--acc); }
+    .ico .to { fill: var(--on); }
+    .ico .tg { fill: var(--on-gold, var(--ink)); }
+    .ico .kan { font-family: var(--font-family-kanji); font-weight: var(--font-weight-black); }
+    .ico .num { font-family: var(--font-family-ui); font-weight: var(--font-weight-bold); }
+    .ico .plate { fill: var(--plate); }
+    .ico .rim { fill: none; stroke: var(--ink); stroke-width: 0.6; }
+
+    /* Line: one weight, like the header's flag and gear. */
+    .st-line {
+      --sw: 2;
+      --ink: var(--color-text-primary);
+      --acc: var(--color-text-accent);
+      --on: var(--color-text-primary);
+      --fa: none; --fg: none; --fh: none; --fn: none; --fm: none; --fp: none;
+    }
+    /* Illustrated: outlined and filled with the game's colours, like the bulb. */
+    .st-duo {
+      --sw: 1.75;
+      --ink: var(--color-text-primary);
+      --acc: var(--color-text-accent);
+      --on: var(--color-feedback-text);
+      --on-gold: var(--color-action-primary-bg);
+      --fa: var(--color-action-primary-bg);
+      --fg: var(--color-hint-bulb);
+      --fh: var(--color-feedback-hit);
+      --fn: var(--color-feedback-near);
+      --fm: var(--color-feedback-miss);
+      --fp: var(--color-tile-bg);
+    }
+    /* Seal and Badge: white, knocked out of a plate (the skin's accent, or the hint's own colour). */
+    .st-seal, .st-badge {
+      --sw: 2.6;
+      --ink: var(--color-action-primary-text);
+      --acc: var(--color-action-primary-text);
+      --on: var(--plate);
+      --fa: var(--ink); --fh: var(--ink); --fn: var(--ink); --fm: var(--ink);
+      --fg: color-mix(in srgb, var(--ink) 34%, transparent);
+      --fp: none;
+    }
+    .st-seal { --plate: var(--color-action-primary-bg); }
+    .st-badge { --plate: var(--badge); }
+    /* A badge's own drawing, on the Badge circle or the Seal square: full size, so no scaling down. */
+    .ico.clean { --sw: 1.9; }
+    .ico .w1 { stroke-width: 1.1; }
+    .ico .soft { stroke: var(--ink); stroke-width: 0.7; stroke-linejoin: round; }
+    /* Brush: ink with a hand-drawn edge, colour as a wash. */
+    .st-ink {
+      --sw: 2.1;
+      --ink: var(--color-text-primary);
+      --acc: var(--color-text-accent);
+      --on: var(--color-text-primary);
+      --fa: color-mix(in srgb, var(--color-action-primary-bg) 45%, transparent);
+      --fg: color-mix(in srgb, var(--color-hint-bulb) 70%, transparent);
+      --fh: color-mix(in srgb, var(--color-feedback-hit) 45%, transparent);
+      --fn: color-mix(in srgb, var(--color-feedback-near) 50%, transparent);
+      --fm: color-mix(in srgb, var(--color-feedback-miss) 40%, transparent);
+      --fp: none;
+    }
+    .emoji { display: block; text-align: center; line-height: 1; flex: none; }
+
+    /* ── The page ─────────────────────────────────────────────────── */
+    body { display: block; }
+    .ha-bar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--spacing-sm) var(--spacing-md);
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: var(--color-bg-surface);
+      border-bottom: var(--stroke-thin) solid var(--color-border-subtle);
+    }
+    .ha-bar h1 { margin: 0; font-size: var(--font-size-lg); }
+    .ha-strip { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); flex: 1 1 auto; }
+    .ha-controls { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); align-items: center; }
+    .ha-controls select {
+      font: inherit;
+      font-size: var(--font-size-xs);
+      color: var(--color-text-primary);
+      background: var(--color-bg-sunken);
+      border: var(--stroke-thin) solid var(--color-border-default);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-xs) var(--spacing-sm);
+    }
+    .ha-seg { display: inline-flex; border: var(--stroke-thin) solid var(--color-border-default); border-radius: var(--radius-full); overflow: hidden; }
+    .ha-seg button {
+      font: inherit;
+      font-size: var(--font-size-xs);
+      padding: var(--spacing-xs) var(--spacing-md);
+      background: none;
+      border: 0;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+    }
+    .ha-seg button[aria-pressed="true"] { background: var(--color-action-primary-bg); color: var(--color-action-primary-text); }
+    .ha-seg button:disabled { opacity: var(--opacity-disabled); cursor: default; }
+
+    .ha-main {
+      width: 100%;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: var(--spacing-lg) var(--spacing-md) var(--spacing-3xl);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-2xl);
+    }
+    .ha-main h2 { margin: 0 0 var(--spacing-xs); font-size: var(--font-size-xl); }
+    .ha-main .ha-sub { margin: 0 0 var(--spacing-md); color: var(--color-text-secondary); font-size: var(--font-size-xs); }
+    .ha-lede { margin: 0; color: var(--color-text-secondary); }
+
+    .ha-styles {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(296px, 1fr));
+      gap: var(--spacing-md);
+    }
+    .ha-pick {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-md);
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      background: var(--color-bg-surface);
+      border: var(--stroke-thick) solid var(--color-border-subtle);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+    }
+    .ha-pick:hover { border-color: var(--color-border-default); }
+    .ha-pick[aria-pressed="true"] { border-color: var(--color-text-accent); background: var(--color-interactive-selected); }
+    .ha-pick[aria-pressed="true"]::after {
+      content: '✓';
+      position: absolute;
+      top: var(--spacing-sm);
+      right: var(--spacing-sm);
+      width: var(--spacing-lg);
+      height: var(--spacing-lg);
+      line-height: var(--spacing-lg);
+      text-align: center;
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-bold);
+      background: var(--color-action-primary-bg);
+      color: var(--color-action-primary-text);
+    }
+    .ha-name { font-weight: var(--font-weight-bold); }
+    .ha-desc { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+    .ha-row { display: flex; flex-wrap: wrap; gap: var(--spacing-xs); align-items: center; }
+
+    .ha-hints { display: flex; flex-direction: column; gap: var(--spacing-lg); }
+    .ha-hint { padding: var(--spacing-md); }
+    .ha-hint-head { display: flex; gap: var(--spacing-sm); align-items: baseline; flex-wrap: wrap; margin-bottom: var(--spacing-md); }
+    .ha-hint-head h3 { margin: 0; font-size: var(--font-size-lg); }
+    .ha-now { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+    .ha-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--spacing-sm);
+    }
+    .ha-option { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--spacing-md); row-gap: var(--spacing-sm); align-items: start; }
+    .ha-option > .ico { grid-row: span 2; }
+    .ha-styles-row { display: flex; gap: var(--spacing-sm); align-items: center; flex-wrap: wrap; }
+    .ha-styles-row .ha-at { font-size: var(--font-size-xs); color: var(--color-text-muted); margin-right: var(--spacing-xs); }
+
+    .ha-set { padding: var(--spacing-lg); display: flex; flex-direction: column; gap: var(--spacing-lg); }
+    .hint-icon .ico, .hint-icon .emoji { margin: 0 auto; }
+    /* The hints list at 32 px, up from the game's 24. */
+    .ha-set .hint-row { grid-template-columns: var(--spacing-xl) minmax(0, 1fr) auto auto; }
+    .ha-big { display: flex; flex-wrap: wrap; gap: var(--spacing-md); }
+    .ha-compare { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--spacing-sm) var(--spacing-md); align-items: center; }
+    .ha-compare .ha-row { gap: var(--spacing-sm); }
+    .ha-summary {
+      margin: 0;
+      padding: var(--spacing-md);
+      white-space: pre-wrap;
+      font-size: var(--font-size-xs);
+      background: var(--color-bg-sunken);
+      border-radius: var(--radius-md);
+    }
+    .ha-label { font-size: var(--font-size-xs); color: var(--color-text-muted); margin: 0 0 var(--spacing-sm); }
+  </style>
+</head>
+<body>
+  <!-- Brush style's edge: a little turbulence pushes each line about. -->
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <filter id="ink-edge" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="1" seed="4" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="0.9" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
+
+  <header class="ha-bar">
+    <h1>Hint art</h1>
+    <div class="ha-strip" id="strip" aria-label="Your picks"></div>
+    <div class="ha-controls">
+      <select id="skin" aria-label="Skin"></select>
+      <div class="ha-seg" id="scheme">
+        <button type="button" data-scheme="light">Light</button>
+        <button type="button" data-scheme="dark">Dark</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="ha-main">
+    <p class="ha-lede">Pick a style, then an idea for each hint. Picks stay in this browser, and the last section lists them, ready to send. The skin and Light / Dark at the top change everything on the page.</p>
+
+    <section>
+      <h2>1 · Style</h2>
+      <p class="ha-sub">One style for all eight, so they match. Each card shows your current ideas.</p>
+      <div class="ha-styles" id="styles"></div>
+    </section>
+
+    <section>
+      <h2>2 · Each hint</h2>
+      <p class="ha-sub">Three ideas per hint, at 48 px in your style (the Use and Buy confirm), then at 32 px in every style (the hints list).</p>
+      <div class="ha-hints" id="hints"></div>
+    </section>
+
+    <section>
+      <h2>3 · Your set</h2>
+      <p class="ha-sub">How the picks look in the hints list (32 px, up from 24) and the confirm (48 px).</p>
+      <div class="card ha-set">
+        <ul class="hint-list" id="set-list"></ul>
+        <div>
+          <p class="ha-label">Use and Buy confirm size</p>
+          <div class="ha-big" id="set-big"></div>
+        </div>
+        <div>
+          <p class="ha-label">Badge before and after the clean-up, and the same clean drawings as a Seal</p>
+          <div class="ha-compare" id="set-compare"></div>
+        </div>
+        <div>
+          <p class="ha-label">Your picks, to send</p>
+          <pre class="ha-summary" id="summary"></pre>
+          <div class="btn-row"><button class="btn btn-secondary btn-small" type="button" id="copy">Copy</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // ── Drawings, on a 24 grid ─────────────────────────────────────
+    function bead(x, y, cls) {
+      return '<path class="' + cls + '" d="M' + (x - 2.2) + ' ' + y + 'L' + x + ' ' + (y - 1.1)
+        + 'L' + (x + 2.2) + ' ' + y + 'L' + x + ' ' + (y + 1.1) + 'Z"/>';
+    }
+    function crossKey(x, y) {
+      var cx = x + 4, cy = y + 4, d = 1.8;
+      return '<rect class="i fm" x="' + x + '" y="' + y + '" width="8" height="8" rx="1.8"/>'
+        + '<path class="o hair" d="M' + (cx - d) + ' ' + (cy - d) + 'L' + (cx + d) + ' ' + (cy + d)
+        + 'M' + (cx + d) + ' ' + (cy - d) + 'L' + (cx - d) + ' ' + (cy + d) + '"/>';
+    }
+    function tile(x, y, fill) {
+      return '<rect class="i hair ' + fill + '" x="' + x + '" y="' + y + '" width="5.5" height="5.5" rx="1.2"/>';
+    }
+    var KANJI = 'text-anchor="middle" dominant-baseline="central"';
+    // A badge glyph, scaled about the point (cx, cy) and moved so that point
+    // sits at the circle's centre. (cx, cy) is the ink box's centre, nudged
+    // against the glyph's heavy side, so it looks centred, not just measures so.
+    function fit(svg, cx, cy, s) {
+      return '<g transform="translate(12 12) scale(' + s + ') translate(' + (-cx) + ' ' + (-cy) + ')">' + svg + '</g>';
+    }
+
+    var HINTS = [
+      {
+        id: 'strokes', name: 'Stroke count', emoji: '🔢',
+        desc: 'Shows how many strokes each kanji has.',
+        ideas: [
+          { id: 'tally', name: '正 tally', desc: 'The five strokes of 正, the way Japanese counts. The Stroke count card already draws them.',
+            svg: '<path class="i" d="M4 4H20M12 4V20M12 12H18M6 12V20"/><path class="a" d="M3 20H21"/>',
+            // Ink 12.9 × 11.9; the wide base weighs it down, so it sits a touch high.
+            badge: fit('<path class="i" d="M7.5 7H16.5M12 7V17M12 12H15.5M8.5 12V17M6.5 17H17.5"/>', 12, 12.25, 0.88) },
+          { id: 'brush', name: 'Brush', desc: 'A fude brush finishing a stroke.',
+            svg: '<path class="a" d="M5.5 19.6C9.5 21 14.5 21 20.5 18.6"/>'
+              + '<g transform="translate(15.5 7.5) rotate(45)">'
+              + '<rect class="i fg" x="-1.6" y="-6" width="3.2" height="10.6" rx="1.6"/>'
+              + '<rect class="i fa" x="-2.1" y="4.4" width="4.2" height="2.6" rx="0.6"/>'
+              + '<path class="i zk" d="M-2 7.1C-2 10 -0.6 11.8 0 13.6C0.6 11.8 2 10 2 7.1Z"/></g>' },
+          { id: 'soroban', name: 'Soroban', desc: 'An abacus: the beads pushed to the bar are the count.',
+            svg: '<rect class="i fp" x="2.5" y="4.5" width="19" height="15" rx="2"/>'
+              + '<path class="i hair" d="M7 4.5V19.5M12 4.5V19.5M17 4.5V19.5"/>'
+              + '<path class="i" d="M2.5 9.5H21.5"/>'
+              + bead(7, 8.1, 'za') + bead(12, 6.6, 'zk') + bead(17, 8.1, 'za')
+              + bead(7, 11.4, 'za') + bead(7, 13.9, 'za')
+              + bead(12, 11.4, 'za') + bead(12, 17.6, 'zk')
+              + bead(17, 15.1, 'zk') + bead(17, 17.6, 'zk') }
+        ]
+      },
+      {
+        id: 'layout', name: 'Layout', emoji: '📐',
+        desc: 'Shows the shape: side by side, stacked or enclosed.',
+        ideas: [
+          { id: 'split', name: 'Split frame', desc: 'A kanji frame cut into its places, like the Layout card.',
+            svg: '<path class="fa" d="M5 3H11V21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3Z"/>'
+              + '<path class="fg" d="M11 3H19A2 2 0 0 1 21 5V11H11Z"/>'
+              + '<rect class="i" x="3" y="3" width="18" height="18" rx="2"/>'
+              + '<path class="i" d="M11 3V21M11 11H21"/>',
+            // A solid square looks bigger than the rest, so its ink is 12, scaled to 10.6;
+            // the filled left place is heavy, so it sits a touch right.
+            badge: fit('<path class="fa" d="M8.75 6.95H11.2V17.05H8.75A1.8 1.8 0 0 1 6.95 15.25V8.75A1.8 1.8 0 0 1 8.75 6.95Z"/>'
+              + '<rect class="i" x="6.95" y="6.95" width="10.1" height="10.1" rx="1.8"/>'
+              + '<path class="i" d="M11.2 6.95V17.05M11.2 12H17.05"/>', 11.6, 12, 0.88) },
+          { id: 'set-square', name: 'Set square', desc: 'A drafting triangle, the idea behind today’s 📐.',
+            svg: '<path class="i fg" d="M4 3.5V20H20.5Z"/>'
+              + '<path class="i fp" d="M7.5 12V16.5H12Z"/>'
+              + '<path class="i hair" d="M4 7.5H5.6M4 10.5H5.1M4 13.5H5.6M4 16.5H5.1M8 20V18.4M11 20V18.9M14 20V18.4M17 20V18.9"/>' },
+          { id: 'shapes', name: 'Four shapes', desc: 'Side by side, stacked, enclosed and wrapped, with one picked out.',
+            svg: '<rect class="i fa" x="2.5" y="2.5" width="8" height="8" rx="1.5"/><path class="o hair" d="M6.5 2.5V10.5"/>'
+              + '<rect class="i" x="13.5" y="2.5" width="8" height="8" rx="1.5"/><path class="i hair" d="M13.5 6.5H21.5"/>'
+              + '<rect class="i" x="2.5" y="13.5" width="8" height="8" rx="1.5"/><rect class="i hair" x="5" y="16" width="3" height="3" rx="0.5"/>'
+              + '<rect class="i" x="13.5" y="13.5" width="8" height="8" rx="1.5"/><path class="i hair" d="M21.5 17H17V21.5"/>' }
+        ]
+      },
+      {
+        id: 'meaning', name: 'Meaning', emoji: '💬',
+        desc: 'Shows what the answer means.',
+        ideas: [
+          { id: 'bubble', name: 'Speech bubble', desc: 'The same idea as today’s 💬, drawn.',
+            svg: '<path class="i fa" d="M5 3.5H19A2.5 2.5 0 0 1 21.5 6V14A2.5 2.5 0 0 1 19 16.5H11.5L7 20.5V16.5H5A2.5 2.5 0 0 1 2.5 14V6A2.5 2.5 0 0 1 5 3.5Z"/>'
+              + '<path class="o" d="M7 8.5H17M7 12H13.5"/>' },
+          { id: 'dictionary', name: 'Dictionary', desc: 'An open book, its definition picked out.',
+            svg: '<path class="i fp" d="M12 6.5C9.5 4.8 6 4.4 2.5 5V18.5C6 18 9.5 18.4 12 20.1Z"/>'
+              + '<path class="i fp" d="M12 6.5C14.5 4.8 18 4.4 21.5 5V18.5C18 18 14.5 18.4 12 20.1Z"/>'
+              + '<path class="i hair" d="M5 9.2H9.5M5 12.2H9.5M5 15.2H8.5M14.5 12.2H19M14.5 15.2H17.5"/>'
+              + '<path class="a" d="M14.5 9.2H19"/>',
+            // Ink 13.1 × 11.6, its middle at y 12.18.
+            badge: fit('<path class="fa soft" d="M11.1 8C9.7 7 7.9 6.6 5.8 6.8V16.4C7.9 16.2 9.7 16.6 11.1 17.6Z"/>'
+              + '<path class="fa soft" d="M12.9 8C14.3 7 16.1 6.6 18.2 6.8V16.4C16.1 16.2 14.3 16.6 12.9 17.6Z"/>'
+              + '<path class="o w1" d="M7.6 9.8H9.6M7.6 12.4H9.6M14.4 9.8H16.4M14.4 12.4H16.4"/>', 12, 12.18, 0.885) },
+          { id: 'scroll', name: 'Hanging scroll', desc: 'A kakejiku with one brush stroke and a red seal, as the Meaning card brushes the meaning in.',
+            svg: '<path class="i hair" d="M8.5 3L12 1.2L15.5 3"/>'
+              + '<rect class="i fp" x="5.5" y="4.5" width="13" height="15"/>'
+              + '<rect class="i fg" x="3.5" y="2.8" width="17" height="2.6" rx="1.3"/>'
+              + '<rect class="i fg" x="4" y="18.8" width="16" height="2.6" rx="1.3"/>'
+              + '<path class="a" d="M8.8 9.4C10.8 8.7 13.3 8.8 15.2 9.7"/>'
+              + '<path class="i hair" d="M9 12.8H13.5"/>'
+              + '<rect class="za" x="13.2" y="13.9" width="2.6" height="2.6" rx="0.4"/>' }
+        ]
+      },
+      {
+        id: 'arrows', name: 'Arrows', emoji: '🧭',
+        desc: 'Each yellow tile shows an arrow: move it left or right.',
+        ideas: [
+          { id: 'tile', name: 'Yellow tile', desc: 'A yellow tile with its left-or-right arrow: just what the hint adds.',
+            svg: '<rect class="i fn" x="3" y="3" width="18" height="18" rx="3"/>'
+              + '<path class="o" d="M7 12H17M9.8 9.2L7 12L9.8 14.8M14.2 9.2L17 12L14.2 14.8"/>',
+            badge: fit('<path class="i" d="M6.5 12H17.5M9.4 9.1L6.5 12L9.4 14.9M14.6 9.1L17.5 12L14.6 14.9"/>', 12, 12, 0.9) },
+          { id: 'compass', name: 'Compass', desc: 'Today’s 🧭, its needle lying left and right.',
+            svg: '<circle class="i fp" cx="12" cy="12" r="9.5"/>'
+              + '<path class="i hair" d="M12 4.2V5.8M12 18.2V19.8M4.2 12H5.8M18.2 12H19.8"/>'
+              + '<path class="za" d="M12 9.6L18.2 12L12 14.4Z"/><path class="zk" d="M12 9.6L5.8 12L12 14.4Z"/>' },
+          { id: 'signpost', name: 'Signpost', desc: 'A post with a board each way.',
+            svg: '<path class="i" d="M12 3V21M8 21H16"/>'
+              + '<path class="i fn" d="M12 4.5H18.3L21 7.3L18.3 10H12Z"/>'
+              + '<path class="i fp" d="M12 11.5H5.7L3 14.2L5.7 17H12Z"/>' }
+        ]
+      },
+      {
+        id: 'sweep', name: 'Sweep', emoji: '🧹',
+        desc: 'Greys out 10 parts that aren’t in the answer.',
+        ideas: [
+          { id: 'broom', name: 'Bamboo broom', desc: 'A takebōki, the broom that crosses the keyboard in the Sweep animation.',
+            svg: '<g transform="translate(15 9) rotate(45)">'
+              + '<path class="i" d="M0 -8.6V2"/>'
+              + '<path class="i fg" d="M-1.6 3.6L-4.6 11Q0 12.6 4.6 11L1.6 3.6Z"/>'
+              + '<path class="i hair" d="M0 4.8V11.4M-1.5 5.2L-2.6 11.2M1.5 5.2L2.6 11.2"/>'
+              + '<rect class="i fa" x="-2.1" y="1.8" width="4.2" height="2" rx="0.6"/></g>'
+              + '<path class="a hair" d="M13.5 21.5H18M16 19H20.5"/>',
+            // Its long handle balances the head, so its weight is already near the middle.
+            badge: fit('<g transform="translate(13.6 10.4) rotate(45)">'
+              + '<path class="i" d="M0 -6.4V0.4"/>'
+              + '<rect class="fa" x="-1.8" y="0.2" width="3.6" height="1.9" rx="0.5"/>'
+              + '<path class="fa soft" d="M-1.4 3L-3.8 7.3Q0 8.8 3.8 7.3L1.4 3Z"/>'
+              + '<path class="o w1" d="M-0.7 4L-1.3 7.3M0.7 4L1.3 7.3"/></g>', 12, 12, 0.9) },
+          { id: 'eraser', name: 'Eraser', desc: 'A rubber with its sleeve, a line rubbed out behind it.',
+            svg: '<g transform="translate(12.5 10.5) rotate(-35)">'
+              + '<rect class="i fp" x="-8" y="-3.6" width="16" height="7.2" rx="1.6"/>'
+              + '<path class="i fa" d="M-1 -3.6H6.4A1.6 1.6 0 0 1 8 -2V2A1.6 1.6 0 0 1 6.4 3.6H-1Z"/></g>'
+              + '<path class="i hair dash" d="M3 21.2H11"/>'
+              + '<circle class="zk" cx="14" cy="20.6" r="0.9"/><circle class="zk" cx="16.8" cy="21.4" r="0.7"/><circle class="zk" cx="15.8" cy="18.8" r="0.6"/>' },
+          { id: 'keys', name: 'Crossed-off keys', desc: 'Three keys crossed off and one left: what Sweep does.',
+            svg: crossKey(2.5, 2.5)
+              + '<rect class="a fp" x="13.5" y="2.5" width="8" height="8" rx="1.8"/><rect class="a hair" x="15.9" y="4.9" width="3.2" height="3.2" rx="0.4"/>'
+              + crossKey(2.5, 13.5) + crossKey(13.5, 13.5) }
+        ]
+      },
+      {
+        id: 'reveal-part', name: 'Reveal a part', emoji: '🧩',
+        desc: 'Puts one part of the answer in its cell, green.',
+        ideas: [
+          { id: 'piece', name: 'Puzzle piece', desc: 'Today’s 🧩, drawn and in the game’s green.',
+            svg: '<path class="i fh" d="M3 6.5H8.6V5.9A2.3 2.3 0 1 1 11.4 5.9V6.5H17V12.1H17.6A2.3 2.3 0 1 1 17.6 14.9H17V20.5H3V14.9H3.6A2.3 2.3 0 1 0 3.6 12.1H3Z"/>' },
+          { id: 'part-tile', name: 'Part tile', desc: 'A green tile with a part on it (氵), and a glint.',
+            svg: '<rect class="i fh" x="3" y="5" width="16" height="16" rx="3"/>'
+              + '<text class="to kan" x="11" y="13.4" font-size="12.5" ' + KANJI + '>氵</text>'
+              + '<path class="za" d="M20 1.2Q20.5 3.5 22.8 4Q20.5 4.5 20 6.8Q19.5 4.5 17.2 4Q19.5 3.5 20 1.2Z"/>',
+            // 氵's ink sits 0.233 em left of its letter's middle and 0.007 em low
+            // (Noto Serif JP 900), so the anchor moves to put the ink in the middle,
+            // then 0.3 right: its dots and stroke start all weigh on the left.
+            badge: '<text class="ti kan" x="15.21" y="11.91" font-size="12.5" ' + KANJI + '>氵</text>' },
+          { id: 'drop', name: 'Drop in', desc: 'A green part falling into its empty cell, as the hint plays.',
+            svg: '<path class="i hair" d="M5 2.5V7M19 2.5V7"/>'
+              + '<rect class="i fh" x="8" y="1.8" width="8" height="8" rx="1.6"/>'
+              + '<rect class="i dash" x="6.5" y="12" width="11" height="10.5" rx="2"/>'
+              + '<path class="a" d="M12 14.4V19.4M9.9 17.3L12 19.4L14.1 17.3"/>' }
+        ]
+      },
+      {
+        id: 'extra-guess', name: 'Extra guess', emoji: '➕',
+        desc: 'Adds one more row.',
+        ideas: [
+          { id: 'row', name: 'New row', desc: 'Two played rows and a new empty one, with a plus.',
+            svg: tile(2.5, 2, 'fm') + tile(9.25, 2, 'fn') + tile(16, 2, 'fm')
+              + tile(2.5, 8.75, 'fh') + tile(9.25, 8.75, 'fm') + tile(16, 8.75, 'fn')
+              + '<rect class="a hair" x="2.5" y="15.5" width="5.5" height="5.5" rx="1.2"/>'
+              + '<rect class="a hair" x="9.25" y="15.5" width="5.5" height="5.5" rx="1.2"/>'
+              + '<circle class="i fa" cx="18.6" cy="18.4" r="4.4"/><path class="o" d="M18.6 16.4V20.4M16.6 18.4H20.6"/>' },
+          { id: 'plus', name: 'Plus', desc: 'Today’s ➕, as a round badge.',
+            svg: '<circle class="i fa" cx="12" cy="12" r="9"/><path class="o thk" d="M12 7.8V16.2M7.8 12H16.2"/>' },
+          { id: 'plus-one', name: '+1 tile', desc: 'A gold tile that says what you get.',
+            svg: '<rect class="i fg" x="3" y="3" width="18" height="18" rx="3"/>'
+              + '<text class="tg num" x="12" y="12.4" font-size="10.5" ' + KANJI + '>+1</text>',
+            // The 1's tall stroke and flag outweigh the plus, so it sits a touch left.
+            badge: fit('<path class="i" d="M6.9 12H12.1M9.5 9.4V14.6M14.9 9.5L17.1 7.6V16.4"/>', 12.25, 12, 0.9) }
+        ]
+      },
+      {
+        id: 'reveal-kanji', name: 'Reveal a kanji', emoji: '🀄',
+        desc: 'Fills in one whole kanji of the word, green.',
+        ideas: [
+          { id: 'mahjong', name: 'Kanji tile', desc: 'A tall tile with 字 on its face, like today’s 🀄.',
+            svg: '<rect class="i fg" x="6" y="3.6" width="13.5" height="18.4" rx="2.6"/>'
+              + '<rect class="i fp" x="4.5" y="2" width="13.5" height="18.4" rx="2.6"/>'
+              + '<text class="ta kan" x="11.25" y="11.4" font-size="11" ' + KANJI + '>字</text>' },
+          { id: 'solved', name: 'Solved tile', desc: 'A green tile with a whole kanji, 字. Pairs with Part tile.',
+            svg: '<rect class="i fh" x="3" y="3" width="18" height="18" rx="3"/>'
+              + '<text class="to kan" x="12" y="12.4" font-size="12.5" ' + KANJI + '>字</text>',
+            // 字 is dense, so smaller (ink 11 tall); its ink is centred on its letter.
+            badge: '<text class="ti kan" x="11.97" y="12.03" font-size="11.6" ' + KANJI + '>字</text>' },
+          { id: 'lens', name: 'Magnifier', desc: 'A lens over 字.',
+            svg: '<path class="i thk" d="M15.6 15.6L21 21"/>'
+              + '<circle class="i fp" cx="10.5" cy="10.5" r="7.5"/>'
+              + '<text class="ta kan" x="10.5" y="10.9" font-size="9" ' + KANJI + '>字</text>' }
+        ]
+      }
+    ];
+
+    var STYLES = [
+      { id: 'emoji', name: 'Today’s emoji', desc: 'What the game shows now. Every phone draws them its own way.' },
+      { id: 'line', name: 'Line', desc: 'One line weight, like the header’s flag and gear. Quiet; the skin’s accent picks out one detail.' },
+      { id: 'duo', name: 'Illustrated', desc: 'Outlined and filled with the game’s own colours: the green, yellow and grey tiles, the bulb’s gold and the skin’s accent. Matches the hints bulb.' },
+      { id: 'seal', name: 'Seal', desc: 'Each hint stamped white into a hanko square in the skin’s accent, so it changes with the skin.' },
+      { id: 'badge', name: 'Badge', desc: 'A colour of its own per hint, from the skins’ traditional palettes, so each is known at a glance.' },
+      { id: 'ink', name: 'Brush', desc: 'Ink lines with a hand-drawn edge and washes of colour, like sumi-e.' }
+    ];
+
+    // Badge colours, from the token primitives (white on each clears 3:1).
+    var C = window.TOKENS.primitives.color;
+    var BADGE = {
+      strokes: C.ai[500], layout: C.fuji[500], meaning: C.sakura[700], arrows: C.feedback.near,
+      sweep: C.sumi[500], 'reveal-part': C.feedback.hit, 'extra-guess': C.kin[700], 'reveal-kanji': C.vermilion[600]
+    };
+
+    function icon(hint, ideaId, style, size) {
+      if (style === 'emoji') {
+        return '<span class="emoji" aria-hidden="true" style="font-size:' + Math.round(size * 0.86) + 'px;width:' + size + 'px">' + hint.emoji + '</span>';
+      }
+      var idea = hint.ideas.find(function (x) { return x.id === ideaId; }) || hint.ideas[0];
+      var body = idea.svg;
+      var plate = '';
+      // 'badge-old': the first badge, the full drawing scaled down (for before and after).
+      var old = style === 'badge-old';
+      if (old) style = 'badge';
+      if ((style === 'badge' || style === 'seal') && idea.badge && !old) {
+        var shape = style === 'seal'
+          ? '<rect class="plate" x="0.5" y="0.5" width="23" height="23" rx="5"/><rect class="rim" x="2" y="2" width="20" height="20" rx="3.6"/>'
+          : '<circle class="plate" cx="12" cy="12" r="12"/>';
+        return '<svg class="ico st-' + style + ' clean" viewBox="0 0 24 24" width="' + size + '" height="' + size
+          + '" style="--badge:' + BADGE[hint.id] + '" aria-hidden="true">' + shape + idea.badge + '</svg>';
+      }
+      if (style === 'seal') {
+        plate = '<rect class="plate" x="0.5" y="0.5" width="23" height="23" rx="5"/>'
+          + '<rect class="rim" x="2" y="2" width="20" height="20" rx="3.6"/>';
+        body = '<g transform="translate(12 12) scale(0.62) translate(-12 -12)">' + body + '</g>';
+      } else if (style === 'badge') {
+        plate = '<circle class="plate" cx="12" cy="12" r="12"/>';
+        body = '<g transform="translate(12 12) scale(0.6) translate(-12 -12)">' + body + '</g>';
+      } else if (style === 'ink') {
+        body = '<g filter="url(#ink-edge)">' + body + '</g>';
+      }
+      return '<svg class="ico st-' + style + '" viewBox="0 0 24 24" width="' + size + '" height="' + size
+        + '" style="--badge:' + BADGE[hint.id] + '" aria-hidden="true">' + plate + body + '</svg>';
+    }
+
+    // ── Picks, kept in this browser ────────────────────────────────
+    var KEY = 'kanjiru-hint-art';
+    var picks = { style: 'duo' };
+    HINTS.forEach(function (h) { picks[h.id] = h.ideas[0].id; });
+    try {
+      var saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+      Object.keys(saved).forEach(function (k) { if (k in picks) picks[k] = saved[k]; });
+    } catch (e) { /* private window: picks just don't stay */ }
+    function save() {
+      try { localStorage.setItem(KEY, JSON.stringify(picks)); } catch (e) { /* see above */ }
+    }
+
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function ideaOf(h) { return h.ideas.find(function (x) { return x.id === picks[h.id]; }) || h.ideas[0]; }
+    function styleOf(id) { return STYLES.find(function (s) { return s.id === id; }); }
+
+    // ── Render ─────────────────────────────────────────────────────
+    var $ = function (id) { return document.getElementById(id); };
+
+    function renderStrip() {
+      $('strip').innerHTML = HINTS.map(function (h) { return icon(h, picks[h.id], picks.style, 32); }).join('');
+    }
+
+    function renderStyles() {
+      $('styles').innerHTML = STYLES.map(function (s) {
+        return '<button type="button" class="ha-pick" data-style="' + s.id + '" aria-pressed="' + (picks.style === s.id) + '">'
+          + '<span class="ha-name">' + esc(s.name) + '</span>'
+          + '<span class="ha-row">' + HINTS.map(function (h) { return icon(h, picks[h.id], s.id, 32); }).join('') + '</span>'
+          + '<span class="ha-desc">' + esc(s.desc) + '</span></button>';
+      }).join('');
+    }
+
+    function renderHints() {
+      var others = STYLES.filter(function (s) { return s.id !== 'emoji'; });
+      $('hints').innerHTML = HINTS.map(function (h) {
+        return '<article class="card ha-hint">'
+          + '<div class="ha-hint-head"><h3>' + esc(h.name) + '</h3><span class="ha-now">' + esc(h.desc) + ' Now ' + h.emoji + '</span></div>'
+          + '<div class="ha-options">'
+          + h.ideas.map(function (idea) {
+            var style = picks.style === 'emoji' ? 'duo' : picks.style;
+            return '<button type="button" class="ha-pick ha-option" data-hint="' + h.id + '" data-idea="' + idea.id + '" aria-pressed="' + (picks[h.id] === idea.id) + '">'
+              + icon(h, idea.id, style, 48)
+              + '<span><span class="ha-name">' + esc(idea.name) + '</span><br><span class="ha-desc">' + esc(idea.desc) + '</span></span>'
+              + '<span class="ha-styles-row">' + others.map(function (s) { return icon(h, idea.id, s.id, 32); }).join('') + '</span>'
+              + '</button>';
+          }).join('')
+          + '</div></article>';
+      }).join('');
+    }
+
+    function renderSet() {
+      $('set-list').innerHTML = HINTS.map(function (h) {
+        return '<li class="hint-row">'
+          + '<span class="hint-icon" aria-hidden="true">' + icon(h, picks[h.id], picks.style, 32) + '</span>'
+          + '<p class="hint-name">' + esc(h.name) + '</p>'
+          + '<span class="hint-held is-held">×1</span>'
+          + '<button class="btn btn-secondary btn-small hint-price" type="button" tabindex="-1"><span class="hint-price-coin" aria-hidden="true">🪙</span><span>Use</span></button>'
+          + '<p class="hint-desc">' + esc(h.desc) + '</p></li>';
+      }).join('');
+      $('set-big').innerHTML = HINTS.map(function (h) { return icon(h, picks[h.id], picks.style, 48); }).join('');
+      $('set-compare').innerHTML = [
+        ['Badge before', 'badge-old', 32], ['Badge after', 'badge', 32], ['Seal after', 'seal', 32],
+        ['Badge before', 'badge-old', 48], ['Badge after', 'badge', 48], ['Seal after', 'seal', 48]]
+        .map(function (r) {
+          return '<span class="ha-desc">' + r[0] + ' · ' + r[2] + ' px</span>'
+            + '<span class="ha-row">' + HINTS.map(function (h) { return icon(h, picks[h.id], r[1], r[2]); }).join('') + '</span>';
+        }).join('');
+      var lines = ['Style: ' + styleOf(picks.style).name, 'Sizes: 32 px in the hints list, 48 px in the confirm'];
+      HINTS.forEach(function (h) { lines.push(h.name + ': ' + ideaOf(h).name); });
+      $('summary').textContent = lines.join('\n');
+    }
+
+    function render() { renderStrip(); renderStyles(); renderHints(); renderSet(); }
+
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-style], [data-idea]');
+      if (!b) return;
+      if (b.dataset.style) picks.style = b.dataset.style;
+      else picks[b.dataset.hint] = b.dataset.idea;
+      save();
+      render();
+    });
+
+    $('copy').addEventListener('click', function () {
+      var text = $('summary').textContent;
+      var done = function () { $('copy').textContent = 'Copied'; setTimeout(function () { $('copy').textContent = 'Copy'; }, 1600); };
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, function () {});
+      else { var r = document.createRange(); r.selectNodeContents($('summary')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+    });
+
+    // ── Skin and scheme ────────────────────────────────────────────
+    var NAMES = { 'default': 'Shu (default)', ai: 'Ai', matcha: 'Matcha', sakura: 'Sakura', fuji: 'Fuji', urushi: 'Urushi', kinpaku: 'Kinpaku', sumi: 'Sumi' };
+    var look = window.TOKENS.look();
+    $('skin').innerHTML = Object.keys(window.TOKENS.themes).map(function (id) {
+      return '<option value="' + id + '"' + (id === look.theme ? ' selected' : '') + '>' + esc(NAMES[id] || id) + '</option>';
+    }).join('');
+    function syncScheme() {
+      var now = window.TOKENS.look();
+      var can = window.TOKENS.schemesOf(now.theme);
+      Array.prototype.forEach.call($('scheme').querySelectorAll('button'), function (b) {
+        b.setAttribute('aria-pressed', String(b.dataset.scheme === now.scheme));
+        b.disabled = can.indexOf(b.dataset.scheme) < 0;
+      });
+    }
+    $('skin').addEventListener('change', function () {
+      window.TOKENS.applyLook($('skin').value, window.TOKENS.look().scheme);
+      syncScheme();
+    });
+    $('scheme').addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b || b.disabled) return;
+      window.TOKENS.applyLook(window.TOKENS.look().theme, b.dataset.scheme);
+      syncScheme();
+    });
+
+    syncScheme();
+    render();
+  })();
+  </script>
+</body>
+</html>

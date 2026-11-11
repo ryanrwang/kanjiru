@@ -14,6 +14,7 @@ import { ACHIEVEMENT, SKINS, POWER, POWERS, ECONOMY } from '../registry.js';
 import { t } from '../i18n.js';
 import { stats, newAchievements, streakRewards } from '../engine/stats.js';
 import * as ledger from '../ledger.js';
+import { textIcon } from './hint-art.js';
 
 const oneOf = (power) => (power ? { [power]: 1 } : null);
 
@@ -57,14 +58,16 @@ export function payGame(save, { engine, state, game, date, points, streakBefore 
   return out;
 }
 
-// What an entry gives, as text: "+50 pts · 🧩 Reveal a part".
+// What an entry gives, as text: "+50 pts · Reveal a part", with the hint's
+// emoji in front in the Emoji icons look ("🧩 Reveal a part").
 export function amounts(entry) {
   const parts = [];
   if (entry.pts > 0) parts.push(t('reward.points', { n: entry.pts }));
   Object.entries(entry.hints || {}).forEach(([id, n]) => {
     if (!POWER[id] || n <= 0) return;
     const name = t(`power.${id}.name`);
-    parts.push(n > 1 ? t('reward.hints', { icon: POWER[id].icon, name, n }) : t('reward.hint', { icon: POWER[id].icon, name }));
+    const icon = textIcon(POWER[id]);
+    parts.push((n > 1 ? t('reward.hints', { icon, name, n }) : t('reward.hint', { icon, name })).trim());
   });
   return parts;
 }
