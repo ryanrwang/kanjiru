@@ -5,7 +5,7 @@
  * guess, in the colours it scored. A game opens (a <details>) to its final
  * board: the kanji guide as it ended (js/play/frame.js, the frames the
  * board draws) over every guess, part by part, in its colours, split by
- * kanji where the board showed the split (Guided).
+ * kanji where the board showed the split (Guided, or the Layout hint).
  *
  *   const card = historyCard({ save, data, engine, glyph, shown, onMore, onDelete });   // or null
  *
@@ -96,6 +96,8 @@ function resultText(g) {
 // The final board: the guide's frames, then each guess's tiles.
 function finalBoard(g, data, glyph, scored) {
   const split = !!(LEVEL[g.level] || {}).showSplit;
+  // Each kanji's tiles apart, as the board grouped them (Guided, or Layout).
+  const grouped = split || (g.powers || []).some((id) => (POWER[id] || {}).effect === 'revealLayout');
   const known = knownAtEnd(g, data, scored);
   const many = known.length > 1;
   const guide = guideShown(known, split)
@@ -116,7 +118,7 @@ function finalBoard(g, data, glyph, scored) {
       return `${x.form} ${t(`game.mark.${x.mark}`)}${way ? t('game.listSep') + t(`game.way.${way}`) : ''}`;
     }));
     return el('li', { class: 'history-row', 'aria-label': t('game.rowLabelParts', { n: i + 1, parts: marks.join(t('game.listSep')) }) },
-      split ? tiles.map((nodes) => el('span', { class: 'history-slot', 'aria-hidden': 'true' }, nodes))
+      grouped ? tiles.map((nodes) => el('span', { class: 'history-slot', 'aria-hidden': 'true' }, nodes))
         : el('span', { class: 'history-slot', 'aria-hidden': 'true' }, tiles.flat()));
   });
   return el('div', { class: 'history-board' }, guide,

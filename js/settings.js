@@ -6,8 +6,7 @@
  *   Appearance  light, dark, or the device's (a skin with one scheme fixes it)
  *   Hints       whether buying a hint asks first (Don't ask again turns it off)
  *   Home screen how to add Kanjiru to it (js/install.js), with the browser's
- *               own Install button where it offers one; folded to its title
- *               until opened (2026-11-10); gone once installed
+ *               own Install button where it offers one; gone once installed
  *   Move your progress to another device:
  *     Send       a one-time code from api/transfer.php, with a countdown
  *     Receive    enter a code from the other device
@@ -15,9 +14,15 @@
  *                that needs no server
  *   Start over  reset achievements (one ask), or delete everything (three
  *               asks, the last one typed): js/confirm.js
- *   Debug       for testing: the answer on the game's keys (js/play/screen.js)
- *               and points to add, as their own ledger entries ('debug')
+ *   Debug       for testing: the answer on the game's keys and every hint
+ *               free in a game (js/play/screen.js). Hidden until About's
+ *               title is tapped quickly enough times (rules.js debugTaps),
+ *               which turns it on; the same taps again turn it off and hide
+ *               it (2026-11-10)
  *   About       a link to the About page and its credits (js/about.js)
+ *
+ * Home screen, Move your progress and Start over are folded to their titles
+ * until opened (fold()), and stay as they were across redraws.
  *
  * The Hard and Guided switches are on the play card (app.js).
  *
@@ -34,7 +39,8 @@
  * redraws itself, in the language now set.
  */
 import { t, has, lang, LANGUAGES } from './i18n.js';
-import { ECONOMY, SKINS, ACHIEVEMENTS } from './registry.js';
+import { ECONOMY, SKINS, ACHIEVEMENTS, RULES } from './registry.js';
+import { toast } from './toast.js';
 import { el, switchRow, segmented } from './dom.js';
 import * as store from './store.js';
 import { sendSave, receiveSave, normalizeCode } from './transfer.js';
@@ -54,7 +60,8 @@ const ui = {
   receive: { code: '', busy: false },
   text: { mode: null, value: '' },   // mode: 'copy' or 'paste'
   ask: null,                         // { section, run(how) } while Merge / Replace shows
-  installOpen: false,                // the home-screen steps unfolded
+  open: {},                          // fold id → unfolded (fold())
+  debugShown: false,                 // About's title tapped enough this visit
   status: {}                         // section → { kind: 'ok' | 'error', text }
 };
 
@@ -64,6 +71,7 @@ export function openSettings(root, options = {}) {
   root.replaceChildren(page);
   ui.status = {};
   ui.ask = null;
+  ui.debugShown = false;
   const off = onInstallChange(() => render());
   render();
   return {
@@ -83,6 +91,8 @@ function render() {
   const focused = document.activeElement && page.contains(document.activeElement)
     ? document.activeElement.dataset.id : null;
   const scrolled = window.scrollY;
+  // Once shown, debug stays for this visit, even switched off.
+  if (store.get().settings.debug) ui.debugShown = true;
 
   // Named by the header's crumb, 漢 › Settings (app.js).
   page.replaceChildren(el('div', { class: 'card sheet-body settings-card' },
@@ -90,15 +100,14 @@ function render() {
     renderScheme(),
     renderHints(),
     renderInstall(),
-    el('section', { class: 'sheet-section', 'aria-labelledby': 'transfer-title' },
-      el('h3', { class: 'sheet-section-title', id: 'transfer-title' }, t('transfer.title')),
+    fold('transfer', 'transfer.title',
       el('p', { class: 'sheet-note' }, t('transfer.intro')),
       store.isPersistent() ? null : el('p', { class: 'transfer-status is-error' }, t('transfer.notSaving')),
       renderSend(),
       renderReceive(),
       renderText()),
     renderReset(),
-    renderDebug(),
+    ui.debugShown ? renderDebug() : null,
     renderAbout()
   ));
 
@@ -119,6 +128,19 @@ function changed() {
   render();
 }
 
+// A section folded to its title until opened, the whole title row its
+// toggle. ui.open keeps each one as it was across redraws.
+function fold(id, titleKey, ...body) {
+  return el('details', {
+    class: 'sheet-section sheet-fold', open: !!ui.open[id],
+    ontoggle: (event) => { ui.open[id] = event.currentTarget.open; }
+  },
+  el('summary', { class: 'fold-summary', 'data-id': `${id}-fold` },
+    el('h3', { class: 'sheet-section-title', id: `${id}-title` }, t(titleKey)),
+    el('span', { class: 'fold-chevron', 'aria-hidden': 'true' })),
+  el('div', { class: 'sheet-fold-body' }, body));
+}
+
 // ── Language and appearance ──────────────────────────────────────────
 
 function renderLanguage() {
@@ -127,7 +149,7 @@ function renderLanguage() {
     segmented({
       id: 'lang', label: t('settings.language'), value: lang(),
       options: LANGUAGES.map((l) => ({ id: l.id, label: l.name, lang: l.id })),
-      onPick: (id) => { store.update((s) => { s.settings.lang = id; }); changed(); }
+      onPick: (id) => { store.update((s) => { s.settings.lang = id; s.settings.langAsked = true; }); changed(); }
     }));
 }
 
@@ -169,15 +191,7 @@ function renderInstall() {
   if (installed()) return null;
   const p = platform();
   const both = p === 'other';
-  // Folded to its title until opened; it stays as it was across redraws.
-  return el('details', {
-    class: 'sheet-section sheet-fold', open: ui.installOpen,
-    ontoggle: (event) => { ui.installOpen = event.currentTarget.open; }
-  },
-  el('summary', { class: 'fold-summary', 'data-id': 'install-fold' },
-    el('h3', { class: 'sheet-section-title', id: 'install-title' }, t('install.title')),
-    el('span', { class: 'fold-chevron', 'aria-hidden': 'true' })),
-  el('div', { class: 'sheet-fold-body' },
+  return fold('install', 'install.title',
     el('p', { class: 'sheet-note' }, t(`install.why.${p}`)),
     (both ? ['ios', 'android'] : [p]).map((q) => (both
       ? el('div', { class: 'sheet-sub', role: 'group', 'aria-labelledby': `install-${q}-title` },
@@ -189,16 +203,33 @@ function renderInstall() {
         class: 'btn btn-primary', type: 'button', 'data-id': 'install',
         onclick: async () => { await promptInstall(); render(); }
       }, t('install.button'))) : null,
-    el('p', { class: 'sheet-note' }, t('install.backup'))));
+    el('p', { class: 'sheet-note' }, t('install.backup')));
 }
 
 // ── About ────────────────────────────────────────────────────────────
 
 function renderAbout() {
   return el('section', { class: 'sheet-section sheet-row', 'aria-labelledby': 'about-link-title' },
-    el('h3', { class: 'sheet-section-title', id: 'about-link-title' }, t('about.title')),
+    el('h3', { class: 'sheet-section-title about-title', id: 'about-link-title', onclick: tapAbout }, t('about.title')),
     // app.js opens it as a page, so Close there comes back here.
     el('a', { class: 'btn btn-secondary btn-small', href: '#about', 'data-id': 'about' }, t('about.open')));
+}
+
+// Debug's way in and out: RULES.debugTaps.count taps on About's title,
+// all within RULES.debugTaps.within ms, show its section and turn it on;
+// the same again turns it off and hides it. A toast says which.
+let taps = [];
+function tapAbout() {
+  const { count, within } = RULES.debugTaps;
+  const now = Date.now();
+  taps = taps.filter((at) => now - at < within).concat(now);
+  if (taps.length < count) return;
+  taps = [];
+  const on = !store.get().settings.debug;
+  ui.debugShown = on;
+  store.update((s) => { s.settings.debug = on; });
+  toast({ icon: '🛠️', title: t(on ? 'settings.debug.unlocked' : 'settings.debug.locked') });
+  changed();
 }
 
 // ── Starting over ────────────────────────────────────────────────────
@@ -210,8 +241,7 @@ function renderReset() {
     el('div', { class: 'btn-row' },
       el('button', { class: `btn ${id === 'all' ? 'btn-danger' : 'btn-secondary'}`, type: 'button', 'data-id': `reset-${id}`, onclick },
         t(`reset.${id}.button`))));
-  return el('section', { class: 'sheet-section', 'aria-labelledby': 'reset-title' },
-    el('h3', { class: 'sheet-section-title', id: 'reset-title' }, t('reset.title')),
+  return fold('reset', 'reset.title',
     row('achievements', resetAchievements),
     row('all', resetAll),
     renderStatus('reset'));
@@ -277,6 +307,8 @@ async function resetAll() {
 
 // ── Debug ────────────────────────────────────────────────────────────
 
+// No Add points: every hint is free in a game in debug mode (the user
+// took the button out, 2026-11-10).
 function renderDebug() {
   const on = !!store.get().settings.debug;
   return el('section', { class: 'sheet-section', 'aria-labelledby': 'debug-title' },
@@ -285,20 +317,9 @@ function renderDebug() {
       id: 'debug', name: t('settings.debug.name'), note: t('settings.debug.body'), on,
       onChange: (value) => {
         store.update((s) => { s.settings.debug = value; });
-        ui.status.debug = null;
         changed();
       }
-    }),
-    on ? el('div', { class: 'btn-row' },
-      el('button', { class: 'btn btn-secondary', type: 'button', 'data-id': 'debug-points', onclick: addPoints },
-        t('settings.debug.add', { n: ECONOMY.debugPoints }))) : null,
-    renderStatus('debug'));
-}
-
-function addPoints() {
-  store.update((s) => store.enter(s, 'debug', { pts: ECONOMY.debugPoints }));
-  ui.status.debug = { kind: 'ok', text: t('settings.debug.added', { n: ECONOMY.debugPoints, total: store.points() }) };
-  changed();
+    }));
 }
 
 // ── Moving devices ───────────────────────────────────────────────────

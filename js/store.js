@@ -3,16 +3,20 @@
  * tokens.js also reads settings.theme and settings.scheme from it before
  * first paint, so keep those two names.
  *
- * Shape (v2)
+ * Shape (v3: v2's shape, every save started afresh at the launch)
  *   v             schema version
  *   settings      { theme, tiles, effect, scheme, lang, level, debug, installLater,
- *                 confirmHintBuy }
+ *                 confirmHintBuy, langAsked, langTipSeen, hintTipSeen }
  *                 scheme and lang null = follow the device; level: the
  *                 difficulty for new games (js/config/levels.js); debug:
- *                 the answer on the game's keys, and points to add (Settings);
+ *                 the answer on the game's keys and free hints (Settings,
+ *                 hidden until About's title there is tapped 8 times);
  *                 installLater: the date the home-screen tip was put off
  *                 (js/install.js), or null; confirmHintBuy: buying a hint
- *                 asks first (false: Don't ask again was ticked)
+ *                 asks first (false: Don't ask again was ticked); langAsked:
+ *                 the first visit's language picker was answered;
+ *                 langTipSeen: the tip at the gear after it went;
+ *                 hintTipSeen: the first game's welcome bonus card went
  *   ledger        { [id]: { why, at, pts?, hints?, game?, what? } }   every
  *                 change to points and hints held (js/ledger.js); points()
  *                 and held() sum it. v1 kept wallet { points } and
@@ -53,7 +57,7 @@ import { puzzleNumber, addDays, isDailyKey } from './engine/daily.js';
 import * as ledger from './ledger.js';
 
 export const SAVE_KEY = 'kanjiru';
-export const VERSION = 2;
+export const VERSION = 3;
 
 // MIGRATIONS[n] turns a version-n save into version n + 1.
 const MIGRATIONS = {
@@ -63,6 +67,18 @@ const MIGRATIONS = {
     delete save.wallet;
     delete save.inventory;
     return save;
+  },
+  // v2 → v3, the launch (2026-11-10, the user asked): every save from
+  // before it starts afresh, so nobody starts with test or debug points,
+  // or games played on the parts from before the parts audit. Only the
+  // language and light or dark stay; a language picked counts as asked.
+  // A v2 save received from another device starts afresh too.
+  2: (save) => {
+    const was = isObject(save.settings) ? save.settings : {};
+    const next = fresh();
+    if (typeof was.lang === 'string') { next.settings.lang = was.lang; next.settings.langAsked = true; }
+    if (typeof was.scheme === 'string') next.settings.scheme = was.scheme;
+    return next;
   }
 };
 
@@ -71,7 +87,12 @@ export function fresh() {
   ledger.add(start, 'start', { pts: ECONOMY.startingPoints });
   return {
     v: VERSION,
-    settings: { ...DEFAULT_LOOK, scheme: null, lang: null, level: DEFAULT_LEVEL, debug: false, installLater: null, confirmHintBuy: true },
+    // langAsked: the first visit's language picker has had its answer
+    // (app.js); langTipSeen: the tip at the gear after it was closed or
+    // the gear tapped. hintTipSeen: the first game's welcome bonus card,
+    // pointing at the hints button, has been used or closed (app.js,
+    // js/play/screen.js).
+    settings: { ...DEFAULT_LOOK, scheme: null, lang: null, level: DEFAULT_LEVEL, debug: false, installLater: null, confirmHintBuy: true, langAsked: false, langTipSeen: false, hintTipSeen: false },
     ledger: start,
     unlocked: {},
     achievements: {},
@@ -292,11 +313,13 @@ export function resetAchievements(lockedNow = () => [], now = Date.now()) {
 }
 
 // Everything goes: games, points, hints, looks, achievements. The language
-// and light or dark stay, since they belong to the device.
+// (and its first-visit answer) and light or dark stay, since they belong to
+// the device. The welcome bonus comes again, and its tip with it.
 export function resetAll() {
   const before = get().settings;
   state = fresh();
   state.settings.lang = before.lang;
+  state.settings.langAsked = !!before.langAsked;
   state.settings.scheme = before.scheme;
   persist();
   return state;

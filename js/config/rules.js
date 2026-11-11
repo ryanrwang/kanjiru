@@ -30,6 +30,11 @@ export const RULES = {
   // many days. iOS clears an unvisited site's saves after 7.
   installTip: { laterDays: 14 },
 
+  // Debug mode is hidden (2026-11-10, the user asked): tapping About's
+  // title in Settings this many times within `within` ms shows its section
+  // and turns it on (js/settings.js).
+  debugTaps: { count: 8, within: 3000 },
+
   // The share text after a game: one square per part, per guess, and a
   // mark when the game used a hint or power (the free meaning doesn't count).
   // show: false hides it on the result card for now (2026-11-08).

@@ -137,7 +137,7 @@
     letterSpacing: { 0: '0', 2: '0.02em', 8: '0.08em' },
 
     // Larger fixed sizes (layout widths), still on the 4px grid.
-    size: { 120: '120px', 240: '240px', 560: '560px' },
+    size: { 120: '120px', 240: '240px', 280: '280px', 560: '560px' },
 
     radius: {
       0: '0px', 4: '4px', 8: '8px', 12: '12px', 16: '16px', 24: '24px', full: '9999px'
@@ -158,10 +158,11 @@
       standard:   'cubic-bezier(0.2, 0, 0, 1)',
       emphasized: 'cubic-bezier(0.3, 0, 0, 1.3)',
       ink:        'cubic-bezier(0.6, 0, 0.2, 1)',   // slow start, quick finish, like a brush
+      inOut:      'cubic-bezier(0.65, 0, 0.35, 1)',   // eases in and out alike
       linear:     'linear'
     },
 
-    opacity: { 0: '0', 25: '0.25', 40: '0.4', 60: '0.6', 80: '0.8', 100: '1' }
+    opacity: { 0: '0', 15: '0.15', 25: '0.25', 40: '0.4', 60: '0.6', 80: '0.8', 100: '1' }
   };
 
   // ──────────────────────────────────────────────────────────────────
@@ -233,6 +234,12 @@
         petal: c.sakura[300],
         spark: c.kin[300],
         shine: c.shine
+      },
+      // The header's hints (app.js): a lit bulb, gold in every skin, with
+      // a glint on its glass.
+      hint: {
+        bulb:  c.kin[300],
+        glint: c.white
       }
     },
 
@@ -288,6 +295,8 @@
       container: primitives.size[560],
       cardMin:   primitives.size[120],
       powerMin:  primitives.size[240],
+      // The first game's tip under the hints in the header (app.js).
+      tip:       primitives.size[280],
       swatch:    s[96],
       guessCol:  s[64],
       tile:      s[48],
@@ -348,6 +357,7 @@
       ease:   primitives.easing.standard,
       bounce: primitives.easing.emphasized,
       ink:    primitives.easing.ink,
+      glide:  primitives.easing.inOut,   // the page and board moving to a game's result
       linear: primitives.easing.linear   // an even pace (the sweep's broom)
     },
 
@@ -359,6 +369,9 @@
 
     opacity: {
       hidden:   primitives.opacity[0],
+      // A colour's touch on a surface: the header's tips are the raised
+      // surface with this much of the accent (styles.css .head-tip).
+      tint:     primitives.opacity[15],
       faint:    primitives.opacity[25],
       disabled: primitives.opacity[40],
       soft:     primitives.opacity[60],

@@ -68,6 +68,16 @@ export function example(id, { tiles, drawn, numeral }) {
   return [...tiles, pieces(id, false)].filter(Boolean);
 }
 
+const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// How long an effect plays over the board, in ms: three long transitions
+// (.fx-board's --fx-time), or 0 when none plays. The game screen waits for
+// it before the page glides down to the result.
+export function effectTime(id) {
+  if (!id || id === 'none' || reducedMotion()) return 0;
+  return (parseFloat(window.TOKENS.active().transition.long) || 0) * 3;
+}
+
 // Plays an effect over the board once a game is won. Returns stop(), which
 // ends it early; it also ends itself when it's done.
 //   board    the board, which the pieces cover
@@ -75,9 +85,7 @@ export function example(id, { tiles, drawn, numeral }) {
 //   answer   the word, for Brush draw
 //   numeral  the game's seal (modes.js)
 export function celebrate(id, { board, row, answer, numeral }) {
-  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!id || id === 'none' || reduced || !board) return () => {};
-  const long = parseFloat(window.TOKENS.active().transition.long) || 0;
+  if (!effectTime(id) || !board) return () => {};
   let layer = null;
   if (ROW_EFFECTS.includes(id)) {
     if (row) row.classList.add(`fx-${id}`);
@@ -102,7 +110,6 @@ export function celebrate(id, { board, row, answer, numeral }) {
     if (layer) layer.remove();
     if (row) row.classList.remove(`fx-${id}`);
   };
-  // .fx-board's --fx-time: three long transitions.
-  timer = setTimeout(stop, long * 3);
+  timer = setTimeout(stop, effectTime(id));
   return stop;
 }

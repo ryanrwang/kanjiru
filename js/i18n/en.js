@@ -192,11 +192,10 @@ export default {
     end: {
       open: 'End game',
       title: 'End this game?',
-      body: '{n} of {rows} guesses used.',
       giveUp: 'Give up',
-      giveUpDesc: 'See the answer. It counts as a loss and ends your win streak. Parts you found still pay.',
+      giveUpDesc: 'See the answer. Counts as a loss.',
       new: 'New puzzle',
-      newDesc: 'Skip to another word. This one isn’t counted, win or loss. Hints used on it stay used.',
+      newDesc: 'Skip this one. It isn’t counted.',
       skipped: 'A new puzzle. The last one wasn’t counted.',
       gaveUp: 'You gave up. Here’s the answer.'
     },
@@ -281,9 +280,10 @@ export default {
   looks: {
     title: 'Looks',
     note: 'Mix colours, tiles and effects',
-    lockPoints: '🔒 {cost} pts',
-    lockAchievement: '🔒 {name}',
-    inUse: '✓ In use'
+    lockPoints: '{cost} pts',
+    lockAchievement: '{name}',
+    locked: 'Locked',
+    inUse: 'In use'
   },
 
   powers: {
@@ -346,6 +346,7 @@ export default {
   // The ask before something that can't be undone (js/confirm.js).
   confirm: {
     cancel: 'Cancel',
+    close: 'Close',
     step: 'Step {n} of {of}'
   },
 
@@ -368,9 +369,29 @@ export default {
     debug: {
       title: 'Debug',
       name: 'Debug mode',
-      body: 'For testing: numbered dots on the game’s keys show the answer in writing order, every hint in a game is free, and you can add points.',
-      add: 'Add {n} pts',
-      added: 'Added {n} pts. You have {total} pts.'
+      body: 'For testing: numbered dots on the game’s keys show the answer in writing order, and every hint in a game is free.',
+      unlocked: 'Debug mode is on.',
+      locked: 'Debug mode is off.'
+    }
+  },
+
+  // The first visit: the language picker (each language's own words, so
+  // title is the same in both), then a tip at the gear; and the first
+  // game's welcome bonus card at the hints button.
+  welcome: {
+    lang: {
+      title: 'Language · 言語',
+      play: 'Play in English',
+      later: 'Not now'
+    },
+    langTip: {
+      body: 'Change the language any time in Settings.',
+      close: 'Close the tip'
+    },
+    tip: {
+      title: 'Welcome bonus',
+      button: 'Buy a hint',
+      later: 'Maybe later'
     }
   },
 
@@ -636,6 +657,7 @@ export default {
 
   achievement: {
     'first-win': { name: 'First kanji', desc: 'Solve your first puzzle.' },
+    regular: { name: 'Regular', desc: 'Solve 25 puzzles.' },
     'streak-7': { name: 'One week', desc: 'Solve 7 dailies in a row.' },
     'streak-30': { name: 'One month', desc: 'Solve 30 dailies in a row.' },
     'win-run-5': { name: 'On a roll', desc: 'Solve 5 puzzles in a row.' },

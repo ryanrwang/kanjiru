@@ -19,9 +19,10 @@
  *
  * Above the rows, the kanji guide: a frame per kanji with all that's known
  * about it (renderFrame, drawn by js/play/frame.js): solved, Guided's shape
- * and parts, Layout's places, and Stroke count's number under it. Over each
- * kanji's cells in Guided; in a centred row otherwise, once something is
- * known.
+ * and parts, Layout's places, and Stroke count's number under it, in a
+ * centred row: always in Guided, otherwise once something is known. Once
+ * the split is known (Guided, or the Layout hint) each kanji's cells keep
+ * close together, with a wide gap between kanji (grouped()).
  *
  * The level (js/config/levels.js; the play card's switches) changes the board:
  *   Normal      one row of cells: where one kanji ends is for the player to
@@ -50,13 +51,13 @@
  * Enter away from a button guesses. A redraw puts the focus back on the
  * same key or cell, and the result takes it when the game ends.
  */
-import { MODES, POWER, LEVEL } from '../registry.js';
+import { MODES, POWER, LEVEL, ECONOMY } from '../registry.js';
 import { t } from '../i18n.js';
 import { el } from '../dom.js';
 import * as store from '../store.js';
 import { tilesForPlace } from '../engine/palette.js';
 import { MARKS } from '../engine/score.js';
-import { stats } from '../engine/stats.js';
+import { stats, games } from '../engine/stats.js';
 import { localDate, answersFor } from '../engine/daily.js';
 import * as session from './session.js';
 import { renderClues, hintsFor, whyNot, openHints, closeHints } from './hints.js';
@@ -67,17 +68,18 @@ import { describe } from './rewards.js';
 import { powerOffer, buyPower } from '../shop.js';
 import { toast } from '../toast.js';
 import { ask, closeAsk } from '../confirm.js';
-import { celebrate } from './effects.js';
+import { celebrate, effectTime } from './effects.js';
 
-// The ask before ending a game early: the flag in the game's header
-// (endGame below) and the one beside Continue on the play page (app.js).
-// Give up, or in a game that isn't a daily, a new puzzle. Resolves to the
-// option's id, or null.
+// The ask before ending a game early: End game under the keyboard
+// (endGame below) and the flag beside Continue on the play page (app.js).
+// Give up, or in a game that isn't a daily, a new puzzle; an × to stay
+// (2026-11-10, the user asked: no Cancel, no guesses line, short notes).
+// Resolves to the option's id, or null.
 export function askEnd(state) {
   return ask({
     icon: '🏳️',
     title: t('game.end.title'),
-    body: t('game.end.body', { n: state.guesses.length, rows: state.rows }),
+    closeX: true,
     options: [
       { id: 'give-up', name: t('game.end.giveUp'), desc: t('game.end.giveUpDesc'), danger: true },
       state.daily ? null : { id: 'new', name: t('game.end.new'), desc: t('game.end.newDesc') }
@@ -85,10 +87,45 @@ export function askEnd(state) {
   });
 }
 
+const FLAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/></svg>';
+
 const DELETE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H9l-7 7 7 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M17 9l-6 6M11 9l6 6"/></svg>';
 
 const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const rank = (mark) => MARKS.indexOf(mark);
+
+// A transition token's easing (cubic-bezier(x1, y1, x2, y2)) as a function
+// of time, 0 to 1, for motion CSS can't do, like scrolling the page.
+function easing(css) {
+  const m = /cubic-bezier\(([^)]+)\)/.exec(css || '');
+  if (!m) return (x) => x;
+  const [x1, y1, x2, y2] = m[1].split(',').map(Number);
+  const at = (a, b, s) => 3 * a * s * (1 - s) ** 2 + 3 * b * s * s * (1 - s) + s ** 3;
+  return (x) => {
+    let lo = 0;
+    let hi = 1;
+    let s = x;
+    for (let i = 0; i < 24; i += 1) {
+      s = (lo + hi) / 2;
+      if (at(x1, x2, s) < x) lo = s; else hi = s;
+    }
+    return at(y1, y2, s);
+  };
+}
+
+// Calls step(p) once a frame for time ms, p going 0 to 1 by ease, and last
+// with 1. Returns stop().
+function tween(time, ease, step) {
+  const start = performance.now();
+  let frame = 0;
+  const tick = (now) => {
+    const x = time > 0 ? Math.min(1, Math.max(0, (now - start) / time)) : 1;
+    step(x === 1 ? 1 : ease(x));
+    if (x < 1) frame = requestAnimationFrame(tick);
+  };
+  frame = requestAnimationFrame(tick);
+  return () => cancelAnimationFrame(frame);
+}
 
 // The row being typed when the screen last closed (Settings or Points opened
 // from the header, which are pages of their own): back in the same game at
@@ -131,9 +168,12 @@ export function openGame(root, ctx) {
   let frameTimer = null;
   let frameShown = null;   // keys the frame last showed, so new ones animate
   let stopFx = () => {};   // ends the win effect playing over the board
+  let stopGlide = () => {};   // calls off the page's glide to the result
   let doneRows = 0;
-  // Whether the rows drawn have the Arrows hint's arrows: using it redraws them.
+  // Whether the rows drawn have the Arrows hint's arrows, and are grouped
+  // by kanji (grouped()): a change redraws them.
   let doneArrows = false;
+  let doneGrouped = false;
   let byKeyboard = false;  // the last move came from the keyboard
 
   // Parts that stay put between redraws.
@@ -167,6 +207,7 @@ export function openGame(root, ctx) {
       keyFocus: null,  // the key that takes Tab into the keyboard
       frameFrom: null, // the state the frames show while a row reveals
       message: null,   // { kind: 'error' | 'info', text }
+      rowError: null,  // why the guess can't be made, under its row (sayRow)
       newRow: -1,      // the row to reveal
       points: game && game.done ? engine.points(game.state) : null,
       // What the game paid besides its points (session.finish), and whether
@@ -198,9 +239,14 @@ export function openGame(root, ctx) {
   // (Declarations, so freshUi() can use them before this line runs.)
   function cellCounts() { return [...game.state.answer].map((ch) => data.kanji[ch].parts.length); }
   function emptyCells() { return Array(cellCounts().reduce((a, b) => a + b, 0)).fill(null); }
-  // The cells' groups on the board: one per kanji when the split shows,
-  // else one for the whole word.
-  const groupCounts = () => (splitShown() ? cellCounts() : [cellCounts().reduce((a, b) => a + b, 0)]);
+  // Whether the board shows where each kanji ends: Guided, or once the
+  // Layout hint showed each kanji's shape (2026-11-10, the user asked).
+  // Then each kanji's cells keep close together, with a wide gap between
+  // kanji; otherwise the cells are one even row.
+  const grouped = () => partsMode() && (splitShown() || !!engine.clues(state()).layout);
+  // The cells' groups on the board: one per kanji when grouped, else one
+  // for the whole word.
+  const groupCounts = () => (grouped() ? cellCounts() : [cellCounts().reduce((a, b) => a + b, 0)]);
   // Each cell's place, per slot, when the board shows places (Guided, or an
   // old level with places); otherwise null.
   const places = () => (partsMode() && (level().showSplit || level().places)
@@ -208,7 +254,7 @@ export function openGame(root, ctx) {
   // Cells in their groups (kept together when rows wrap), with a gap where
   // the place changes when places show.
   const laidOut = (perSlot) => {
-    if (!splitShown()) return el('span', { class: 'row-slot' }, perSlot.flat());
+    if (!grouped()) return el('span', { class: 'row-slot' }, perSlot.flat());
     const pl = places();
     return perSlot.map((nodes, s) => el('span', { class: 'row-slot' },
       nodes.map((node, i) => [pl && i && pl[s][i] !== pl[s][i - 1] ? el('span', { class: 'cell-gap' }) : null, node])));
@@ -245,13 +291,20 @@ export function openGame(root, ctx) {
   // level and kind went (2026-11-10, the user asked).
   function head() {
     const s = state();
+    const save = store.get();
+    const on = playing() && partsMode();
     return {
-      playing: playing() && partsMode(),
-      held: hintsFor(s).reduce((n, p) => n + (store.held()[p.id] || 0), 0)
+      playing: on,
+      held: hintsFor(s).reduce((n, p) => n + (store.held()[p.id] || 0), 0),
+      // The first game's tip: the welcome bonus buys a hint, from here.
+      // Gone once closed or the hints opened (hintTipSeen), after the first
+      // game, or once the bonus is spent.
+      tip: on && !save.settings.hintTipSeen && games(save.history).length === 0
+        && store.points(save) >= ECONOMY.startingPoints
     };
   }
 
-  // Ends the game early, at any time (the flag in the site header, app.js):
+  // Ends the game early, at any time (End game, under the keyboard):
   // give up (a loss, the answer shows) or, in a game that isn't a daily, a
   // new puzzle (this one isn't recorded).
   async function endGame() {
@@ -344,10 +397,11 @@ export function openGame(root, ctx) {
         : ghost ? el('span', { class: 'cell-ghost', 'aria-hidden': 'true' }, glyph(ghost.form)) : null);
     }));
     return el('div', {
-      class: 'board-row is-next', role: 'group', 'aria-describedby': 'game-cells-help',
+      class: `board-row is-next${ui.rowError ? ' is-error' : ''}`, role: 'group', 'aria-describedby': 'game-cells-help',
       'aria-label': t('game.cells', { n: filled, cells: ui.cells.length })
     },
-      el('span', { class: 'row-tiles' }, laidOut(perSlot)));
+      el('span', { class: 'row-tiles' }, laidOut(perSlot)),
+      ui.rowError ? rowErrorNode(ui.rowError) : null);
   }
 
   // A row not reached yet.
@@ -431,10 +485,10 @@ export function openGame(root, ctx) {
   // on one line and, with the head, frames, place names, clues found and
   // keyboard, the screen's height, as in Wordle. For those cells, frames
   // take the largest size that fits, then keys; keys drop to keySm only
-  // when cells are at the base size or smaller. With the split shown, each
-  // kanji's frame sits above its cells, no wider than them, and if even the
-  // smallest cells are too wide, rows wrap between kanji (data-wrap).
-  // Without it, a solved kanji takes a line of cell height above its cells.
+  // when cells are at the base size or smaller. The frames sit in a centred
+  // row, no bigger than a cell if they can be. Grouped by kanji, a wide gap
+  // (spacing.lg) parts the kanji, and if even the smallest cells are too
+  // wide, rows wrap between kanji (data-wrap).
   // Sizes are layout tokens; styles.css keys on the board's data-cell and
   // data-frame, and the keyboard's data-keys.
   function fitBoard() {
@@ -458,6 +512,7 @@ export function openGame(root, ctx) {
       board.dataset.frame = held.frame;
       board.toggleAttribute('data-wrap', held.wrap);
       picker.removeAttribute('data-keys');
+      sizeResult();
       return;
     }
     const tk = window.TOKENS.active();
@@ -465,6 +520,8 @@ export function openGame(root, ctx) {
     const xs = px(tk.spacing.xs);
     const sm = px(tk.spacing.sm);
     const md = px(tk.spacing.md);
+    // Between kanji, when grouped (styles.css .board.is-parts .row-tiles).
+    const between = px(tk.spacing.lg);
     const counts = groupCounts();
     const split = splitShown();
     const pl = split ? places() : null;
@@ -474,23 +531,21 @@ export function openGame(root, ctx) {
     const slotWidths = (c) => counts.map((n, s) => slotWidth(c, s));
     // Hard's word hangs off the right of the rows (styles.css .row-made).
     const made = madeShown() ? sm + px(tk.spacing['2xl']) : 0;
-    const rowWidth = (c) => slotWidths(c).reduce((a, b) => a + b, 0) + (counts.length - 1) * md + made;
+    const rowWidth = (c) => slotWidths(c).reduce((a, b) => a + b, 0) + (counts.length - 1) * between + made;
     const width = board.clientWidth;
     const rows = state().rows;
     const sizes = (list) => list.map(([id, key]) => ({ id, px: px(tk.layout[key]) }));
     const cells = sizes(CELL_SIZES);
     const frameSizes = sizes(FRAME_SIZES);
     const keySizes = sizes(KEY_SIZES);
-    // Each frame no wider than its kanji's cells (the smallest if none is);
-    // in a centred row (no split shown), no bigger than a cell if it can be.
+    // The frames, in a centred row that fits the width, each no bigger
+    // than a cell if it can be.
+    const kanjiCount = cellCounts().length;
     const framesFor = (c) => {
-      if (!split) {
-        const small = frameSizes.filter((x) => x.px <= c);
-        return small.length ? small : frameSizes.slice(-1);
-      }
-      const narrowest = Math.min(...slotWidths(c));
-      const narrow = frameSizes.filter((x) => x.px <= narrowest);
-      return narrow.length ? narrow : frameSizes.slice(-1);
+      const fit = frameSizes.filter((x) => kanjiCount * x.px + (kanjiCount - 1) * md <= width);
+      const sizes = fit.length ? fit : frameSizes.slice(-1);
+      const small = sizes.filter((x) => x.px <= c);
+      return small.length ? small : sizes.slice(-1);
     };
     const keysFor = (c) => (keyboard && c <= px(tk.layout.cell) ? keySizes : keySizes.slice(0, 1));
     // Height: everything else on the screen while the keyboard is up (the
@@ -542,7 +597,7 @@ export function openGame(root, ctx) {
         let n = 1;
         let used = 0;
         slotWidths(c).forEach((w) => {
-          if (used && used + md + w > width) { n += 1; used = w; } else used += (used ? md : 0) + w;
+          if (used && used + between + w > width) { n += 1; used = w; } else used += (used ? between : 0) + w;
         });
         return n;
       };
@@ -556,6 +611,14 @@ export function openGame(root, ctx) {
     board.toggleAttribute('data-wrap', !!pick.wrap);
     if (keyboard) picker.dataset.keys = pick.keys;
     else picker.removeAttribute('data-keys');
+    sizeResult();
+  }
+
+  // The result card's answer row (a game not solved) takes the board's
+  // cell size, so its tiles match the rows' (2026-11-10, the user asked).
+  function sizeResult() {
+    if (board.dataset.cell) result.dataset.cell = board.dataset.cell;
+    else result.removeAttribute('data-cell');
   }
 
   // ── Kanji guide ────────────────────────────────────────────────────
@@ -570,10 +633,10 @@ export function openGame(root, ctx) {
   //   its shape    Guided, or the Layout hint: a box per place, with a dot
   //                for each part still hidden (the same frame either way)
   //   Stroke count its strokes, on a line under the frame
-  // With the split shown (Guided) each frame sits over its kanji's cells
-  // and is always there. Without it the frames sit in a centred row apart
-  // from the cells, and show only once something is
-  // known: a part found green is enough (2026-11-10, the user asked).
+  // The frames sit in a centred row over the rows (the user asked for
+  // that over each frame above its kanji's cells, 2026-11-10). In Guided
+  // they're always there; otherwise they show once something is known: a
+  // part found green is enough (2026-11-10, the user asked).
   // Tapping a frame opens the kanji card (js/play/reveal.js). While a row
   // reveals, the guide shows the state before it (ui.frameFrom), then
   // catches up.
@@ -598,9 +661,6 @@ export function openGame(root, ctx) {
     board.classList.toggle('has-guide', show);
     // Not shown yet: whatever shows first is new, and comes in.
     if (!show) { frames.replaceChildren(); frameShown = new Set(); return; }
-    const split = splitShown();
-    const pl = places();
-    const counts = cellCounts();
     const seen = new Set();
     const known = knownOf(s);
     const slots = known.map((k, slot) => {
@@ -609,36 +669,37 @@ export function openGame(root, ctx) {
         seen.add(id);
         return frameShown !== null && !frameShown.has(id);
       };
-      const node = el('button', {
+      return el('button', {
         class: 'frame-slot', type: 'button', 'data-id': `frame-${slot}`, title: t('game.clue.again'),
         onclick: () => openClue('kanji')
       },
         kanjiFrame(k, { glyph, isNew, label: frameLabel(k, { slot, many: known.length > 1 }) }),
         k.strokes !== null ? strokesLine(k.strokes) : null,
         el('span', { class: 'visually-hidden' }, t('game.clue.again')));
-      if (split) {
-        node.style.setProperty('--n', counts[slot]);
-        node.style.setProperty('--g', pl ? pl[slot].filter((pos, i) => i && pos !== pl[slot][i - 1]).length : 0);
-      }
-      return node;
     });
-    frames.classList.toggle('is-centred', !split);
+    frames.classList.add('is-centred');
     frames.dataset.effects = 'revealStrokes revealLayout revealKanji';
-    frames.replaceChildren(el('span', { class: split ? 'row-tiles' : 'frame-row' }, slots));
+    frames.replaceChildren(el('span', { class: 'frame-row' }, slots));
     frameShown = seen;
   }
 
   function renderBoard() {
     const s = state();
     board.classList.toggle('is-parts', partsMode());
-    board.classList.toggle('is-flat', partsMode() && !splitShown());
+    board.classList.toggle('is-flat', partsMode() && !grouped());
     board.classList.toggle('has-made', madeShown());
     if (board.isConnected) fitBoard();
     renderFrame();
     renderShape();
     boardDone.setAttribute('aria-label', t('game.board'));
     const arrowsOn = engine.clues(s).arrows;
-    if (doneRows > s.guesses.length || arrowsOn !== doneArrows) { boardDone.replaceChildren(); doneRows = 0; doneArrows = arrowsOn; }
+    const groupedOn = grouped();
+    if (doneRows > s.guesses.length || arrowsOn !== doneArrows || groupedOn !== doneGrouped) {
+      boardDone.replaceChildren();
+      doneRows = 0;
+      doneArrows = arrowsOn;
+      doneGrouped = groupedOn;
+    }
     s.guesses.slice(doneRows).forEach((g, j) => {
       const i = doneRows + j;
       boardDone.append(guessRow(g, i, i === ui.newRow && !reducedMotion()));
@@ -785,12 +846,43 @@ export function openGame(root, ctx) {
   // a moment (.picker-float in styles.css), so it never moves the board or
   // scrolls the page.
   let messageTimer = 0;
+  const messageTime = () => parseFloat(window.TOKENS.active().transition.message) || 0;
   function say(kind, text) {
     clearTimeout(messageTimer);
+    clearRowError();
     ui.message = text ? { kind, text } : null;
     message.className = `status-line${ui.message && ui.message.kind === 'error' ? ' is-error' : ''}`;
     message.textContent = text || '';
-    if (text) messageTimer = setTimeout(() => say(null, ''), parseFloat(window.TOKENS.active().transition.message) || 0);
+    if (text) messageTimer = setTimeout(() => say(null, ''), messageTime());
+  }
+
+  // A guess that can't be made (2026-11-11, the user asked): the row being
+  // entered shakes, its cells edged red, with why under it, until the next
+  // key or a moment, like say().
+  function sayRow(text) {
+    say(null, '');
+    ui.rowError = text;
+    live.textContent = text;
+    const row = boardNext.querySelector('.board-row.is-next');
+    if (row) {
+      row.classList.add('is-error');
+      row.append(rowErrorNode(text));
+      row.classList.remove('is-shake');
+      void row.offsetWidth;
+      row.classList.add('is-shake');
+    }
+    messageTimer = setTimeout(() => say(null, ''), messageTime());
+  }
+
+  const rowErrorNode = (text) => el('p', { class: 'row-error', 'aria-hidden': 'true' }, text);
+
+  function clearRowError() {
+    if (!ui.rowError) return;
+    ui.rowError = null;
+    const row = boardNext.querySelector('.board-row.is-next');
+    if (!row) return;
+    row.classList.remove('is-error', 'is-shake');
+    row.querySelectorAll('.row-error').forEach((node) => node.remove());
   }
 
   function makeKeys() {
@@ -1025,7 +1117,12 @@ export function openGame(root, ctx) {
     const on = playing() && partsMode();
     picker.classList.toggle('is-keyboard', on);
     if (!on) { picker.replaceChildren(); return; }
-    picker.replaceChildren(float, hints, choices);
+    // Under the keys, End game: quiet, as it's rarely wanted (it was a flag
+    // in the header until 2026-11-10; the user asked).
+    const end = el('button', { class: 'btn btn-ghost btn-small picker-end', type: 'button', 'data-id': 'end-game', onclick: endGame });
+    end.innerHTML = FLAG;
+    end.append(t('game.end.open'));
+    picker.replaceChildren(float, hints, choices, el('div', { class: 'picker-foot' }, end));
     renderChoices();
   }
 
@@ -1034,13 +1131,13 @@ export function openGame(root, ctx) {
   function submit() {
     if (!partsMode()) return;
     if (ui.cells.includes(null)) {
-      say('error', t('game.errors.slots', { cells: ui.cells.length }));
+      sayRow(t('game.errors.slots', { cells: ui.cells.length }));
       return;
     }
     const r = engine.guess(state(), picksBySlot());
     if (r.error) {
       const detail = r.detail || {};
-      say('error', t(`game.errors.${r.error}`, { n: [...state().answer].length, cells: ui.cells.length, part: detail.part, cell: detail.cell }));
+      sayRow(t(`game.errors.${r.error}`, { n: [...state().answer].length, cells: ui.cells.length, part: detail.part, cell: detail.cell }));
       return;
     }
     const before = state();
@@ -1090,8 +1187,9 @@ export function openGame(root, ctx) {
   // The board stays as it was played (ui.held, fitBoard): same size, same
   // place (2026-11-10: the user found the old switch jumpy on desktop, the
   // board leaping up and its tiles shrinking). Anything that still moves
-  // glides (settle). Then, on a win, its effect. focus: the result's title
-  // takes the focus (End game).
+  // glides (settle). Then, on a win, its effect, and the page glides down
+  // to the card (glideToResult). focus: the result's title takes the focus
+  // (End game).
   function showResult({ focus = false } = {}) {
     clearTimeout(resultTimer);
     const calm = reducedMotion();
@@ -1106,7 +1204,11 @@ export function openGame(root, ctx) {
       renderBoard();
       renderResultCard({ arriving: !calm });
       settle(grid, before);
-      if (state().status === 'won') playWin();
+      const won = state().status === 'won';
+      if (won) playWin();
+      // On a win the effect plays first, the glide ending as it does.
+      const effect = won ? effectTime(store.get().settings.effect) : 0;
+      glideToResult(Math.max(0, effect - (parseFloat(window.TOKENS.active().transition.long) || 0)));
       if (focus) {
         const title = result.querySelector('#result-title');
         if (title) { title.setAttribute('tabindex', '-1'); title.focus({ preventScroll: true }); }
@@ -1116,6 +1218,71 @@ export function openGame(root, ctx) {
     if (calm || !picker.classList.contains('is-keyboard')) { swap(); return; }
     picker.classList.add('is-leaving');
     resultTimer = setTimeout(swap, parseFloat(window.TOKENS.active().transition.base) || 0);
+  }
+
+  // Once the game is over, after wait ms, one eased motion brings the
+  // result card into sight (2026-11-10, the user asked: it was out of sight
+  // below the board, and a first try that only scrolled wasn't smooth). The
+  // board lets go of the height it had with the keyboard up (ui.held), so
+  // its rows and the card move up into the room the keyboard left; and if
+  // the card still isn't all in sight, the page scrolls down to it at the
+  // same pace, but no further than leaves half the grid in sight
+  // (scrollGoal). Scrolling, a tap or a key calls it off where it is.
+  function glideToResult(wait) {
+    stopGlide();
+    const tr = window.TOKENS.active().transition;
+    const time = reducedMotion() ? 0 : parseFloat(tr.long) || 0;
+    const events = ['wheel', 'touchstart', 'keydown'];
+    const off = () => stopGlide();
+    let pending = 0;
+    let stopTween = () => {};
+    stopGlide = () => {
+      clearTimeout(pending);
+      stopTween();
+      events.forEach((type) => window.removeEventListener(type, off));
+      stopGlide = () => {};
+    };
+    events.forEach((type) => window.addEventListener(type, off, { passive: true }));
+    pending = setTimeout(() => {
+      if (!result.isConnected || !result.firstElementChild) { stopGlide(); return; }
+      // Where it all ends, measured with the board at its own height.
+      const held = board.classList.contains('is-held');
+      const from = board.getBoundingClientRect().height;
+      if (held) board.style.removeProperty('--held-h');
+      const to = board.getBoundingClientRect().height;
+      const top = window.scrollY;
+      const goal = scrollGoal();
+      if (held) board.style.setProperty('--held-h', `${from}px`);
+      stopTween = tween(time, easing(tr.glide), (p) => {
+        if (held) {
+          const h = from + (to - from) * p;
+          board.style.setProperty('--held-h', `${h}px`);
+          if (ui.held) ui.held.height = h;
+        }
+        if (goal !== null) window.scrollTo(0, top + (goal - top) * p);
+        if (p === 1) stopGlide();
+      });
+    }, wait);
+  }
+
+  // How far down the page goes to show the result card under the site
+  // header (which sticks): all of the card if it fits, else its top; but
+  // never so far that less than half the grid is in sight, or the last row
+  // played (a win's solved row) goes under the header. null when the card
+  // is in sight already.
+  function scrollGoal() {
+    const head = document.querySelector('.app-header');
+    const under = head ? head.getBoundingClientRect().bottom : 0;
+    const gap = parseFloat(window.TOKENS.active().spacing.md) || 0;
+    const card = result.getBoundingClientRect();
+    const rows = grid.getBoundingClientRect();
+    const last = boardDone.lastElementChild;
+    const need = Math.min(card.top - under - gap, card.bottom + gap - window.innerHeight);
+    const most = Math.min(rows.top + rows.height / 2 - under,
+      last ? last.getBoundingClientRect().top - under - gap : Infinity,
+      document.documentElement.scrollHeight - window.innerHeight - window.scrollY);
+    const by = Math.min(need, most);
+    return by > 0 ? window.scrollY + by : null;
   }
 
   // Slides a node from where it was (its top, before) to where it is now.
@@ -1179,14 +1346,19 @@ export function openGame(root, ctx) {
       rewards: rewards.map(describe),
       balance: store.points(),
       fresh,
+      // The tile reveal in use: the answer's row (a game not solved) plays
+      // it as the card arrives.
+      tiles: store.get().settings.tiles,
+      reveal: arriving,
       onPractice: () => (kind === 'practice' ? playAgain() : ctx.onPractice()),
       onHome: ctx.onHome
     });
     result.replaceChildren(card.node);
-    // Played from the keyboard: the result takes the focus the keys had.
+    // Played from the keyboard: the result takes the focus the keys had,
+    // leaving the scrolling to glideToResult.
     if (fresh && !ui.toasted && byKeyboard && (document.activeElement === document.body || !document.activeElement)) {
       const title = card.node.querySelector('#result-title');
-      if (title) { title.setAttribute('tabindex', '-1'); title.focus(); }
+      if (title) { title.setAttribute('tabindex', '-1'); title.focus({ preventScroll: true }); }
     }
     if (fresh && !ui.toasted) {
       ui.toasted = true;
@@ -1205,6 +1377,8 @@ export function openGame(root, ctx) {
     if (!game) { ctx.onHome(); return; }
     ui = freshUi();
     build();
+    // The header shows this game's: End game and the hints, not the points.
+    renderHead();
     window.scrollTo(0, 0);
   }
 
@@ -1212,6 +1386,7 @@ export function openGame(root, ctx) {
 
   function build() {
     stopFx();
+    stopGlide();
     clearTimeout(resultTimer);
     clearTimeout(frameTimer);
     ui.frameFrom = null;
@@ -1254,7 +1429,6 @@ export function openGame(root, ctx) {
     refresh() { ui.message = null; build(); },
     head,
     openHints: pickHints,
-    endGame,
     // keep: closing for a page of its own (app.js), so a game just over is
     // kept to come back to (ended).
     destroy({ keep = false } = {}) {
@@ -1262,7 +1436,7 @@ export function openGame(root, ctx) {
       ended = keep && !playing()
         ? { mode: mode.id, kind, game, points: ui.points, rewards: ui.rewards, toasted: ui.toasted, held: ui.held }
         : null;
-      clearInterval(timer); clearTimeout(resultTimer); clearTimeout(frameTimer); closeHints(); closeAsk(); stopFx();
+      clearInterval(timer); clearTimeout(resultTimer); clearTimeout(frameTimer); closeHints(); closeAsk(); stopFx(); stopGlide();
       if (card) card.dismiss();
       cancelAnimationFrame(resizeFrame);
       window.removeEventListener('resize', onResize);

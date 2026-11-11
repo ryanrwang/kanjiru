@@ -3,8 +3,8 @@
  *
  * The header: the brand on the left, and on the right one row of controls
  * that all look alike (bordered pills): the points, which open the Points
- * page, and the gear, which opens Settings. In a game on the go, End game's
- * flag and the hints held take the points' place. On a page of its own
+ * page, and the gear, which opens Settings. In a game on the go, the hints
+ * held take the points' place (End game is under the keyboard). On a page of its own
  * (Points, Settings, About) the controls make way for Close, which goes back
  * where you came from. Away from the play page the brand is a breadcrumb:
  * 漢 › Points, 漢 › Settings, 漢 › Play; 漢 goes home. Everything on a page
@@ -32,7 +32,7 @@
  * Close goes back one, and the phone's Back does the same.
  */
 import { MODES, MODE, LEVEL, ECONOMY, settingsLevel, validate } from './js/registry.js';
-import { t, setLang } from './js/i18n.js';
+import { t, tIn, setLang, lang, detect, LANGUAGES } from './js/i18n.js';
 import { el, switchRow } from './js/dom.js';
 import * as store from './js/store.js';
 import { openSettings } from './js/settings.js';
@@ -63,7 +63,14 @@ const pts = (n) => t('currency.amount', { n });
 // ── Header: the points, Settings, and Close ─────────────────────────
 
 const FLAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/></svg>';
-const BULB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>';
+// The hints: a lit bulb, drawn (styles.css .bulb-*): rays in the skin's
+// accent, gold glass with a glint, and its base (2026-11-10, the user asked
+// for a more illustrated one).
+const BULB = '<svg class="bulb" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  + '<path class="bulb-rays" d="M12 1.5v1.5M4.6 4.6l1.1 1.1M19.4 4.6l-1.1 1.1M2 11.5h1.5M20.5 11.5H22"/>'
+  + '<path class="bulb-glass" d="M12 6a5.5 5.5 0 0 0-3.2 10c.5.35.7.9.7 1.5v1h5v-1c0-.6.2-1.15.7-1.5A5.5 5.5 0 0 0 12 6z"/>'
+  + '<path class="bulb-glint" d="M9.6 11.2a2.6 2.6 0 0 1 2-2.5"/>'
+  + '<path class="bulb-base" d="M9.5 21h5M10.75 23h2.5"/></svg>';
 const GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 const CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
@@ -79,14 +86,12 @@ const PAGES = new Set(['points', 'settings', 'about']);
 
 const byId = (id) => document.getElementById(id);
 // The controls stay put between redraws, so the focus stays on them.
-const endBtn = byId('end-open');
 const hintsBtn = byId('hints-open');
 const walletBtn = byId('wallet');
 const settingsBtn = byId('settings-open');
 const closeBtn = byId('page-close');
 const dockBtn = byId('head-points');
 let dockShown = null;   // the points the docked total last showed
-endBtn.innerHTML = FLAG;
 settingsBtn.innerHTML = GEAR;
 closeBtn.innerHTML = CLOSE;
 
@@ -121,20 +126,20 @@ function renderHeader() {
   settingsBtn.hidden = own;
   label(settingsBtn, t('settings.open'));
 
-  // While a game is on, End game (a flag: give up, or a new puzzle; js/play/
-  // screen.js endGame) and the hints held, which open the hints modal, take
-  // the points' place.
+  // While a game is on, the hints held, which open the hints modal, take
+  // the points' place. (End game is under the keyboard since 2026-11-10;
+  // js/play/screen.js.)
   const hintsOn = !!(game && game.playing);
-  endBtn.hidden = !hintsOn;
-  label(endBtn, t('game.end.open'));
   hintsBtn.hidden = !hintsOn;
   if (hintsOn) {
-    const icon = el('span', { class: 'head-icon is-accent' });
+    const icon = el('span', { class: 'head-icon' });
     icon.innerHTML = BULB;
     hintsBtn.replaceChildren(icon, el('span', {}, String(game.held)));
     hintsBtn.title = t('game.powers.title');
     hintsBtn.setAttribute('aria-label', t('header.hints', { n: game.held }));
   }
+  renderHeadTip(hintsOn && game.tip ? 'bonus'
+    : p.name === 'play' && save.settings.langAsked && !save.settings.langTipSeen ? 'lang' : null);
 
   // The points open the Points page. A change since they last showed rises
   // from them, once they're on screen (a game on the go shows the hints;
@@ -164,8 +169,119 @@ function renderHeader() {
   dockShown = docked ? now : null;
 }
 
-endBtn.addEventListener('click', () => view && view.endGame && view.endGame());
-hintsBtn.addEventListener('click', () => view && view.openHints && view.openHints());
+// The tooltip: one component for every tip (headTip(), styles.css
+// .head-tip; the user asked, 2026-11-11). Glass hanging from the header,
+// its arrow at one of the header's controls (aimTip()); the rest of the
+// page dims but that control, which calls, a ring swelling from it
+// (.is-calling). One at a time (2026-11-10, the user asked for both):
+//   lang   after the first visit's language picker, on the play page: a
+//          small tip at the gear, where the language changes. Closing it
+//          or tapping the gear puts it away (settings.langTipSeen).
+//   bonus  the first game's welcome bonus, a card at the hints: Buy a
+//          hint opens them, Maybe later puts it away, and so does opening
+//          the hints (settings.hintTipSeen); js/play/screen.js head()
+//          says when it's due.
+const TIPS = {
+  lang: { anchor: () => settingsBtn, build: () => langTip() },
+  bonus: { anchor: () => hintsBtn, build: () => bonusCard() }
+};
+let tipAnchor = null;
+function renderHeadTip(which) {
+  const head = document.querySelector('.app-header');
+  const was = head.querySelector('.head-tip');
+  const tip = TIPS[which] || null;
+  if (tipAnchor) {
+    tipAnchor.classList.remove('is-calling');
+    tipAnchor.removeAttribute('aria-describedby');
+  }
+  tipAnchor = tip ? tip.anchor() : null;
+  if (!tip) {
+    if (was) was.remove();
+    return;
+  }
+  // The same tip in the same language stays put, so it doesn't come in
+  // again each time the header redraws.
+  const key = `${which}:${lang()}`;
+  const node = was && was.dataset.tip === key ? was : tip.build();
+  node.dataset.tip = key;
+  if (node !== was) {
+    if (was) was.replaceWith(node);
+    else head.append(node);
+  }
+  tipAnchor.classList.add('is-calling');
+  tipAnchor.setAttribute('aria-describedby', node.id);
+  aimTip();
+}
+
+// The tooltip itself. size: 'small' (an icon, a line and ×) or 'card' (a
+// card the page's width, its parts stacked and centred).
+function headTip({ id, size }, ...children) {
+  return el('div', { class: `head-tip is-${size}`, id, role: 'note' }, ...children);
+}
+
+// Its arrow at the middle of its control, wherever the header put it.
+function aimTip() {
+  const node = document.querySelector('.head-tip');
+  if (!node || !tipAnchor) return;
+  const box = node.getBoundingClientRect();
+  const at = tipAnchor.getBoundingClientRect();
+  node.style.setProperty('--tip-arrow', `${Math.round(box.right - (at.left + at.width / 2))}px`);
+}
+window.addEventListener('resize', aimTip);
+
+function tipClose(text, onclick) {
+  const close = el('button', { class: 'head-tip-close', type: 'button', onclick });
+  close.innerHTML = CLOSE;
+  label(close, text);
+  return close;
+}
+
+function langTip() {
+  return headTip({ id: 'lang-tip', size: 'small' },
+    el('span', { class: 'head-tip-icon', 'aria-hidden': 'true' }, '🌐'),
+    el('p', { class: 'head-tip-text' }, t('welcome.langTip.body')),
+    tipClose(t('welcome.langTip.close'), seenLangTip));
+}
+
+// The coin, the bonus, and two buttons: Maybe later, and Buy a hint, which
+// opens the hints (2026-11-11, the user asked: no blurb, no ×).
+function bonusCard() {
+  return headTip({ id: 'bonus-tip', size: 'card' },
+    el('span', { class: 'bonus-coin', 'aria-hidden': 'true' }, ECONOMY.currency.icon),
+    el('p', { class: 'bonus-title' }, t('welcome.tip.title')),
+    el('p', { class: 'bonus-amount' }, pts(ECONOMY.startingPoints)),
+    el('div', { class: 'bonus-actions' },
+      el('button', { class: 'btn btn-ghost', type: 'button', 'data-id': 'bonus-later', onclick: seenHintTip },
+        t('welcome.tip.later')),
+      el('button', {
+        class: 'btn btn-primary', type: 'button', 'data-id': 'bonus-buy',
+        onclick: () => {
+          seenHintTip();
+          if (view && view.openHints) view.openHints();
+        }
+      }, t('welcome.tip.button'))));
+}
+
+function seenLangTip() {
+  if (store.get().settings.langTipSeen) return;
+  store.update((s) => { s.settings.langTipSeen = true; });
+  save = store.get();
+  renderHeader();
+}
+
+function seenHintTip() {
+  if (store.get().settings.hintTipSeen) return;
+  store.update((s) => { s.settings.hintTipSeen = true; });
+  save = store.get();
+  renderHeader();
+}
+
+hintsBtn.addEventListener('click', () => {
+  seenHintTip();
+  if (view && view.openHints) view.openHints();
+});
+// The gear is where the language tip pointed: found, it goes.
+settingsBtn.addEventListener('click', () => { if (save.settings.langAsked) seenLangTip(); });
 closeBtn.addEventListener('click', closePage);
 
 byId('brand').addEventListener('click', (event) => {
@@ -602,9 +718,33 @@ function renderAll() {
 window.addEventListener('popstate', route);
 window.addEventListener('hashchange', route);
 
+// The first visit asks which language to play in, each offered in its own
+// words, the device's first (2026-11-10, the user asked). Not now follows
+// the device. Either way it asks once (settings.langAsked); Settings can
+// change it any time.
+async function askLanguage() {
+  if (save.settings.langAsked) return;
+  const device = detect();
+  const order = [...LANGUAGES].sort((a, b) => (b.id === device) - (a.id === device));
+  const pick = await ask({
+    icon: '🌐',
+    title: t('welcome.lang.title'),
+    options: order.map((l) => ({ id: l.id, name: l.name, desc: tIn(l.id, 'welcome.lang.play'), lang: l.id })),
+    cancel: t('welcome.lang.later')
+  });
+  store.update((s) => {
+    s.settings.langAsked = true;
+    if (pick) s.settings.lang = pick;
+  });
+  const was = lang();
+  settingsChanged();
+  if (lang() !== was) renderAll();
+}
+
 catchUp();
 applyLook();
 renderAll();
+askLanguage();
 // The play cards wait for the data. Dailies it moved to keep playing
 // (useEpoch, on the first visit after launch) change the Points page's
 // streak and stats, so it redraws too.

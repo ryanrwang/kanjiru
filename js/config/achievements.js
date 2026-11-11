@@ -25,6 +25,8 @@
  */
 export const ACHIEVEMENTS = [
   { id: 'first-win',    test: { stat: 'wins', atLeast: 1 }, reward: { points: 50 } },
+  // The eighth, for an even 8 at launch (2026-11-10, the user asked).
+  { id: 'regular',      test: { stat: 'wins', atLeast: 25 }, reward: { points: 150 } },
   { id: 'unaided',      test: { stat: 'cleanWins', atLeast: 1 }, reward: { points: 50 } },
   { id: 'hard-win',     test: { stat: 'hardWins', atLeast: 1 }, reward: { points: 200 } },
   { id: 'sharp-eye',    test: { stat: 'fastestWin', atMost: 2 } },
