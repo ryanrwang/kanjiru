@@ -4,7 +4,7 @@ A kanji word puzzle in the spirit of Wordle: guess the word (1–4 kanji, 4–6 
 
 ## Start here
 - **`docs/DESIGN.md`**: every game decision so far, marked Decided, Proposed or Open, with the reasons. Confirm anything Proposed with the user before building on it.
-- **`docs/ROADMAP.md`**: the steps to launch, their order, and the prompt that starts each one. Tick a step off when it merges, and update both docs when a decision changes.
+- **`docs/ROADMAP.md`**: the steps to launch, their order, and the prompt that starts each one. Tick a step off when it merges, and update both docs when a decision changes. Next up: step 9, the audit follow-ups, planned in full there (agreed 2026-11-11).
 - **Threads share this folder.** Two sessions here at once will switch each other's Git branches, so run one at a time or give each its own worktree.
 
 ## Tech Stack
@@ -29,7 +29,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 ## Key Files
 | File | Purpose |
 |---|---|
-| `index.html` | Shell: loads `tokens.js`, the fonts, `styles.css`, then `app.js`. Its `<head>` also preloads every module and the data, and has the install and share-preview tags |
+| `index.html` | Shell: loads `tokens.js`, the fonts, `styles.css`, then `app.js`. Its `<head>` also preloads every module and the data, and has the install and share-preview tags; the body has a live region for page moves (`#route-status`) and a line for a browser without JavaScript |
 | `manifest.webmanifest` | The web app manifest: home-screen name, colours and icons |
 | `icons/` | Home-screen icons and the 1200 × 630 share image, drawn by `tools/make_images.py` |
 | `sw.js` | Service worker: network first, a kept copy only offline; never `api/` or `review/` |
@@ -37,7 +37,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `.htaccess` | Gzips the JSON data and has it rechecked every visit (the site's root `.htaccess` does pages, CSS and JS) |
 | `tokens.js` | Design tokens, skins' colours (`THEMES`) and `TOKENS.applyLook()` |
 | `styles.css` | All styles, using token variables only |
-| `app.js` | The header (one look for every control, `.head-btn`; a breadcrumb on the Points, Settings, About and game pages; Close on Points, Settings and About; in a game on the go, the hints pill in the points' place; tips hanging from it, one tooltip component (`headTip()`, `renderHeadTip()`; the page dims but the control it points at): the language tip at the gear after the first visit's language picker (`askLanguage()`), and the first game's welcome bonus card at the hints), the play page (How to play on top, open until a game is played; the play card with the level switches, and beside Continue the flag that ends the game on the go (`endFromCard()`); every game played; the install tip, folded, at the bottom), data loading, and the routes (`''` play page, `#points`, `#settings`, `#about`, `#main` a random game, or a mode's daily where it has one, `#main/practice` keep playing after a daily), each a history entry with its depth so 漢 and Close go back |
+| `app.js` | The header (one look for every control, `.head-btn`; a breadcrumb on the Points, Settings, About and game pages; Close on Points, Settings and About; in a game on the go, the hints pill in the points' place; tips hanging from it, one tooltip component (`headTip()`, `renderHeadTip()`; the page dims but the control it points at): the language tip at the gear after the first visit's language picker (`askLanguage()`), and the first game's welcome bonus card at the hints), the play page (How to play on top, open until a game is played; the play card with the level switches, and beside Continue the flag that ends the game on the go (`endFromCard()`); every game played; the install tip, folded, at the bottom), data loading, and the routes (`''` play page, `#points`, `#settings`, `#about`, `#main` a random game, or a mode's daily where it has one, `#main/practice` keep playing after a daily), each a history entry with its depth so 漢 and Close go back; a move sets the tab's title, tells screen readers and carries the keyboard's focus (`arrive()`); a save changed in another tab is taken and drawn again (`saveChangedElsewhere()`) |
 | `js/config/modes.js` | Game modes: main (4–6 parts, 1–4 kanji), with no daily since 2026-11-09, so every game is a random puzzle (`daily: false`); k1–k4 retired |
 | `js/config/levels.js` | Levels: Normal, plus the Hard and Guided switches on the play card (`settingsLevel()`); Easy retired |
 | `js/config/skins.js` | Skin catalogue: 8 colours, 8 tile reveals, 8 win effects, each free, bought or unlocked by an achievement, and 4 hint icon looks (Emoji, free; Badge and Seal to buy; Illustrated with Regular; `style`) |
@@ -46,7 +46,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/config/achievements.js` | Achievements as stat + threshold (8 at launch) |
 | `js/config/rules.js` | Rules that aren't points or modes: the palette's always-shown tiles and decoy weights, palette-only guesses, practice repeats, share squares, how long Not now hides the install tip, the taps that turn debug mode on (`debugTaps`) |
 | `js/registry.js` | One import for all catalogues, plus a start-up check that their ids agree |
-| `js/store.js` | The save in localStorage: versioned (v3; the v2 → v3 migration starts every older save afresh, the launch reset), with migrations, plus export, import and the merge rules (`MERGE`). Games on the go are in `playing`; points and hints held are the `ledger` (`points()`, `held()`, `enter()`); `resetAchievements()` and `resetAll()` (Settings, Start over); `deleteGame()` (history's Delete), remembered in `deleted` so a merge doesn't bring a game back |
+| `js/store.js` | The save in localStorage: versioned (v3; the v2 → v3 migration starts every older save afresh, the launch reset), with migrations, plus export, import and the merge rules (`MERGE`). Games on the go are in `playing`; points and hints held are the `ledger` (`points()`, `held()`, `enter()`); `resetAchievements()` and `resetAll()` (Settings, Start over); `deleteGame()` (history's Delete), remembered in `deleted` so a merge doesn't bring a game back; `sync()` takes a save another tab wrote; a save that can't be read is kept under `kanjiru-unreadable`; `keepSafe()` asks the browser to keep the save once a game is finished |
 | `js/ledger.js` | The ledger: every gain and spend of points or hints as an entry with its own id, the balance, the v1 migration and the merge that joins entries |
 | `js/points.js` | The Points page (`#points`, opened by the points in the header, which then reads 漢 › Points, with Close): the wallet, Looks with an example of every look, Hints & powers (one per row, its price on the right) and Achievements, with buying confirmed in a modal (a hint's has Don't ask again). On scroll the header sticks on glass (app.js `glass()`, on every page) and the total docks into it (`dock()`). `openPoints(root, ctx)` |
 | `js/about.js` | The About page (`#about`): who made it, where progress lives, and the credits EDRDG's licence asks for, with every source in `data/ATTRIBUTION.md`. `openAbout(root)` |
@@ -79,7 +79,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/play/share.js` | The share text and emoji grid (squares in `rules.js` `share`) |
 | `js/play/glyph.js` | Part glyphs as text, or KanjiVG strokes where fonts may lack them |
 | `tests/` | `node --test` tests for the engine, on fixtures (never the real word list) |
-| `api/transfer.php` | Device transfer: a save in, a one-time code out, and back. Settings at the top |
+| `api/transfer.php` | Device transfer: a save in, a one-time code out, and back. Settings at the top. Limits per address (an IPv6 /64 is one), a cap on waiting saves, and only this site's own pages may call it |
 | `js/i18n.js` | Interface languages: `t()`, `setLang()`, `LANGUAGES`, missing-text check |
 | `js/i18n/en.js`, `js/i18n/ja.js` | All interface text, English (the reference) and Japanese |
 | `tools/build_data.py` | Downloads the dictionaries and writes `data/candidates.json` (settings at the top; see `tools/README.md`). `--parts-only` redoes just the part breakdowns and `data/parts.json` |
@@ -112,6 +112,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 - **Ids are permanent.** Saves store mode, skin, power and achievement ids. Never rename one; add a new entry and retire the old.
 - **The save is versioned.** Changing its shape means bumping `VERSION` in `js/store.js` and adding a migration. Adding a key needs nothing: missing keys are filled from `fresh()`.
 - **History is the source of truth.** Streaks and stats are worked out from `history`, never stored as counters.
+- **Every change to the save goes through `store.update()`,** which writes it at once. Other tabs rely on it: a tab takes a save another wrote (`store.sync()`), so it must hold nothing unwritten.
 - **No dailies now:** every game is a random puzzle (docs/DESIGN.md, "No dailies"). The daily code stays for a mode with `daily: true`.
 - **The epoch is fixed after launch.** Dailies from another epoch become keep-playing games (`settleDailies()` in `js/store.js`), so moving it never breaks a save, but it does change every player's puzzle numbers.
 - **A new module needs a preload.** Add its `<link rel="modulepreload">` to `index.html`'s `<head>`; `node --test` (`tests/head.test.js`) names any that are missing or extra.

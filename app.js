@@ -94,6 +94,10 @@ const CRUMBS = { points: 'points.title', settings: 'settings.title', about: 'abo
 const PAGES = new Set(['points', 'settings', 'about']);
 
 const byId = (id) => document.getElementById(id);
+// The tab's title on the play page (index.html's); a page of its own puts
+// its name before it, "Settings · Kanjiru · 漢じる", so tabs, the browser's
+// history and screen readers say where you are.
+const TITLE = document.title;
 // The controls stay put between redraws, so the focus stays on them.
 const hintsBtn = byId('hints-open');
 const walletBtn = byId('wallet');
@@ -120,6 +124,7 @@ function renderHeader() {
   // the user asked).
   const answer = game && game.answer ? game.answer : null;
   const crumb = answer || (CRUMBS[p.name] ? t(CRUMBS[p.name]) : null);
+  document.title = crumb ? `${crumb} · ${TITLE}` : TITLE;
   brand.title = t('header.home');
   // Shown as 漢 alone, the link is named for where it goes.
   if (crumb) brand.setAttribute('aria-label', t('header.home'));
@@ -336,6 +341,25 @@ function settingsChanged() {
   applyLook();
   renderHeader();
 }
+
+// Another tab changed the save, or the home-screen app did (on Android it
+// shares Chrome's storage): this one takes it and draws again, so its next
+// change can't write over theirs with what it held (js/store.js sync()).
+// The storage event comes while the other tab writes; a tab that was in
+// the background, or kept by the browser to come back to (pageshow), checks
+// as it returns.
+function saveChangedElsewhere() {
+  if (!store.sync()) return;
+  save = store.get();
+  setLang(save.settings.lang);
+  applyLook();
+  renderAll();
+}
+window.addEventListener('storage', (event) => {
+  if (event.key === null || event.key === store.SAVE_KEY) saveChangedElsewhere();
+});
+window.addEventListener('pageshow', (event) => { if (event.persisted) saveChangedElsewhere(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) saveChangedElsewhere(); });
 
 // With no saved choice, follow the device as it switches.
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
@@ -612,7 +636,9 @@ function renderPlay() {
   app.replaceChildren(guide.node, renderCards());
   renderHistory();
   renderTip();
-  // The countdown ticks; at midnight the new daily takes the card.
+  // The countdown ticks; at midnight the new daily takes the card. With no
+  // daily listed (none now), there's nothing to count down to.
+  if (!MODES.some((m) => m.listed && m.daily)) return;
   const day = localDate();
   playTimer = setInterval(() => {
     if (localDate() !== day) { renderAll(); return; }
@@ -662,9 +688,32 @@ function closePage() {
 function route() {
   if (routed === location.hash) return;
   routed = location.hash;
+  const from = document.body.dataset.page;
   renderAll();
   window.scrollTo(0, 0);
   glass();   // at the top now, before the scroll event's frame
+  arrive(from);
+}
+
+// A move between pages, for someone who can't see it happen: a screen
+// reader hears the page's name (index.html's #route-status, a live
+// region), and a player on the keyboard keeps a focus: the control that
+// opened the page hides, which would drop it. A page of its own puts it on
+// Close; closing one puts it back on the control that opened it (the
+// points, the gear). With a mouse or a finger nothing takes the focus, so
+// no ring shows; and in a game it stays where the game's keys expect it.
+const routeStatus = byId('route-status');
+const OPENERS = { points: walletBtn, settings: settingsBtn };
+let keyed = false;   // the last move came from the keyboard
+document.addEventListener('keydown', (event) => { if (!event.metaKey && !event.ctrlKey && !event.altKey) keyed = true; }, true);
+document.addEventListener('pointerdown', () => { keyed = false; }, true);
+
+function arrive(from) {
+  const p = page();
+  if (routeStatus) routeStatus.textContent = CRUMBS[p.name] ? t(CRUMBS[p.name]) : t('header.home');
+  if (!keyed) return;
+  const to = PAGES.has(p.name) ? closeBtn : OPENERS[from];
+  if (to && !to.hidden) to.focus({ preventScroll: true });
 }
 
 async function renderGame({ mode, kind }) {

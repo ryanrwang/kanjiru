@@ -94,7 +94,8 @@ function render() {
   // Once shown, debug stays for this visit, even switched off.
   if (store.get().settings.debug) ui.debugShown = true;
 
-  // Named by the header's crumb, 漢 › Settings (app.js).
+  // Named by the header's crumb, 漢 › Settings (app.js), which is the
+  // page's h1: so each section's title is an h2, and a part of one an h3.
   page.replaceChildren(el('div', { class: 'card sheet-body settings-card' },
     renderLanguage(),
     renderScheme(),
@@ -136,7 +137,7 @@ function fold(id, titleKey, ...body) {
     ontoggle: (event) => { ui.open[id] = event.currentTarget.open; }
   },
   el('summary', { class: 'fold-summary', 'data-id': `${id}-fold` },
-    el('h3', { class: 'sheet-section-title', id: `${id}-title` }, t(titleKey)),
+    el('h2', { class: 'sheet-section-title', id: `${id}-title` }, t(titleKey)),
     el('span', { class: 'fold-chevron', 'aria-hidden': 'true' })),
   el('div', { class: 'sheet-fold-body' }, body));
 }
@@ -145,7 +146,7 @@ function fold(id, titleKey, ...body) {
 
 function renderLanguage() {
   return el('section', { class: 'sheet-section sheet-row', 'aria-labelledby': 'lang-title' },
-    el('h3', { class: 'sheet-section-title', id: 'lang-title' }, t('settings.language')),
+    el('h2', { class: 'sheet-section-title', id: 'lang-title' }, t('settings.language')),
     segmented({
       id: 'lang', label: t('settings.language'), value: lang(),
       options: LANGUAGES.map((l) => ({ id: l.id, label: l.name, lang: l.id })),
@@ -159,7 +160,7 @@ function renderScheme() {
   const fixed = window.TOKENS.schemesOf(look.theme).length < 2;
   const saved = store.get().settings.scheme;
   return el('section', { class: 'sheet-section sheet-row', 'aria-labelledby': 'scheme-title' },
-    el('h3', { class: 'sheet-section-title', id: 'scheme-title' }, t('settings.scheme.title')),
+    el('h2', { class: 'sheet-section-title', id: 'scheme-title' }, t('settings.scheme.title')),
     segmented({
       id: 'scheme', label: t('settings.scheme.title'), disabled: fixed,
       value: fixed ? look.scheme : saved || 'auto',
@@ -175,7 +176,7 @@ function renderScheme() {
 // and here it comes back on.
 function renderHints() {
   return el('section', { class: 'sheet-section', 'aria-labelledby': 'hints-settings-title' },
-    el('h3', { class: 'sheet-section-title', id: 'hints-settings-title' }, t('settings.hints.title')),
+    el('h2', { class: 'sheet-section-title', id: 'hints-settings-title' }, t('settings.hints.title')),
     switchRow({
       id: 'confirm-hint-buy', name: t('settings.hints.name'), note: t('settings.hints.body'),
       on: store.get().settings.confirmHintBuy !== false,
@@ -195,7 +196,7 @@ function renderInstall() {
     el('p', { class: 'sheet-note' }, t(`install.why.${p}`)),
     (both ? ['ios', 'android'] : [p]).map((q) => (both
       ? el('div', { class: 'sheet-sub', role: 'group', 'aria-labelledby': `install-${q}-title` },
-        el('h4', { class: 'sheet-sub-title', id: `install-${q}-title` }, t(`install.${q}.name`)),
+        el('h3', { class: 'sheet-sub-title', id: `install-${q}-title` }, t(`install.${q}.name`)),
         installSteps(q))
       : installSteps(q))),
     canPrompt() ? el('div', { class: 'btn-row' },
@@ -210,7 +211,7 @@ function renderInstall() {
 
 function renderAbout() {
   return el('section', { class: 'sheet-section sheet-row', 'aria-labelledby': 'about-link-title' },
-    el('h3', { class: 'sheet-section-title about-title', id: 'about-link-title', onclick: tapAbout }, t('about.title')),
+    el('h2', { class: 'sheet-section-title about-title', id: 'about-link-title', onclick: tapAbout }, t('about.title')),
     // app.js opens it as a page, so Close there comes back here.
     el('a', { class: 'btn btn-secondary btn-small', href: '#about', 'data-id': 'about' }, t('about.open')));
 }
@@ -236,7 +237,7 @@ function tapAbout() {
 
 function renderReset() {
   const row = (id, onclick) => el('div', { class: 'sheet-sub', role: 'group', 'aria-labelledby': `reset-${id}-title` },
-    el('h4', { class: 'sheet-sub-title', id: `reset-${id}-title` }, t(`reset.${id}.name`)),
+    el('h3', { class: 'sheet-sub-title', id: `reset-${id}-title` }, t(`reset.${id}.name`)),
     el('p', { class: 'sheet-note' }, t(`reset.${id}.note`)),
     el('div', { class: 'btn-row' },
       el('button', { class: `btn ${id === 'all' ? 'btn-danger' : 'btn-secondary'}`, type: 'button', 'data-id': `reset-${id}`, onclick },
@@ -317,7 +318,7 @@ async function resetAll() {
 function renderDebug() {
   const on = !!store.get().settings.debug;
   return el('section', { class: 'sheet-section', 'aria-labelledby': 'debug-title' },
-    el('h3', { class: 'sheet-section-title', id: 'debug-title' }, t('settings.debug.title')),
+    el('h2', { class: 'sheet-section-title', id: 'debug-title' }, t('settings.debug.title')),
     switchRow({
       id: 'debug', name: t('settings.debug.name'), note: t('settings.debug.body'), on,
       onChange: (value) => {
@@ -331,7 +332,7 @@ function renderDebug() {
 
 function section(id, ...content) {
   return el('div', { class: 'sheet-sub', role: 'group', 'aria-labelledby': `transfer-${id}-title` },
-    el('h4', { class: 'sheet-sub-title', id: `transfer-${id}-title` }, t(`transfer.${id}.title`)),
+    el('h3', { class: 'sheet-sub-title', id: `transfer-${id}-title` }, t(`transfer.${id}.title`)),
     el('p', { class: 'sheet-note' }, t(`transfer.${id}.body`)),
     content,
     ui.ask && ui.ask.section === id ? renderAsk() : null,

@@ -115,7 +115,16 @@
     </nav>
   </header>
 
-  <main class="app-main" id="app"></main>
+  <!-- app.js draws every page in here. Without JavaScript nothing can run
+       (the tokens that style the page are a script too), so say so. -->
+  <main class="app-main" id="app">
+    <noscript>
+      <p class="noscript">Kanjiru needs JavaScript to run. Turn it on in your browser’s settings, then reload.</p>
+      <p class="noscript">漢じるを遊ぶにはJavaScriptが必要です。ブラウザの設定でオンにして、再読み込みしてください。</p>
+    </noscript>
+  </main>
+  <!-- A move between pages, said to screen readers (app.js arrive()). -->
+  <p class="visually-hidden" id="route-status" role="status"></p>
 
   <footer class="app-footer">
     <a href="/apps/" title="Back to Apps" class="rw-back-link">

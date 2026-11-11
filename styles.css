@@ -15,6 +15,13 @@ html, body { margin: 0; padding: 0; }
    Overlay scrollbars (phones, macOS) take no room either way. */
 html { scrollbar-gutter: stable; }
 
+/* A phone turned on its side enlarges text it thinks is small, unevenly
+   (iOS Safari). Sizes stay as the tokens set them; pinch zoom still works. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   min-height: 100vh;
   min-height: 100dvh;
@@ -67,9 +74,14 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   width: 100%;
   max-width: var(--layout-container);
   margin: 0 auto;
-  padding-left: var(--spacing-md);
-  padding-right: var(--spacing-md);
+  /* Clear of a phone's notch and rounded corners when it's on its side:
+     the page reaches the screen's edges (viewport-fit=cover, index.html). */
+  padding-left: max(var(--spacing-md), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--spacing-md), env(safe-area-inset-right, 0px));
 }
+
+/* Without JavaScript nothing runs, the tokens included: index.html's note. */
+.noscript { text-align: center; }
 
 .app-header {
   display: flex;
@@ -1004,6 +1016,23 @@ summary.history-summary:hover { background: var(--color-interactive-hover); }
 .is-near-bg { background: var(--color-feedback-near); }
 .is-miss-bg { background: var(--color-feedback-miss); }
 
+/* Forced colours (Windows' contrast themes) repaint every background with
+   the theme's, which would leave a guess's tiles all alike: green, yellow
+   and grey are the game, so scored tiles, the legend's squares and the
+   looks' examples keep theirs. Everything else takes the theme's colours. */
+@media (forced-colors: active) {
+  .tile.is-hit,
+  .tile.is-near,
+  .tile.is-other,
+  .tile.is-miss,
+  .is-hit-bg,
+  .is-near-bg,
+  .is-miss-bg,
+  .swatch-preview {
+    forced-color-adjust: none;
+  }
+}
+
 /* ── Buttons ───────────────────────────────────────────────────────── */
 
 .btn {
@@ -1040,6 +1069,14 @@ summary.history-summary:hover { background: var(--color-interactive-hover); }
   color: var(--color-action-secondary-text);
 }
 .btn-secondary:hover:not(:disabled) { background: var(--color-action-secondary-hover); }
+
+/* Forced colours drop a button's fill, which is all that showed it was
+   one: an edge in the text's colour takes its place (a filled button has
+   no border of its own to repaint). */
+@media (forced-colors: active) {
+  .btn-primary,
+  .btn-secondary { border: var(--stroke-thin) solid; }
+}
 
 /* A link drawn as a button (About in Settings) keeps the button's look. */
 a.btn { text-decoration: none; }
@@ -4323,9 +4360,6 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   line-height: var(--font-lineHeight-snug);
 }
 
-/* In Settings, between the sheet's notes and its sub-titles. */
-.sheet-section .install-steps { font-size: var(--font-size-sm); }
-
 .install-note {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
@@ -4391,6 +4425,14 @@ button.clue-chip:hover { border-color: var(--color-border-strong); }
   flex-wrap: wrap;
   column-gap: var(--spacing-xs);
   overflow-wrap: anywhere;
+}
+
+/* Each link is a full touch target (24 px high), so two rows of them on a
+   narrow phone aren't too close to tap (WCAG 2.5.8). */
+.credit-links > * {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--spacing-lg);
 }
 
 .credit-sep { color: var(--color-text-muted); }

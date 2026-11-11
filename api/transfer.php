@@ -17,8 +17,16 @@
  * Storage: codes/ next to this file. The web can't read it (a deny-all
  * .htaccess this script writes into it, plus the rule in api/.htaccess),
  * Git ignores it and the deploy skips it. Files are named by a hash of the
- * code, so even a leaked file name isn't a working code. A code lasts
- * CODE_SECONDS and is deleted the first time it's read.
+ * code, so a listing doesn't show codes at a glance; it's the folder being
+ * private that keeps them safe, since a 6-character code's hash can be
+ * found by trying them all. A code lasts CODE_SECONDS and is deleted the
+ * first time it's read; once it has expired its save is emptied, and the
+ * empty file stays a while to say "expired".
+ *
+ * Limits: each address gets RATE_LIMITS requests per RATE_WINDOW (an IPv6
+ * /64, one home or phone, counts as one address), and the folder holds at
+ * most STORE_BYTES of saves, so it can't be used to fill the disk. Only
+ * this site's own pages may call it (sameSite()).
  *
  * Written for PHP 7.4 and up (the site runs PHP 8.2), core functions only.
  */
@@ -34,6 +42,7 @@ const MAX_BYTES     = 1048576;    // 1 MB: years of daily games
 const RATE_WINDOW   = 900;        // seconds
 const RATE_LIMITS   = ['send' => 10, 'receive' => 20];   // per IP per window
 const SWEEP_AFTER   = 3600;       // expired codes stay this long, to say "expired"
+const STORE_BYTES   = 52428800;   // 50 MB of live saves at most; past it, send waits
 
 define('STORE', __DIR__ . '/codes');
 
@@ -95,10 +104,19 @@ function codePath(string $code): string
     return STORE . '/' . hash('sha256', $code) . '.json';
 }
 
-// Drops codes long past their expiry, half-read leftovers and old rate counts.
+// Drops codes long past their expiry, half-read leftovers and old rate counts,
+// and empties the saves of codes that have expired: the empty file still
+// says "expired" (its time is kept), but no longer takes room.
 function sweep(): void
 {
     $now = time();
+    foreach (glob(STORE . '/*.json') ?: [] as $file) {
+        $time = @filemtime($file);
+        if ($time !== false && $time < $now - CODE_SECONDS && @filesize($file) > 0) {
+            @file_put_contents($file, '');
+            @touch($file, $time);
+        }
+    }
     $old = function (string $pattern, int $age) use ($now): void {
         foreach (glob($pattern) ?: [] as $file) {
             $time = @filemtime($file);
@@ -114,12 +132,29 @@ function sweep(): void
 
 // ── Rate limit ───────────────────────────────────────────────────────
 
-// Counts this IP's requests per action in a sliding window. Receive attempts
-// are limited too, so codes can't be guessed. The IP is stored hashed.
-function rateLimit(string $action): void
+// The address requests are counted by. One home or phone on IPv6 has a
+// whole /64 to itself (2^64 addresses), so counting each address alone
+// would be no limit at all: the first 64 bits count as one. IPv4, and IPv4
+// written as IPv6 (::ffff:1.2.3.4), count whole.
+function clientKey(): string
 {
     $ip = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : 'unknown';
-    $file = STORE . '/rate/' . hash('sha256', $action . '|' . $ip) . '.json';
+    $packed = @inet_pton($ip);
+    if ($packed === false || strlen($packed) !== 16) {
+        return $ip;
+    }
+    if (substr($packed, 0, 12) === str_repeat("\0", 10) . "\xff\xff") {
+        return (string) inet_ntop(substr($packed, 12));
+    }
+    return bin2hex(substr($packed, 0, 8)) . '/64';
+}
+
+// Counts this address's requests per action in a sliding window. Receive
+// attempts are limited too, so codes can't be guessed. The address is
+// stored hashed.
+function rateLimit(string $action): void
+{
+    $file = STORE . '/rate/' . hash('sha256', $action . '|' . clientKey()) . '.json';
     $handle = @fopen($file, 'c+');
     if ($handle === false) {
         return;   // can't count: let it through rather than block everyone
@@ -175,12 +210,42 @@ function newCode(): string
     return $code;
 }
 
+// The bytes of saves waiting to be received.
+function storeBytes(): int
+{
+    $bytes = 0;
+    foreach (glob(STORE . '/*.json') ?: [] as $file) {
+        $bytes += (int) @filesize($file);
+    }
+    return $bytes;
+}
+
+// A save, as far as the server can tell: a JSON object with a whole version
+// number, whose main parts are objects when it has them (js/store.js
+// readSave() checks it in full on the device that receives it).
+function looksLikeSave($save): bool
+{
+    if (!is_array($save) || !isset($save['v']) || !is_int($save['v']) || $save['v'] < 1) {
+        return false;
+    }
+    foreach (['settings', 'ledger', 'history'] as $key) {
+        if (isset($save[$key]) && !is_array($save[$key])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 function send(): void
 {
     $text = readBody(MAX_BYTES);
-    $save = json_decode($text, true);
-    if (!is_array($save) || !isset($save['v'])) {
+    if (!looksLikeSave(json_decode($text, true))) {
         fail(400, 'bad-save');
+    }
+    // Full: nothing more until codes expire and sweep() empties them.
+    if (storeBytes() + strlen($text) > STORE_BYTES) {
+        header('Retry-After: ' . CODE_SECONDS);
+        fail(503, 'server');
     }
     // 'x' creates the file only if no live code has this name already.
     for ($try = 0; $try < 5; $try++) {
@@ -217,7 +282,8 @@ function receive(): void
     $time = @filemtime($taken);
     $save = @file_get_contents($taken);
     @unlink($taken);
-    if ($time !== false && $time < time() - CODE_SECONDS) {
+    // Expired, or emptied by sweep() once it had.
+    if (($time !== false && $time < time() - CODE_SECONDS) || $save === '') {
         fail(410, 'expired');
     }
     if ($save === false) {
@@ -228,9 +294,38 @@ function receive(): void
 
 // ── Start ────────────────────────────────────────────────────────────
 
+// Whether the request comes from this site's own pages. Another site's page
+// can make a visitor's browser post here (it can't read the reply), which
+// would spend that visitor's tries, and with enough visitors guess at codes
+// from many addresses at once. Browsers say where a request comes from:
+// Sec-Fetch-Site on https, and Origin on any cross-site POST. A request
+// with neither (an old browser, a script) is let through, to the limits.
+function sameSite(): bool
+{
+    $site = isset($_SERVER['HTTP_SEC_FETCH_SITE']) ? strtolower((string) $_SERVER['HTTP_SEC_FETCH_SITE']) : '';
+    if ($site !== '') {
+        return $site === 'same-origin' || $site === 'none';
+    }
+    $origin = isset($_SERVER['HTTP_ORIGIN']) ? (string) $_SERVER['HTTP_ORIGIN'] : '';
+    $host = isset($_SERVER['HTTP_HOST']) ? strtolower((string) $_SERVER['HTTP_HOST']) : '';
+    if ($origin === '' || $host === '') {
+        return true;
+    }
+    $parts = parse_url($origin);
+    if (!is_array($parts) || !isset($parts['host'])) {
+        return false;   // "null", or not an origin at all
+    }
+    $from = strtolower($parts['host']) . (isset($parts['port']) ? ':' . $parts['port'] : '');
+    return $from === $host;
+}
+
 if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Allow: POST');
     fail(405, 'method');
+}
+
+if (!sameSite()) {
+    fail(403, 'bad-request');
 }
 
 $action = isset($_GET['action']) ? (string) $_GET['action'] : '';
