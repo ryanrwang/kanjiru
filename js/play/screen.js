@@ -31,8 +31,8 @@
  *               frame per kanji built from the parts found green, and the
  *               keys that can't go in the selected cell dimmed (tilesForPlace in js/engine/palette.js).
  *   Hard        (realKanji) each row shows the kanji its parts make.
- * The site header reads 漢 › Play, with the hints
- * held as a pill on the right (app.js asks head()). It opens the hints
+ * The site header reads 漢 › Play (漢 › the answer once the result shows),
+ * with the hints held as a pill on the right (app.js asks head()). It opens the hints
  * modal (js/play/hints.js): each hint, how many you hold, and Use, which
  * asks once more. A hint used plays its animation (js/play/reveal.js), on
  * a card over the board or on the board itself, and its clue stays on
@@ -300,7 +300,11 @@ export function openGame(root, ctx) {
       // Gone once closed or the hints opened (hintTipSeen), after the first
       // game, or once the bonus is spent.
       tip: on && !save.settings.hintTipSeen && games(save.history).length === 0
-        && store.points(save) >= ECONOMY.startingPoints
+        && store.points(save) >= ECONOMY.startingPoints,
+      // The answer, for the header's crumb in Play's place, once the game
+      // is over and its result shows (not while the last row reveals; the
+      // user asked, 2026-11-11).
+      answer: !playing() && result.hasChildNodes() ? s.answer : null
     };
   }
 
@@ -1203,6 +1207,7 @@ export function openGame(root, ctx) {
       renderPicker();
       renderBoard();
       renderResultCard({ arriving: !calm });
+      renderHead();   // the crumb names the answer now it's shown
       settle(grid, before);
       const won = state().status === 'won';
       if (won) playWin();

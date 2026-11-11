@@ -7,7 +7,8 @@
  * held take the points' place (End game is under the keyboard). On a page of its own
  * (Points, Settings, About) the controls make way for Close, which goes back
  * where you came from. Away from the play page the brand is a breadcrumb:
- * 漢 › Points, 漢 › Settings, 漢 › Play; 漢 goes home. Everything on a page
+ * 漢 › Points, 漢 › Settings, 漢 › Play (漢 › the answer, once a game's
+ * result shows); 漢 goes home. Everything on a page
  * is built from the catalogues in js/config/ and the text in js/i18n/: add
  * an entry and it appears.
  *
@@ -73,6 +74,13 @@ const BULB = '<svg class="bulb" viewBox="0 0 24 24" fill="none" stroke-width="2"
   + '<path class="bulb-base" d="M9.5 21h5M10.75 23h2.5"/></svg>';
 const GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 const CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+// The tooltip's arrow, drawn to its box (tokens layout.tipArrowW × H, one
+// unit a pixel): a 70° point with a rounded tip, its sides curving into
+// the tip's top edge. y 10 is the middle of that edge's 2 px line (its
+// stroke continues it); the fill reaches below it, over the edge, so the
+// two read as one shape (2026-11-11, the user asked for a tighter arrow).
+const TIP_ARROW_EDGE = 'M0 10H1.1A3 3 0 0 0 3.55 8.72L8.36 1.85A2 2 0 0 1 11.64 1.85L16.45 8.72A3 3 0 0 0 18.9 10H20';
+const TIP_ARROW = `<svg class="head-tip-arrow" viewBox="0 0 20 12" aria-hidden="true"><path class="tip-arrow-fill" d="${TIP_ARROW_EDGE}V12H0Z"/><path class="tip-arrow-edge" d="${TIP_ARROW_EDGE}"/></svg>`;
 
 function applyLook() {
   TOKENS.applyLook(save.settings.theme, save.settings.scheme);
@@ -104,19 +112,25 @@ function renderHeader() {
   // Home names the game; another page shows where you are: 漢 › Points.
   const brand = byId('brand');
   const p = page();
-  const crumb = CRUMBS[p.name] ? t(CRUMBS[p.name]) : null;
+  // In a game: whether it's on, the hints held, and once it's over and its
+  // result shows, the answer (js/play/screen.js head()).
+  const game = p.name === 'game' && view && view.head ? view.head() : null;
+  // A game over names its answer in Play's place: 漢 › 時間 (2026-11-11,
+  // the user asked).
+  const answer = game && game.answer ? game.answer : null;
+  const crumb = answer || (CRUMBS[p.name] ? t(CRUMBS[p.name]) : null);
   brand.title = t('header.home');
   // Shown as 漢 alone, the link is named for where it goes.
   if (crumb) brand.setAttribute('aria-label', t('header.home'));
   else brand.removeAttribute('aria-label');
   brand.parentElement.querySelectorAll('.crumb').forEach((node) => node.remove());
   document.querySelector('.app-header').classList.toggle('is-crumb', !!crumb);
-  // In a game: whether it's on and the hints held (js/play/screen.js head()).
-  const game = p.name === 'game' && view && view.head ? view.head() : null;
   if (crumb) {
     brand.after(
       el('span', { class: 'crumb crumb-sep', 'aria-hidden': 'true' }, '›'),
-      el('span', { class: 'crumb crumb-page', id: `${p.name}-title` }, crumb));
+      el('span', answer
+        ? { class: 'crumb crumb-page kanji', id: `${p.name}-title`, lang: 'ja' }
+        : { class: 'crumb crumb-page', id: `${p.name}-title` }, crumb));
   }
 
   // A page of its own: Close alone.
@@ -216,7 +230,9 @@ function renderHeadTip(which) {
 // The tooltip itself. size: 'small' (an icon, a line and ×) or 'card' (a
 // card the page's width, its parts stacked and centred).
 function headTip({ id, size }, ...children) {
-  return el('div', { class: `head-tip is-${size}`, id, role: 'note' }, ...children);
+  const node = el('div', { class: `head-tip is-${size}`, id, role: 'note' }, ...children);
+  node.insertAdjacentHTML('afterbegin', TIP_ARROW);
+  return node;
 }
 
 // Its arrow at the middle of its control, wherever the header put it.
