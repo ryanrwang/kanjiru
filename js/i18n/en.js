@@ -30,14 +30,14 @@ export default {
   howto: {
     title: 'How to play',
     lead: 'Guess the word from its parts.',
-    body: 'Fill the cells with the word’s parts in writing order, like Wordle’s letters. Where one kanji ends is for you to work out. A part turns green in its cell, yellow if it’s elsewhere in the word, grey if the word hasn’t got it.',
+    body: 'Fill in the word’s parts in writing order, like letters in Wordle. Where one kanji ends and the next begins is part of the puzzle.',
     hit: 'Right part, right spot',
     near: 'Right part, wrong spot',
     miss: 'Not in the answer',
     // The lines under the little game, one per step (js/howto.js).
     step: {
       type: 'Tap parts to fill a row, in writing order.',
-      colours: 'Green: right cell. Yellow: elsewhere in the word. Grey: not in it.',
+      colours: 'Green: right spot. Yellow: wrong spot. Grey: not in the word.',
       use: 'Use the colours for the next guess.',
       closer: 'Three right. Two parts are in the word, in other cells.',
       split: 'Where one kanji ends is up to you to work out.',

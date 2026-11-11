@@ -308,8 +308,11 @@
       container: primitives.size[560],
       cardMin:   primitives.size[120],
       powerMin:  primitives.size[240],
-      // The first game's tip under the hints in the header (app.js).
+      // The first game's tip under the hints in the header (app.js), and
+      // its arrow's box (app.js TIP_ARROW is drawn to it).
       tip:       primitives.size[280],
+      tipArrowW: s[20],
+      tipArrowH: s[12],
       swatch:    s[96],
       guessCol:  s[64],
       tile:      s[48],

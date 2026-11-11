@@ -243,9 +243,11 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 .head-tip {
   --tip-fill: color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-tint) * 100%), var(--color-bg-raised));
   --tip-bg: color-mix(in srgb, var(--tip-fill) calc(var(--opacity-strong) * 100%), transparent);
-  --tip-edge: color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-faint) * 100%), transparent);
   /* The glass as it looks on the page: the arrow's fill. */
   --tip-solid: color-mix(in srgb, var(--tip-fill) calc(var(--opacity-strong) * 100%), var(--color-bg-page));
+  /* The edge, solid, so the tip's and the arrow's are the same colour
+     whatever lies behind them (the arrow sits over the page's dimming). */
+  --tip-edge: color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-faint) * 100%), var(--tip-solid));
   position: absolute;
   z-index: 1;
   top: calc(100% - var(--spacing-xs));
@@ -253,6 +255,11 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   display: flex;
   border: var(--stroke-thick) solid var(--tip-edge);
   border-radius: var(--radius-xl);
+  /* The corner nearest the arrow rounds no further than leaves the arrow
+     on the straight edge. */
+  border-top-right-radius: clamp(var(--radius-sm),
+    calc(var(--tip-arrow, var(--spacing-xl)) - var(--layout-tipArrowW) / 2 - var(--stroke-thick)),
+    var(--radius-xl));
   background: var(--tip-bg);
   box-shadow:
     var(--shadow-lg),
@@ -262,22 +269,26 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
   animation: toast-in var(--transition-slow) var(--transition-bounce) both;
 }
 
-/* The arrow: a square turned on its point, clipped to its top half, its
-   base over the tip's edge so the two read as one. Its fill is solid (the
-   glass as it looks on the page), so the edge it covers doesn't show
-   through it (2026-11-11, the user saw a line in it). */
-.head-tip::before {
-  content: '';
+/* The arrow (app.js TIP_ARROW): drawn, its line on the middle of the tip's
+   top edge and its fill reaching just inside it, so the edge runs up round
+   the point and back without a seam. Its fill is solid (the glass as it
+   looks on the page), so the edge it covers doesn't show through it
+   (2026-11-11, the user saw a line in it, then asked for a tighter shape). */
+.head-tip-arrow {
   position: absolute;
-  top: calc(var(--spacing-md) / -2);
-  right: calc(var(--tip-arrow, var(--spacing-xl)) - var(--spacing-md) / 2 - var(--stroke-thick));
-  width: var(--spacing-md);
-  height: var(--spacing-md);
-  border-top: var(--stroke-thick) solid var(--tip-edge);
-  border-left: var(--stroke-thick) solid var(--tip-edge);
-  background: var(--tip-solid);
-  transform: rotate(45deg);
-  clip-path: polygon(0 0, 100% 0, 0 100%);
+  top: 0;
+  right: calc(var(--tip-arrow, var(--spacing-xl)) - var(--layout-tipArrowW) / 2 - var(--stroke-thick));
+  width: var(--layout-tipArrowW);
+  height: var(--layout-tipArrowH);
+  overflow: visible;
+  transform: translateY(calc(var(--stroke-thick) / 2 - 100%));
+  pointer-events: none;
+}
+.tip-arrow-fill { fill: var(--tip-solid); }
+.tip-arrow-edge {
+  fill: none;
+  stroke: var(--tip-edge);
+  stroke-width: var(--stroke-thick);
 }
 
 .head-tip-close {
@@ -297,8 +308,10 @@ body [lang="ja"], .kanji { font-family: var(--font-family-kanji); }
 .head-tip-close:hover { background: var(--color-interactive-hover); color: var(--color-text-primary); }
 .head-tip-close svg { width: var(--layout-headIcon); height: var(--layout-headIcon); }
 
-/* The language tip: one line or two, at the gear. */
+/* The language tip: one line or two, at the gear. It reaches a little
+   past the gear, so the arrow clears the rounded corner. */
 .head-tip.is-small {
+  right: var(--spacing-sm);
   align-items: center;
   gap: var(--spacing-sm);
   width: min(var(--layout-tip), calc(100% - var(--spacing-md) * 2));
@@ -686,16 +699,28 @@ body:not([data-page="play"]) .app-footer { display: none; }
 
 .howto-text { color: var(--color-text-secondary); }
 
-/* The little game: the answer over three rows, and a line saying what each
-   step shows. Sizes stay put while it plays, so nothing below it moves. */
+/* Japanese lines break between phrases, not mid-word, where the browser
+   can (2026-11-11: 当てよ / う。 read badly). */
+.howto :is(.howto-lead, .howto-text, .demo-line, .demo-legend) { word-break: auto-phrase; }
+
+/* The little game: the answer over three rows, a line saying what each
+   step shows, and the colours' key under a hairline. Sizes stay put while
+   it plays, so nothing below it moves. */
 .demo {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-md);
   padding: var(--spacing-md);
   border-radius: var(--radius-lg);
   background: var(--color-bg-page);
+}
+
+.demo-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
 }
 
 .demo-row {
@@ -747,24 +772,34 @@ body:not([data-page="play"]) .app-footer { display: none; }
 
 .demo-line.is-shown { opacity: var(--opacity-full); }
 
+/* Three columns, a colour over its words. */
 .demo-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-sm) var(--spacing-md);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+  align-self: stretch;
   margin: 0;
-  padding: 0;
+  padding: var(--spacing-md) 0 0;
+  border-top: var(--stroke-thin) solid var(--color-border-subtle);
   list-style: none;
   font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  text-align: center;
   color: var(--color-text-secondary);
 }
 
+.demo-legend li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
 .legend-dot {
-  display: inline-block;
-  width: var(--spacing-sm);
-  height: var(--spacing-sm);
-  margin-right: var(--spacing-xs);
-  border-radius: var(--radius-full);
-  vertical-align: middle;
+  display: block;
+  width: var(--spacing-md);
+  height: var(--spacing-md);
+  border-radius: var(--radius-sm);
 }
 
 /* ── Play page: every game played (js/history.js) ──────────────────── */

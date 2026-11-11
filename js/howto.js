@@ -11,7 +11,8 @@
  * app.js decides); either way it sits above the play card. It plays only
  * while open and on screen; under reduced motion it shows the three rows at
  * once, every line listed. The board is a picture (aria-hidden): the text
- * above it says the same for screen readers.
+ * above it and the colours' key under it, in the same box, say the same for
+ * screen readers.
  */
 import { t } from './i18n.js';
 import { el } from './dom.js';
@@ -36,8 +37,13 @@ export function howTo({ open = true, tiles = 'flip' } = {}) {
       return cell;
     }))));
   const line = el('p', { class: 'demo-line' });
-  const board = el('div', { class: 'demo', 'aria-hidden': 'true', 'data-tiles': tiles },
+  const board = el('div', { class: 'demo-board', 'aria-hidden': 'true' },
     el('div', { class: 'demo-answer-row' }, answer), rows, line);
+  // The colours' key, in the box under the little game (2026-11-11, the
+  // user asked), and read out: the board itself is hidden from readers.
+  const legend = el('ul', { class: 'demo-legend' },
+    ['hit', 'near', 'miss'].map((state) =>
+      el('li', {}, el('span', { class: `legend-dot is-${state}-bg`, 'aria-hidden': 'true' }), t(`howto.${state}`))));
 
   const details = el('details', { class: 'card fold howto', open },
     el('summary', { class: 'fold-summary' },
@@ -46,10 +52,7 @@ export function howTo({ open = true, tiles = 'flip' } = {}) {
     el('div', { class: 'fold-body' },
       el('p', { class: 'howto-lead' }, t('howto.lead')),
       el('p', { class: 'howto-text' }, t('howto.body')),
-      board,
-      el('ul', { class: 'demo-legend' },
-        ['hit', 'near', 'miss'].map((state) =>
-          el('li', {}, el('span', { class: `legend-dot is-${state}-bg` }), t(`howto.${state}`))))));
+      el('div', { class: 'demo', 'data-tiles': tiles }, board, legend)));
 
   // ── The animation ──────────────────────────────────────────────────
 
