@@ -3551,6 +3551,13 @@ button.clue-chip {
   min-width: 0;
 }
 
+/* A one-kanji answer's word (選 → 選ぶ), over its meaning. */
+.answer-form {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-lineHeight-tight);
+}
+
 .answer-meanings { font-weight: var(--font-weight-bold); }
 .answer-meanings.is-second {
   font-size: var(--font-size-xs);

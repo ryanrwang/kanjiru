@@ -113,6 +113,8 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
     el('div', { class: 'answer' },
       el('span', { class: 'answer-kanji kanji', lang: 'ja' }, state.answer),
       el('div', { class: 'answer-info' },
+        // A one-kanji answer that isn't a word alone: the word it's known by.
+        info.form ? el('p', { class: 'answer-form kanji', lang: 'ja' }, info.form) : null,
         // In the interface's language where the answer has a meaning in it
         // (data/meanings-ja.json), with the dictionary's English under it.
         local ? el('p', { class: 'answer-meanings', lang: lang() }, local) : null,

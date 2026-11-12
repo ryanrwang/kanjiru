@@ -123,10 +123,12 @@ export function scoreParts(picks, answer, places = null) {
 // order). Which kanji a cell belongs to doesn't change its mark.
 //   picks: the tile ids per slot, as many as each answer kanji has parts.
 // Same return shape as scoreGuess; a tile's `pos` is its cell's place in the
-// answer. A slot is solved when all its cells are `hit`.
+// answer. A `hit` tile shows the form its cell has in the answer (氵 for 水,
+// 𠆢 for 人): it is that part now, as a reader sees it (native audit,
+// 2026-11-12). A slot is solved when all its cells are `hit`.
 export function scoreOrder(picks, answer) {
   if (picks.length !== answer.length) throw new Error('guess and answer differ in length');
-  const cells = answer.flatMap((slot, s) => slot.parts.map((p, i) => ({ slot: s, part: i, el: p.el, pos: p.pos })));
+  const cells = answer.flatMap((slot, s) => slot.parts.map((p, i) => ({ slot: s, part: i, el: p.el, pos: p.pos, form: p.form || p.el })));
   const result = picks.map((els) => ({
     kanji: null,
     solved: false,
@@ -139,7 +141,7 @@ export function scoreOrder(picks, answer) {
     tile.pos = cells[i].pos;
     if (tile.el !== cells[i].el) return;
     used[i] = true;
-    Object.assign(tile, { mark: 'hit', of: { slot: cells[i].slot, part: cells[i].part } });
+    Object.assign(tile, { mark: 'hit', form: cells[i].form, of: { slot: cells[i].slot, part: cells[i].part } });
   });
   tiles.forEach((tile) => {
     if (tile.mark !== 'miss') return;

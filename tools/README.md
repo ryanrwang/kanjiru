@@ -102,6 +102,7 @@ python -I -X utf8 tools/compile_game.py
 - **Loose strokes:** a `LISTS` rule with `without` leaves out words with any of those tiles as a part. `main` leaves out the loose single strokes 丨 丶 丿 乙 亅 (`LOOSE_STROKES`; 一 is a real part and stays), since a cell holding one is close to guesswork. The words stay Keep, and come back on the next compile once `data/parts-overrides.json` fixes their kanji. The summary counts them, and lists any already-played day whose answer is now left out (in a list with a daily, it keeps its slot).
 - **Stable order:** answers for days already played, up to tomorrow, never move. Every later day is shuffled again from a fixed seed, so newly kept words mix in evenly. A word cut after its day is listed but stays in its slot.
 - **The summary** shows each list's answer count against the 365 a year of dailies needs.
+- **Hand data** (`HAND_FILES`, native audit 2026-11-12): `data/meanings-en.json` replaces the dictionary's English for an answer (a kanji's in `kanji.json`, a word's in `answers.json` `words`); `data/one-kanji.json` replaces a one-kanji answer's readings with the jōyō table's and gives a stem its word (選 → 選ぶ, `answers.json` `forms`). Keys starting with `_` are notes. The summary names any one-kanji answer with no readings written, and a test fails on one.
 
 Settings at the top:
 

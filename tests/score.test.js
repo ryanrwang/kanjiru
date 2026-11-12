@@ -195,3 +195,13 @@ test('in order: the kanji a cell sits in doesn\'t change its mark', () => {
   assert.deepEqual(flatMarks(scoreOrder([['木'], ['日', '一']], answerOf('日本'))), ['near', 'near', 'hit']);
   assert.ok(allHit(scoreOrder([['日'], ['木', '一']], answerOf('日本'))));
 });
+
+test('in order: a green cell shows the form its part has in the answer', () => {
+  // 海 = 氵 𠂉 毋: the 水 key goes green in cell 1 and shows 氵; yellow and grey keep the key's glyph.
+  const scored = scoreOrder([['水', '𠂉', '毋']], answerOf('海'));
+  assert.equal(scored[0].tiles[0].mark, 'hit');
+  assert.equal(scored[0].tiles[0].form, '氵');
+  assert.equal(scored[0].tiles[0].el, '水', 'it still scores as its tile');
+  const late = scoreOrder([['𠂉', '水', '口']], answerOf('海'));
+  assert.deepEqual(late[0].tiles.map((t) => [t.mark, t.form]), [['near', '𠂉'], ['near', '水'], ['miss', '口']]);
+});

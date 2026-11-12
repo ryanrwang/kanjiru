@@ -55,6 +55,13 @@ Because they adapt CC BY-SA material, both files are shared under **CC BY-SA 4.0
 - **Used for:** knowing which palette glyphs those fonts can draw (`font: false` in `data/parts.json`). Nothing from it is copied into the data. The fonts themselves are SIL Open Font License 1.1, and the app loads them from Google Fonts.
 - **The coin:** the points' coin (`js/coin.js`) carries the outline of 金 from Noto Serif JP Black (weight 900, Google Fonts' v34), under the same SIL Open Font License 1.1, so it looks the same before the fonts load.
 
+## Hand edits
+
+Some dictionary data is replaced by hand (2026-11-12, the native audit), and `tools/compile_game.py` puts it into `data/game/`:
+
+- `data/meanings-en.json`: English meanings for 57 one-kanji answers and 17 words, where KANJIDIC's keywords ("work, (kokuji)" for 働) or JMdict's rarer senses ("financial situation" for 台所) misled. Adapted from KANJIDIC and JMdict, under the same CC BY-SA 4.0.
+- `data/one-kanji.json`: the one-kanji answers' readings as the jōyō table (2010) lists them, a subset of KANJIDIC's, and the word each stem is known by (選ぶ).
+
 ## Crediting in the app
 
 EDRDG asks apps to credit JMdict and KANJIDIC on a screen of their own, such as an About screen, with links to the project pages above. KanjiVG asks for a credit and a link to <https://kanjivg.tagaini.net>. Waller asks for credit and a link to his site.

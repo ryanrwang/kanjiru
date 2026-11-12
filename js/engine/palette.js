@@ -1,8 +1,10 @@
 /*
  * The parts palette for one puzzle: a subset of data/parts.json's tiles.
  *
- * It holds every part of the answer, the tiles in rules.js palette.always,
- * and random decoys up to the mode's `palette` size. Guesses may only use
+ * It holds every part of the answer, the tiles in `always` (rules.js
+ * palette.always, plus palette.strokeKeys at a level with strokeKeys), and
+ * random decoys up to the mode's `palette` size, never one in `never` (the
+ * single strokes at a level without strokeKeys). Guesses may only use
  * its parts (rules.js guessFromPalette), so the palette also decides which
  * kanji can be guessed.
  */
@@ -42,16 +44,16 @@ export function tilesForPlace(data, palette, pos) {
 
 // answerKanji: the answer's kanji, e.g. ['日', '本'].
 // Returns tile ids in data.tiles order (fewest strokes first).
-export function buildPalette({ data, answerKanji, size, rules, rng }) {
+export function buildPalette({ data, answerKanji, size, rules, rng, always = rules.palette.always || [], never = [] }) {
   const sets = tilesOfKanji(data);
   const known = new Set(data.tiles.map((t) => t.id));
   const chosen = new Set();
   answerKanji.forEach((ch) => (sets.get(ch) || []).forEach((el) => chosen.add(el)));
-  (rules.palette.always || []).forEach((id) => { if (known.has(id)) chosen.add(id); });
+  always.forEach((id) => { if (known.has(id)) chosen.add(id); });
 
   // Neighbours: how many kanji each tile shares with a part of the answer.
   const answerTiles = new Set(chosen);
-  (rules.palette.always || []).forEach((id) => {
+  always.forEach((id) => {
     if (!answerKanji.some((ch) => (sets.get(ch) || new Set()).has(id))) answerTiles.delete(id);
   });
   const neighbours = new Map();
@@ -61,7 +63,7 @@ export function buildPalette({ data, answerKanji, size, rules, rng }) {
   });
 
   const weight = rules.palette.decoyWeight || {};
-  const pool = data.tiles.filter((t) => !chosen.has(t.id));
+  const pool = data.tiles.filter((t) => !chosen.has(t.id) && !never.includes(t.id));
   const weights = pool.map((t) =>
     (weight.byUses || 0) * (t.uses || 0) + (weight.byNeighbour || 0) * (neighbours.get(t.id) || 0));
   while (chosen.size < size && pool.length) {

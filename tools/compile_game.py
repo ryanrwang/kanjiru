@@ -6,7 +6,11 @@
     each list in LISTS (one per mode: js/config/modes.js `answers`) has its
     answers in a fixed shuffled order; `words` has the reading and meanings
     of each answer of 2+ kanji, and `meanings` each answer's meaning in the
-    other interface languages (MEANING_FILES), for the Meaning hint.
+    other interface languages (MEANING_FILES), for the Meaning hint, and
+    `forms` the word a one-kanji answer is known by (選 → 選ぶ).
+
+Hand-written data goes in on the way (HAND_FILES): English meanings where
+the dictionary's mislead, and the one-kanji answers' jōyō readings and words.
 
 Answers are only the words marked Keep on the review page (data/review.json,
 read only). With no Keep words, the answer lists are empty and the summary
@@ -98,6 +102,20 @@ MEANING_FILES = {
     "ja": PROJECT_DIR / "data" / "meanings-ja.json",
 }
 
+# Written by hand in the native audit (2026-11-12), in place of the
+# dictionaries' (keys starting with _ are notes):
+#   en:  { answer: [glosses] }: English meanings where KANJIDIC's keywords
+#        (働 "work, (kokuji)") or JMdict's rarer senses first (台所
+#        "financial situation") mislead. A kanji's go in kanji.json, a
+#        longer word's in answers.json words.
+#   one: { kanji: { word?, on, kun } }: the one-kanji answers' readings as
+#        the jōyō table lists them (KANJIDIC adds others: 愛 かな.しい), and
+#        for a kanji that isn't a word alone, the word it's known by (選ぶ).
+HAND_FILES = {
+    "en": PROJECT_DIR / "data" / "meanings-en.json",
+    "one": PROJECT_DIR / "data" / "one-kanji.json",
+}
+
 
 # --------------------------------------------------------------------------
 # Kanji
@@ -109,17 +127,23 @@ def clean_meanings(meanings: list[str]) -> list[str]:
     return (kept or meanings)[:MAX_KANJI_MEANINGS]
 
 
-def compile_kanji(candidates: dict) -> dict:
+def hand(data: dict | None) -> dict:
+    """A hand-written file's entries, without its notes (keys starting with _)."""
+    return {k: v for k, v in (data or {}).items() if not k.startswith("_")}
+
+
+def compile_kanji(candidates: dict, en: dict | None = None, one: dict | None = None) -> dict:
     """Every joyo kanji as a row of KANJI_FIELDS. Parts are [tile, position]
-    or [tile, position, form] when the glyph shown differs (氵 for 水)."""
+    or [tile, position, form] when the glyph shown differs (氵 for 水).
+    en and one (HAND_FILES) replace a kanji's meanings and readings."""
+    en, one = hand(en), hand(one)
     rows = {}
     for ch, k in candidates["kanji"].items():
         parts = [[p["el"], p["pos"]] + ([p["form"]] if p.get("form") else []) for p in k["parts"]]
-        rows[ch] = [
-            k["strokes"], k.get("jlpt"), k.get("freq"),
-            clean_meanings(k.get("meanings") or []),
-            k.get("on") or [], k.get("kun") or [], parts,
-        ]
+        meanings = en[ch][:MAX_KANJI_MEANINGS] if ch in en else clean_meanings(k.get("meanings") or [])
+        on = one[ch]["on"] if ch in one else k.get("on") or []
+        kun = one[ch]["kun"] if ch in one else k.get("kun") or []
+        rows[ch] = [k["strokes"], k.get("jlpt"), k.get("freq"), meanings, on, kun, parts]
     return {
         "about": "Every joyo kanji a player may guess, as rows of `fields`. Parts are "
                  "[tile, position] or [tile, position, form]; tiles are data/parts.json's. "
@@ -260,6 +284,20 @@ def compile_meanings(answers: dict, by_lang: dict) -> tuple[dict, dict]:
     return out, report
 
 
+def apply_hand(doc: dict, en: dict | None, one: dict | None) -> dict:
+    """Puts the hand-written data (HAND_FILES) into answers.json: English
+    meanings for longer words, and `forms`, the word each one-kanji answer
+    is known by. Returns the report: one-kanji answers with no readings
+    written (`unread`)."""
+    en, one = hand(en), hand(one)
+    for word, info in doc["words"].items():
+        if word in en:
+            info[1] = en[word]
+    singles = list(dict.fromkeys(w for items in doc["answers"].values() for w in items if len(w) == 1))
+    doc["forms"] = {k: one[k]["word"] for k in singles if k in one and one[k].get("word")}
+    return {"unread": [k for k in singles if k not in one]}
+
+
 # --------------------------------------------------------------------------
 # Writing
 # --------------------------------------------------------------------------
@@ -277,7 +315,11 @@ def answers_text(doc: dict) -> str:
         lines.append(f"{dumps(length)}:[" + (f"\n{body}\n" if items else "") + "]" + ("," if i < len(entries) - 1 else ""))
     lines.append("},")
     word_lines = ",\n".join(f"{dumps(w)}:{dumps(info)}" for w, info in doc["words"].items())
-    lines.append('"words":{' + (f"\n{word_lines}\n" if word_lines else "") + "}" + ("," if "meanings" in doc else ""))
+    more = [key for key in ("forms", "meanings") if key in doc]
+    lines.append('"words":{' + (f"\n{word_lines}\n" if word_lines else "") + "}" + ("," if more else ""))
+    if "forms" in doc:
+        form_lines = ",\n".join(f"{dumps(k)}:{dumps(w)}" for k, w in doc["forms"].items())
+        lines.append('"forms":{' + (f"\n{form_lines}\n" if form_lines else "") + "}" + ("," if "meanings" in doc else ""))
     if "meanings" in doc:
         langs = list(doc["meanings"].items())
         lines.append('"meanings":{')
@@ -321,9 +363,12 @@ def main(argv: list[str] | None = None) -> int:
     review = read_json(args.review)
     previous = read_json(args.out / "answers.json")
 
-    kanji_text = dumps(compile_kanji(candidates)) + "\n"
+    en, one = (read_json(path) for path in HAND_FILES.values())
+    kanji_text = dumps(compile_kanji(candidates, en, one)) + "\n"
     doc, report = compile_answers(candidates, review, previous, args.today)
-    doc["about"] += " meanings gives each answer's meaning in other languages (MEANING_FILES)."
+    hand_report = apply_hand(doc, en, one)
+    doc["about"] += (" forms gives a one-kanji answer's word (選 → 選ぶ); meanings each answer's "
+                     "meaning in other languages (MEANING_FILES).")
     doc["meanings"], meaning_report = compile_meanings(
         doc["answers"], {lang: read_json(path) for lang, path in MEANING_FILES.items()})
     text = answers_text(doc)
@@ -358,6 +403,9 @@ def main(argv: list[str] | None = None) -> int:
               + (f"; {len(info['missing'])} have none (English shows)" if info["missing"] else ""))
         if info["shows"]:
             print(f"    LEFT OUT, the meaning shows a kanji of the answer: {' '.join(info['shows'])}")
+    if hand_report["unread"]:
+        print(f"One-kanji answers with no jōyō readings in {HAND_FILES['one'].name} "
+              f"(KANJIDIC's show): {' '.join(hand_report['unread'])}")
     if report["lookalikes"]:
         print(f"Left out, look-alike kanji: {' '.join(report['lookalikes'])}")
     if report["not_candidates"]:

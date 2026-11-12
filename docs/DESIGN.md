@@ -2,7 +2,7 @@
 
 The decisions so far, and why, so any new thread can pick up the game without the original conversation. Status of each: **Decided** (the user chose it), **Proposed** (suggested, not yet confirmed — confirm before building on it), or **Open**.
 
-Last updated: 2026-11-11.
+Last updated: 2026-11-12.
 
 ## The game
 
@@ -12,6 +12,7 @@ Last updated: 2026-11-11.
 - **Decided — Name:** Kanjiru, written **漢じる**: 感じる (*kanjiru*, "to sense") with the 漢 of 漢字 in place of 感. The favicon is a vermilion hanko seal with 漢.
 - **Decided — No modes by length (step 4):** the first plan had one mode per length (k1–k4 in `js/config/modes.js`). After playing, one kanji had too few parts to feel like Wordle, so one main mode (`main`) plays every length. k1–k4 are retired, kept so old saves still read.
 - **Decided — Difficulty ceiling:** answers are JLPT N3 or easier, for learners, but words a native speaker also knows. Nothing obscure.
+- **Decided — Native audit (2026-11-12):** the user asked for an audit as a native kanji expert; they agreed to every fix, and to Claude's default on each call. `docs/NATIVE-AUDIT.md` has it all. The main list has 442 answers: 12 one-kanji answers never said alone left (景 漢 商 館 …), with 歳 舞 一人一人 and 図書 (Maybe). The 22 words above N3 in practice (相続 破産 …) stay: all are on Waller's N3 list and natives know them. A one-kanji stem (選, 高) stays, and its result card shows the word (選ぶ, 高い). English meanings and one-kanji readings are hand-written where the dictionaries mislead (`data/meanings-en.json`, `data/one-kanji.json`).
 - **Decided — Everything scalable:** the number of kanji, skins, hint types and point values are catalogue entries, never hard-coded (see CLAUDE.md, "Rules").
 - **Decided — Interface languages:** English and Japanese, picked in Settings. It follows the device until the player picks.
 - **Decided — Japanese reads plainly (2026-11-11):** the user asked for every Japanese string to sound natural and simple. Claude went through `js/i18n/ja.js`: shorter, everyday phrasing (回答 4/6 for 6回中4回回答, トップに戻る, チャンスを使い切りました), one name per thing (Looks are きせかえ everywhere, not 見た目; the Hard switch is むずかしい in its achievement too; a merge adds points and hints, not アイテム), and errors that say what to do (…マス目に入れてください). Answers' meanings (`data/meanings-ja.json`) weren't part of it.
@@ -118,11 +119,13 @@ From `js/config/economy.js`, every number there:
 
 ## The palette (Decided, step 2)
 
-Each puzzle shows a subset of the 263 tiles instead of all of them, like Wordle's keyboard. The engine is `js/engine/palette.js`.
+Each puzzle shows a subset of the 264 tiles instead of all of them, like Wordle's keyboard. The engine is `js/engine/palette.js`.
 
-- **What's in it:** every part of the answer, the six single strokes (`rules.js` `palette.always`), and random decoys up to the mode's `palette` size in `modes.js` (40) times the level's `paletteScale` (0.7): 28 keys ("Levels").
+- **What's in it:** every part of the answer, 一 (`rules.js` `palette.always`), and random decoys up to the mode's `palette` size in `modes.js` (40) times the level's `paletteScale` (0.7): 28 keys ("Levels").
 - **Guesses:** only kanji built entirely from the palette's tiles, typed ones included (`rules.js` `guessFromPalette`).
 - **Same for everyone:** a daily's palette comes from its puzzle number.
+- **Decided — Single strokes only at Hard (native audit, 2026-11-12):** no answer has 丨 丶 丿 乙 亅, so at Normal and Guided they were dead keys. They are keys only at a level with `strokeKeys` (Hard, Guided · Hard), where a guess must make real kanji, and never decoys elsewhere (`rules.js` `palette.strokeKeys`). 一 stays on every keyboard.
+- **Decided — A key shows its forms (2026-11-12):** up to two other forms sit small in its corner (人: 亻 𠆢).
 - **Decoys:** picked by weight: how many jōyō kanji use the tile, plus 20× how many kanji it shares with a part of the answer (`rules.js` `decoyWeight`). Neighbours make more real kanji buildable.
 - **Why 40:** tested on the real data, a 40-tile palette leaves about 190 buildable jōyō kanji per puzzle, about 75 of them N3 or easier. 30 tiles leaves about 115, which felt too tight.
 - **The leak:** the answer's parts are always in the palette; with 34 decoys that gives little away.
@@ -386,10 +389,10 @@ The user asked for smooth moves between states (pages, folds, hovers, switches, 
 
 Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in stroke order, each with its position in the whole kanji. The palette is `data/parts.json`. The rules are in `tools/README.md` ("Parts").
 
-- **Decided — Palette (step 1):** 251 tiles, 263 since the parts audit (Proposed, below).
+- **Decided — Palette (step 1):** 251 tiles, 263 since the parts audit (Proposed, below), 264 since the native audit (戌 and 成 in, 匸 now a form of 匚).
   - The radicals that jōyō kanji use, plus shapes that recur but aren't radicals (业, 免, 兼), and a few kanji that would otherwise fall apart into single strokes (五, 不, 半, 北).
   - ナ and マ stand for the katakana-like shapes in 右, 左 and 予.
-  - The six single strokes 一 丨 丶 丿 乙 亅 cover what's left over.
+  - The six single strokes 一 丨 丶 丿 乙 亅 cover what's left over (only 一 is in answers; the others are keys only at Hard).
 - **Decided — Variants are the same part:** 氵 and 氺 count as 水, 亻 as 人, 扌 as 手, 忄 as 心, 刂 as 刀, 灬 as 火, 犭 as 犬, 礻 as 示, 衤 as 衣, 飠 as 食, 爫 as 爪, 耂 as 老, 覀 as 西, ⺧ as 牛, ⺷ as 羊. The parts audit added 𠆢 (人), 丷 (八), 牜 (牛), ⻊ (足), ⺮ (竹), 龵 (手), 巳 (己), 㔾 (卩) and 夾 (夹).
   - **Why:** players learn them as one idea, a guess of 水 for 海 should score, and the palette stays small.
   - Each part keeps the glyph it appears as (`form`), so a revealed part can show 氵.
@@ -408,6 +411,8 @@ Every jōyō kanji has `parts` in `data/candidates.json`: palette tiles in strok
     - **⺍ (学 単 栄): best kept apart, even if the others merge.** Unicode files it with 小 too (CJK RADICAL SMALL TWO), but it's written left to right like ツ, and a reader doesn't see 小 in it.
     - Merging changes how those parts score (a guess with 小 would count for 光's top) and drops tile ids from saves, which the user said is fine.
   - **Why Proposed:** the user asked for the audit and for the display forms. The new tiles and each split are Claude's calls; `docs/PARTS-AUDIT.md` ("For the user to decide") lists the ones worth a second look.
+- **Decided — Native audit (2026-11-12):** 52 kanji re-split so each part is the shape a reader sees: 茶 (艹 𠆢 木, not 余), 母 (its own form of 毋), 曜 (ヨ ヨ, not 羽), 感 減 威 (戌, not 戍), 常 堂 (冖, not 冂), 周 週 調 (土, not 士), 令 冷 領 (卩 as printed, not マ), 成 (a tile), 南 (𢆉, as 幸), 左 友 (ナ on top) and others. `docs/NATIVE-AUDIT.md` lists them all.
+- **Decided — Green cells show the answer's form (2026-11-12):** a green cell is that part of the answer, so it shows its glyph there (𠆢 for 会's roof, 氵 for 海's water), not the key's. Yellow and grey keep the key's (`scoreOrder()` in `js/engine/score.js`).
 - **Decided — Depth: building blocks.** A kanji splits into the biggest pieces that are tiles, like jisho's radical search. 語 = 言 + 五 + 口, not 言 + 吾 (吾 isn't a tile).
 - **Decided — Positions:** left, right, top, bottom, outer, inner, whole or none. The kanji's first split decides, so 語's 五 and 口 are both right.
   - Enclosures are outer and what they hold is inner (国 = 囗 outer + 玉 inner).

@@ -232,6 +232,34 @@ class Meanings(unittest.TestCase):
             self.assertEqual(shown, [], f"{path.name}: these meanings show a kanji of their answer")
 
 
+class Hand(unittest.TestCase):
+    EN = {"_about": "a note", "明": ["bright (by hand)"], "日本": ["Japan (by hand)"]}
+    ONE = {"_about": "a note", "明": {"word": "明るい", "on": ["メイ"], "kun": ["あか.るい"]}, "海": {"on": ["カイ"], "kun": ["うみ"]}}
+
+    def test_hand_meanings_and_readings_replace_the_dictionary_ones(self):
+        row = dict(zip(cg.KANJI_FIELDS, cg.compile_kanji(CANDIDATES, self.EN, self.ONE)["kanji"]["明"]))
+        self.assertEqual((row["meanings"], row["on"], row["kun"]), (["bright (by hand)"], ["メイ"], ["あか.るい"]))
+        other = dict(zip(cg.KANJI_FIELDS, cg.compile_kanji(CANDIDATES, self.EN, self.ONE)["kanji"]["本"]))
+        self.assertEqual(other["on"], ["オン"], "a kanji with no hand data keeps the dictionary's")
+
+    def test_words_get_hand_meanings_and_one_kanji_answers_their_word(self):
+        doc, _ = compile_(review("明", "海", "時", "日本"))
+        report = cg.apply_hand(doc, self.EN, self.ONE)
+        self.assertEqual(doc["words"]["日本"][1], ["Japan (by hand)"])
+        self.assertEqual(doc["forms"], {"明": "明るい"}, "海 is a word alone, so it has none")
+        self.assertEqual(report["unread"], ["時"])
+        self.assertEqual(json.loads(cg.answers_text(doc)), doc)
+
+    def test_every_real_one_kanji_answer_has_its_readings_written(self):
+        answers = cg.read_json(cg.OUT_DIR / "answers.json") or {"answers": {}}
+        one = cg.hand(cg.read_json(cg.HAND_FILES["one"]))
+        singles = {w for items in answers["answers"].values() for w in items if len(w) == 1}
+        self.assertEqual(sorted(singles - set(one)), [])
+        for k, entry in one.items():
+            if "word" in entry:
+                self.assertTrue(entry["word"].startswith(k), f"{k}: {entry['word']}")
+
+
 class Files(unittest.TestCase):
     def test_answers_text_is_valid_json(self):
         doc, _ = compile_(review("明", "海", "日本", "本日"))

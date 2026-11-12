@@ -121,7 +121,11 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
       daily: !!start.daily,
       puzzle: start.daily ? start.puzzle : null,
       rows: mode.guesses,
-      palette: buildPalette({ data, answerKanji: chars, size, rules, rng: seeded(`${seed}:palette`) }),
+      palette: buildPalette({
+        data, answerKanji: chars, size, rules, rng: seeded(`${seed}:palette`),
+        always: [...(rules.palette.always || []), ...(level.strokeKeys ? rules.palette.strokeKeys || [] : [])],
+        never: level.strokeKeys ? [] : rules.palette.strokeKeys || []
+      }),
       status: 'playing',
       guesses: [],
       powers: [],
@@ -414,15 +418,18 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
   }
 
   // The answer's dictionary info. One kanji: its meanings and on/kun
-  // readings; a word: its reading and meanings. local: its meaning in other
-  // languages, { [lang]: text }, where it has one (data.localMeanings).
+  // readings, and `form`, the word it's known by when it isn't one alone
+  // (選 → 選ぶ, data.forms); a word: its reading and meanings. local: its
+  // meaning in other languages, { [lang]: text }, where it has one
+  // (data.localMeanings).
   function answerInfo(word) {
     const chars = [...word];
     const local = {};
     Object.entries(data.localMeanings || {}).forEach(([lang, list]) => { if (list && list[word]) local[lang] = list[word]; });
     if (chars.length === 1) {
       const k = data.kanji[word];
-      return { word, meanings: k.meanings || [], reading: { on: k.on || [], kun: k.kun || [] }, local };
+      const form = (data.forms && data.forms[word]) || null;
+      return { word, form, meanings: k.meanings || [], reading: { on: k.on || [], kun: k.kun || [] }, local };
     }
     const w = (data.words && data.words[word]) || {};
     return { word, meanings: w.meanings || [], reading: w.reading || '', local };

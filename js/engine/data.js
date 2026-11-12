@@ -6,6 +6,8 @@
  *   tiles    data/parts.json's tiles: [{ id, strokes, uses, forms }]
  *   answers  { [length]: [answer, …] }   the daily order, Keep words only
  *   words    { [word]: { reading, meanings } }   for answers of 2+ kanji
+ *   forms    { [kanji]: word }   the word a one-kanji answer is known by
+ *            (選 → 選ぶ), for one that isn't a word alone (data/one-kanji.json)
  *   localMeanings  { [lang]: { [answer]: meaning } }   meanings in other
  *            interface languages (written by hand; English is the dictionary's)
  *   epoch    'YYYY-MM-DD', the date of puzzle 1
@@ -27,6 +29,7 @@ export function prepareData({ kanji, answers, parts }) {
     tiles: parts.tiles,
     answers: (answers && answers.answers) || {},
     words,
+    forms: (answers && answers.forms) || {},
     localMeanings: (answers && answers.meanings) || {},
     epoch: (answers && answers.epoch) || null
   };

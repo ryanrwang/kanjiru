@@ -56,6 +56,16 @@ class DrawnAs(unittest.TestCase):
             for shown in [named, *shapes.values()]:
                 self.assertIn(shown, FORM_TO_TILE)
 
+    def test_a_split_element_is_drawn_as_its_joined_strokes(self):
+        # 感's 咸: KanjiVG's 戍 wraps 口 in two pieces, with 一 inside, not 人: 戌.
+        strokes = [stroke("㇒", 30, 20, 20, 80), stroke("㇐", 30, 25, 80, 25), stroke("㇐", 35, 40, 55, 40),
+                   stroke("㇑", 35, 50, 35, 70), stroke("㇕", 35, 50, 55, 70), stroke("㇐", 35, 70, 55, 70),
+                   stroke("㇂", 60, 15, 85, 85), stroke("㇒", 85, 40, 65, 70), stroke("㇔", 75, 15, 80, 20)]
+        root = node("咸", [node("戍", [0, 1, 2], raw="戌", part="1"), node("口", [3, 4, 5]),
+                           node("戍", [6, 7, 8], raw="戌", part="2")])
+        parts = bd.split_kanji("咸", root, strokes, FORM_TO_TILE, {"戍": 6, "戌": 6, "口": 3})
+        self.assertEqual([(p["el"], p["form"]) for p in parts], [("戌", "戌"), ("口", "口")])
+
     def test_a_typo_stops_the_build(self):
         with mock.patch.dict(bd.DRAWN_AS, {"八": {"㇔㇒": "X"}}):
             with self.assertRaises(SystemExit):
@@ -147,6 +157,14 @@ class Palette(unittest.TestCase):
         for form, tile in {"𠆢": "人", "亻": "人", "丷": "八", "巳": "己", "㔾": "卩",
                            "牜": "牛", "⻊": "足", "⺮": "竹", "夾": "夹"}.items():
             self.assertEqual(FORM_TO_TILE[form], tile)
+
+    def test_the_native_audit_forms_and_tiles(self):
+        # One printed shape, one key: 匸 is 匚. 母 and 毌 are drawn apart from 毋 but are its part.
+        for form, tile in {"匸": "匚", "母": "毋", "毌": "毋", "龍": "竜"}.items():
+            self.assertEqual(FORM_TO_TILE[form], tile)
+        for tile in ("戌", "成"):
+            self.assertIn(tile, TILES)
+        self.assertNotIn("匸", TILES)
 
     def test_月_and_肉_stay_apart(self):
         self.assertEqual(FORM_TO_TILE["月"], "月")
