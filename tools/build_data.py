@@ -69,17 +69,19 @@ REQUIRE_COMMON = True
 # look like those shapes. The parts audit (docs/PARTS-AUDIT.md) added shapes
 # whose split gave a wrong tile or a stroke salad: 且 (not 月 + 一), 今, 由,
 # 申, 冊 (not 冂 + 廾), 夹 (not 大 人 人 大), 及 (not 丿 + 又), 巴 (not 己),
-# 三 (for 春 奏 泰: 三 + 人) and 以.
+# 三 (for 春 奏 泰: 三 + 人) and 以. The native audit (2026-11-12) added 戌
+# (感 減 威, not 戍, which has 人 inside: 機 幾) and 成 (城 盛 誠: no reader
+# sees 𠂊 + 戈 in it), and made 匸 a form of 匚 (one printed shape).
 PALETTE = """
 一 丨 丶 丿 乙 亅
-二 亠 人 儿 入 八 冂 冖 冫 几 凵 刀 力 勹 匕 匚 匸 十 卜 卩 厂 厶 又 乂 𠂊 𠂉 マ ナ 九 了 丂 乃
+二 亠 人 儿 入 八 冂 冖 冫 几 凵 刀 力 勹 匕 匚 十 卜 卩 厂 厶 又 乂 𠂊 𠂉 マ ナ 九 了 丂 乃
 口 囗 土 士 夂 夕 大 女 子 宀 寸 小 ⺌ ⺍ 尢 尸 山 川 巛 工 己 巾 干 幺 广 廴 廾 弋 弓 ヨ 彑 彡 彳
     艹 辶 阝 丬 也 才 亡 三 及
 心 戈 戸 手 支 攵 文 斗 斤 方 日 月 木 欠 止 歹 殳 毋 比 毛 氏 气 水 火 爪 父 片 牛 犬 王 夫 勿 尺
     井 廿 龶 㐄 五 不 卌 今 巴
 玄 玉 瓦 生 用 田 疋 疒 癶 白 皮 皿 目 矢 石 示 禸 禾 穴 立 甘 牙 罒 业 乍 卯 司 央 巨 布 𢆉 可 北 半
     以 且 由 申 冊
-竹 米 糸 缶 羊 羽 老 而 耒 耳 聿 肉 自 至 臼 舌 舟 艮 虍 虫 血 行 衣 西 瓜 共 戍 兆 曲 亥 亦 关 并
+竹 米 糸 缶 羊 羽 老 而 耒 耳 聿 肉 自 至 臼 舌 舟 艮 虍 虫 血 行 衣 西 瓜 共 戍 戌 成 兆 曲 亥 亦 关 并
     朱 𠔉 𠂤 夹 𠂢 乑
 見 角 言 谷 豆 豕 豸 貝 赤 走 足 身 車 辛 辰 酉 釆 里 甫 臣 余 我 呉
 金 長 門 隹 雨 青 非 其 免 垂 岡 斉
@@ -121,6 +123,9 @@ VARIANT_FORMS = {
     "己": "巳",
     "卩": "㔾",
     "夹": "夾",
+    "匚": "匸",       # 区 医 匹 匿: the same printed shape as 匚 (匠 欧)
+    "毋": "母毌",     # 母 has two dots where 毋 has a stroke; 貫 慣 have 毌
+    "竜": "龍",       # 籠 襲 have the full 龍
 }
 
 # KanjiVG names some parts by where they come from, not by how they are
@@ -137,10 +142,12 @@ DRAWN_AS = {
     "竹": {"㇒㇐㇔㇒㇐㇒": "⺮"},                        # 答 第 等: short ticks, no verticals
     "羊": {"㇔㇒㇐㇑㇐㇐": "⺷"},                        # 美 義 差: the vertical stops
     "手": {"㇒㇐㇐㇒": "龵"},                           # 看
-    "卩": {"㇆㇟": "㔾",                               # 危 範 宛
-           "㇇㇔": "マ", "㇆㇔": "マ"},                  # 令's foot in 領 齢, as in 冷 鈴
+    "卩": {"㇆㇟": "㔾"},                              # 危 範 宛 (令's foot stays 卩: 領 齢)
     "人": {"㇒㇟": "匕"},                               # 曷 in 渇 喝 掲 謁 褐
     "宀": {"㇔㇖": "冖"},                               # 隺 in 確 鶴: no top dot
+    "冂": {"㇔㇖": "冖"},                               # 尚 squeezed over 口: 常 堂 党 賞 掌
+    "玄": {"㇜㇜㇔": "幺"},                             # 茲 in 慈 滋 磁: 幺 twice
+    "戍": {"㇒㇐㇐㇂㇒㇔": "戌", "㇐㇒㇐㇂㇒㇔": "戌"},  # 咸 in 感 減 憾, 威: 一 inside, not 人
 }
 
 # 人 on top, at least this wide against what it covers, is the roof 𠆢 (会
@@ -185,7 +192,7 @@ LOOKALIKES = {
     "龹": "𠔉",
     "𠂇": "ナ", "丆": "ナ",
     "襾": "西",
-    "戶": "戸", "靑": "青", "黃": "黄", "黑": "黒", "齒": "歯", "龍": "竜", "龜": "亀", "麥": "麦",
+    "戶": "戸", "靑": "青", "黃": "黄", "黑": "黒", "齒": "歯", "龜": "亀", "麥": "麦",
 }
 
 # A stroke outside every tile becomes a single-stroke part, by its KanjiVG
@@ -851,10 +858,13 @@ def join_pieces(parts: list[dict], strokes: list[dict], form_to_tile: dict, tile
             else:
                 joined.extend(cut(part["node"], strokes, form_to_tile, tile_strokes))
         else:
+            numbers = set().union(*(p["strokes"] for p in pieces))
+            # The whole element's strokes say how it is drawn (感's 戍 is 戌).
+            form = drawn_as(part["form"], sorted(numbers), strokes)
             joined.append({
-                "el": part["el"],
-                "form": part["form"],
-                "strokes": set().union(*(p["strokes"] for p in pieces)),
+                "el": form_to_tile[form],
+                "form": form,
+                "strokes": numbers,
                 "wrap": True,
             })
     return joined

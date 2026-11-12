@@ -513,3 +513,21 @@ test('powers: the meaning comes in other languages where the answer has one', ()
   assert.deepEqual(engine.clues(used).meaning, ['Japan'], 'English stays');
   assert.deepEqual(engine.answerInfo('明').local, {});
 });
+
+test('the single strokes other than 一 are keys only at a level with strokeKeys (Hard)', () => {
+  // A palette with no room for decoys: the answer's parts and the always keys.
+  const config = testConfig();
+  config.modes.forEach((m) => { m.palette = 1; });
+  const engine = setup(config);
+  const strokes = ['丨', '丶', '丿', '乙', '亅'];
+  const normal = engine.newGame(start('k1', '明', { level: 'normal' }));
+  const hard = engine.newGame(start('k1', '明', { level: 'hard' }));
+  assert.deepEqual(normal.palette.slice().sort(), ['一', '日', '月'].sort(), '一 is on every keyboard');
+  strokes.forEach((id) => assert.ok(hard.palette.includes(id), `${id} is a key at Hard`));
+  // Nor do they come in as decoys at Normal, whatever the palette's size.
+  const roomy = setup(testConfig());
+  for (let i = 0; i < 20; i++) {
+    const game = roomy.newGame(start('k1', '明', { level: 'normal', seed: `decoys:${i}` }));
+    strokes.forEach((id) => assert.ok(!game.palette.includes(id), `${id} isn't a decoy at Normal`));
+  }
+});

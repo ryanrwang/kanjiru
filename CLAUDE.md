@@ -5,6 +5,7 @@ A kanji word puzzle in the spirit of Wordle: guess the word (1–4 kanji, 4–6 
 ## Start here
 - **`docs/DESIGN.md`**: every game decision so far, marked Decided, Proposed or Open, with the reasons. Confirm anything Proposed with the user before building on it.
 - **`docs/ROADMAP.md`**: the steps to launch, their order, and the prompt that starts each one. Tick a step off when it merges, and update both docs when a decision changes. Next up: step 9, the audit follow-ups, planned in full there (agreed 2026-11-11).
+- **`docs/NATIVE-AUDIT.md`**: the native-reader audit of the answers and parts (2026-11-12), what it fixed and what it left.
 - **Threads share this folder.** Two sessions here at once will switch each other's Git branches, so run one at a time or give each its own worktree.
 
 ## Tech Stack
@@ -39,12 +40,12 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `styles.css` | All styles, using token variables only |
 | `app.js` | The header (one look for every control, `.head-btn`; a breadcrumb on the Points, Settings, About and game pages; Close on Points, Settings and About; in a game on the go, the hints pill in the points' place; tips hanging from it, one tooltip component (`headTip()`, `renderHeadTip()`; the page dims but the control it points at): the language tip at the gear after the first visit's language picker (`askLanguage()`), and the first game's welcome bonus card at the hints), the play page (How to play on top, open until a game is played; the play card with the level switches, and beside Continue the flag that ends the game on the go (`endFromCard()`); every game played; the install tip, folded, at the bottom), data loading, and the routes (`''` play page, `#points`, `#settings`, `#about`, `#main` a random game, or a mode's daily where it has one, `#main/practice` keep playing after a daily), each a history entry with its depth so 漢 and Close go back; a move deeper slides the page in from the right and one back slides it out, like an iPhone (`slide()`); a move sets the tab's title, tells screen readers and carries the keyboard's focus (`arrive()`); a save changed in another tab is taken and drawn again (`saveChangedElsewhere()`) |
 | `js/config/modes.js` | Game modes: main (4–6 parts, 1–4 kanji), with no daily since 2026-11-09, so every game is a random puzzle (`daily: false`); k1–k4 retired |
-| `js/config/levels.js` | Levels: Normal, plus the Hard and Guided switches on the play card (`settingsLevel()`); Easy retired |
+| `js/config/levels.js` | Levels: Normal, plus the Hard and Guided switches on the play card (`settingsLevel()`); Easy retired. `strokeKeys`: the single strokes are keys (Hard) |
 | `js/config/skins.js` | Skin catalogue: 8 colours, 8 tile reveals, 8 win effects, each free, bought or unlocked by an achievement, and 4 hint icon looks (Emoji, free; Badge and Seal to buy; Illustrated with Regular; `style`) |
 | `js/config/powers.js` | Hints and powers: effect, cost, when usable, drop weight, its emoji (`icon`), drawing (`art`) and Badge colour (`badge`); `retired` ones (Reading, Head start) stay for old saves, and `becomes` counts their hints as another. Prices are set so a win buys about two hints |
 | `js/config/economy.js` | Every points number: the 60-point welcome bonus, per part, per win, streaks, drops |
 | `js/config/achievements.js` | Achievements as stat + threshold (8 at launch) |
-| `js/config/rules.js` | Rules that aren't points or modes: the palette's always-shown tiles and decoy weights, palette-only guesses, practice repeats, share squares, how long Not now hides the install tip, the taps that turn debug mode on (`debugTaps`), the physical keys that type parts (`typing`) |
+| `js/config/rules.js` | Rules that aren't points or modes: the palette's always-shown tiles (一; the other single strokes only at a level with `strokeKeys`, Hard) and decoy weights, palette-only guesses, practice repeats, share squares, how long Not now hides the install tip, the taps that turn debug mode on (`debugTaps`), the physical keys that type parts (`typing`) |
 | `js/registry.js` | One import for all catalogues, plus a start-up check that their ids agree |
 | `js/store.js` | The save in localStorage: versioned (v3; the v2 → v3 migration starts every older save afresh, the launch reset), with migrations, plus export, import and the merge rules (`MERGE`). Games on the go are in `playing`; points and hints held are the `ledger` (`points()`, `held()`, `enter()`); `resetAchievements()` and `resetAll()` (Settings, Start over); `deleteGame()` (history's Delete), remembered in `deleted` so a merge doesn't bring a game back; `sync()` takes a save another tab wrote; a save that can't be read is kept under `kanjiru-unreadable`; `keepSafe()` asks the browser to keep the save once a game is finished |
 | `js/ledger.js` | The ledger: every gain and spend of points or hints as an entry with its own id, the balance, the v1 migration and the merge that joins entries |
@@ -60,7 +61,7 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/history.js` | Every game played (titled Kanjita), newest first, under the play card, with each guess's squares scored again; each opens to its final board (the kanji guide as it ended, over every guess's tiles, with the Arrows hint's arrows when it was used) and Delete (`onDelete`; app.js asks, then `store.deleteGame()`) |
 | `js/transfer.js` | Calls `api/transfer.php` |
 | `js/dom.js` | `el()`, the small DOM helper, plus `switchRow()` (a toggle switch, which slides even when its page redraws) and `segmented()` (one of a few); and the moves between states (docs/DESIGN.md, "Motion"): `motion()` (a token's time, 0 under reduced motion), `smoothFold()` for a `<details>`, `growIn()` and `shrinkOut()` for a block coming or going, `openSheet()`, `closeSheet()` and `dismissable()` for every modal, and `crossfade()` for a new look or language |
-| `js/engine/score.js` | Scoring: a guess against the answer, part by part (rules in `docs/DESIGN.md`, "Scoring"), and `nearWays()`, which way a yellow tile's part lies (the Arrows hint) |
+| `js/engine/score.js` | Scoring: a guess against the answer, part by part (rules in `docs/DESIGN.md`, "Scoring"; a green tile takes the answer's form, 氵 for 水), and `nearWays()`, which way a yellow tile's part lies (the Arrows hint) |
 | `js/engine/game.js` | `createEngine(data)`: game state, guesses, every power effect, giving up, points, replay, history entries, bonus drops |
 | `js/engine/palette.js` | The puzzle's palette (a seeded subset of tiles), `buildable()`, `narrow()` for the picker, and `tilesForPlace()` for a cell's parts |
 | `js/engine/daily.js` | Date → puzzle number → answer, practice picks, history keys |
@@ -85,9 +86,11 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 | `js/i18n/en.js`, `js/i18n/ja.js` | All interface text, English (the reference) and Japanese |
 | `tools/build_data.py` | Downloads the dictionaries and writes `data/candidates.json` (settings at the top; see `tools/README.md`). `--parts-only` redoes just the part breakdowns and `data/parts.json` |
 | `data/candidates.json` | Every candidate answer, with kanji info and part breakdowns |
-| `data/parts.json` | The parts palette: 263 tiles, their forms (氵 for 水, 𠆢 for 人) and drawings for the 5 glyphs Noto lacks |
+| `data/parts.json` | The parts palette: 264 tiles, their forms (氵 for 水, 𠆢 for 人) and drawings for the 5 glyphs Noto lacks |
 | `data/parts-overrides.json` | Hand-fixed part breakdowns, each with a `why`; `build_data.py` uses them instead of its own split |
 | `data/meanings-ja.json` | Each daily answer's meaning in Japanese, written by hand (by Claude, 2026-11-09), never using the answer's own kanji. `compile_game.py` writes them into `data/game/answers.json`; not deployed |
+| `data/meanings-en.json` | English meanings written by hand (native audit, 2026-11-12) where the dictionary's mislead: every one-kanji answer and 17 words. `compile_game.py` puts them in `data/game/kanji.json` (a kanji) or `answers.json` `words` (a word); not deployed |
+| `data/one-kanji.json` | The one-kanji answers: their jōyō-table readings (KANJIDIC lists more) and, for a stem, the word it's known by (選 → 選ぶ), which the result card shows. `compile_game.py` puts them in `kanji.json` and `answers.json` `forms`; its test fails if an answer has none; not deployed |
 | `docs/PARTS-AUDIT.md` | The parts audit (2026-11-10): every tile's Kangxi radical, every kanji it changed, and what was left alone |
 | `tools/compile_game.py` | Writes `data/game/`: the slim kanji file and the daily schedule from the Keep words (see `tools/README.md`). `EPOCH` is the date of puzzle 1 |
 | `tools/make_images.py` | Draws `icons/` from the favicon's design (needs Pillow and the Noto JP fonts) |
@@ -122,10 +125,10 @@ Tests (no dependencies): `node --test` for the engine, and `python -I -X utf8 -m
 - **Accessibility:** the game plays by keyboard and every look keeps WCAG AA contrast (docs/DESIGN.md, "Accessibility"). Check a new control or colour in every skin and both schemes.
 - **Check the console.** `validate()` logs `[kanjiru config]` warnings at start-up when catalogues disagree. Fix them before committing.
 - **Answers are N3 or easier.** Guesses may use any jōyō kanji built from the puzzle's palette.
-- **Game data is compiled.** After a rebuild, a review session or a change to `data/meanings-ja.json`, run `python -I -X utf8 tools/compile_game.py` and commit `data/game/`. Each run reshuffles the days not yet played; to add meanings without that, pass `--today` the date of the last compile. It never invents answers: with no Keep words the answer lists are empty.
+- **Game data is compiled.** After a rebuild, a review session or a change to `data/meanings-ja.json`, `data/meanings-en.json` or `data/one-kanji.json`, run `python -I -X utf8 tools/compile_game.py` and commit `data/game/`. Each run reshuffles the days not yet played; to add meanings without that, pass `--today` the date of the last compile. It never invents answers: with no Keep words the answer lists are empty.
 - **Which modes play:** a mode needs `playable: true` in `js/config/modes.js` (the game screen supports it) and answers. Until both, its play card shows "soon".
 - **Levels:** a game's level lives in its start (`start.level`) and decides what a guess is (`levels.js` `guess`). Code checks the level's fields, never its id.
-- **Dev-only files don't deploy.** `tools/`, `review/`, `tests/`, `package.json`, `data/candidates.json`, `data/review.json` and `data/meanings-ja.json` are excluded in `deploy.yml`. The review page writes files, so it must never reach the server.
+- **Dev-only files don't deploy.** `tools/`, `review/`, `tests/`, `package.json`, `data/candidates.json`, `data/review.json`, `data/meanings-ja.json`, `data/meanings-en.json` and `data/one-kanji.json` are excluded in `deploy.yml`. The review page writes files, so it must never reach the server.
 - **Server data stays put.** `api/transfer.php` writes codes to `api/codes/`, which is gitignored, blocked by `.htaccess` and excluded in `deploy.yml`.
 - **Back-to-apps mark:** this app's hover move is `rw-brush`, a left-to-right clip-path wipe. Keep it unique across the apps family. It shows on the play page only (the footer is hidden on every other page: `body[data-page]` in `styles.css`, the user's call on 2026-11-10).
 

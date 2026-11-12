@@ -34,6 +34,8 @@
  *   countLeft    each guess keeps how many kanji still fit each slot
  *                (engine.fits). No offered level shows it: Guided did,
  *                under its frames, until 2026-11-10
+ *   strokeKeys   the keyboard also has the single strokes in rules.js
+ *                palette.strokeKeys (Hard: they build guess kanji)
  *   paletteScale the mode's palette size (modes.js palette) times this,
  *                rounded: 28 keys for everyone
  *   meanings     guessed kanji show their meaning on the board
@@ -46,17 +48,17 @@ const PARTS = {
 };
 
 export const LEVELS = [
-  { id: 'normal', offered: true, hard: false, guided: false, ...PARTS,
+  { id: 'normal', offered: true, hard: false, guided: false, ...PARTS, strokeKeys: false,
     realKanji: false, useHints: false, showSplit: false, countLeft: false, points: 1 },
-  { id: 'hard', offered: true, hard: true, guided: false, ...PARTS,
+  { id: 'hard', offered: true, hard: true, guided: false, ...PARTS, strokeKeys: true,
     realKanji: true, useHints: true, showSplit: false, countLeft: false, points: 1.5 },
-  { id: 'guided', offered: true, hard: false, guided: true, ...PARTS,
+  { id: 'guided', offered: true, hard: false, guided: true, ...PARTS, strokeKeys: false,
     realKanji: false, useHints: false, showSplit: true, countLeft: false, points: 0.75 },
-  { id: 'guided-hard', offered: true, hard: true, guided: true, ...PARTS,
+  { id: 'guided-hard', offered: true, hard: true, guided: true, ...PARTS, strokeKeys: true,
     realKanji: true, useHints: true, showSplit: true, countLeft: false, points: 1.125 },
   // Retired: Easy guessed whole kanji from a strip.
   { id: 'easy', offered: false, hard: false, guided: false, guess: 'kanji', order: false, places: false,
-    realKanji: true, useHints: false, showSplit: false, countLeft: false, paletteScale: 1,
+    strokeKeys: true, realKanji: true, useHints: false, showSplit: false, countLeft: false, paletteScale: 1,
     meanings: true, freeMeaning: true, points: 0.5 }
 ];
 

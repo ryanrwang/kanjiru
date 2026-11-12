@@ -58,4 +58,6 @@ jobs:
             data/candidates.json
             data/review.json
             data/meanings-ja.json
+            data/meanings-en.json
+            data/one-kanji.json
             **/*.md

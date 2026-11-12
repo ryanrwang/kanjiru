@@ -50,8 +50,8 @@
       "why": "The bottom is 丂; KanjiVG leaves it as a line and a loose stroke."
     },
     "母": {
-      "parts": [["毋", "whole"]],
-      "why": "The shape is the 毋 tile, as in 毎 and 海; KanjiVG leaves its two dots loose."
+      "parts": [["母", "whole"]],
+      "why": "母 has two dots, not 毋's stroke: it shows as 母, a form of the 毋 tile (毎 海 keep 毋)."
     },
     "内": {
       "parts": [["冂", "outer"], ["人", "inner"]],
@@ -100,6 +100,110 @@
     "脊": {
       "parts": [["𠆢", "top"], ["二", "top"], ["二", "top"], ["月", "bottom"]],
       "why": "The top is a roof with 二 on each side, over 月; KanjiVG's 人 overlaps the 二s, so the roof wasn't found."
+    },
+    "茶": {
+      "parts": [["艹", "top"], ["𠆢", "bottom"], ["木", "bottom"]],
+      "why": "艹 over a roof over 木 (9 strokes). The build found 余, which makes 荼, a different kanji."
+    },
+    "曜": {
+      "parts": [["日", "left"], ["ヨ", "right"], ["ヨ", "right"], ["隹", "right"]],
+      "why": "The jōyō 曜 has ヨヨ over 隹, not 羽 (習 keeps 羽); KanjiVG names the top 羽."
+    },
+    "躍": {
+      "parts": [["⻊", "left"], ["ヨ", "right"], ["ヨ", "right"], ["隹", "right"]],
+      "why": "The jōyō 躍 has ヨヨ over 隹, not 羽 (習 keeps 羽); KanjiVG names the top 羽."
+    },
+    "濯": {
+      "parts": [["氵", "left"], ["ヨ", "right"], ["ヨ", "right"], ["隹", "right"]],
+      "why": "The jōyō 濯 has ヨヨ over 隹, not 羽 (習 keeps 羽); KanjiVG names the top 羽."
+    },
+    "周": {
+      "parts": [["冂", "outer"], ["土", "inner"], ["口", "inner"]],
+      "why": "The lower line inside is the longer: 土, not 士. KanjiVG names it 吉."
+    },
+    "週": {
+      "parts": [["冂", "inner"], ["土", "inner"], ["口", "inner"], ["辶", "outer"]],
+      "why": "周 is 冂 holding 土 and 口, not 士."
+    },
+    "調": {
+      "parts": [["言", "left"], ["冂", "right"], ["土", "right"], ["口", "right"]],
+      "why": "周 is 冂 holding 土 and 口, not 士."
+    },
+    "彫": {
+      "parts": [["冂", "left"], ["土", "left"], ["口", "left"], ["彡", "right"]],
+      "why": "周 is 冂 holding 土 and 口, not 士."
+    },
+    "令": {
+      "parts": [["𠆢", "top"], ["一", "bottom"], ["卩", "bottom"]],
+      "why": "Printed fonts (Noto, which the game loads) draw 令's foot as 卩; マ is the handwritten form."
+    },
+    "冷": {
+      "parts": [["冫", "left"], ["𠆢", "right"], ["一", "right"], ["卩", "right"]],
+      "why": "令 as printed: 𠆢 一 卩."
+    },
+    "鈴": {
+      "parts": [["金", "left"], ["𠆢", "right"], ["一", "right"], ["卩", "right"]],
+      "why": "令 as printed: 𠆢 一 卩."
+    },
+    "零": {
+      "parts": [["雨", "top"], ["𠆢", "bottom"], ["一", "bottom"], ["卩", "bottom"]],
+      "why": "令 as printed: 𠆢 一 卩."
+    },
+    "南": {
+      "parts": [["十", "top"], ["冂", "bottom"], ["𢆉", "bottom"]],
+      "why": "The inside is the 𢆉 of 幸 and 報, one tile in both."
+    },
+    "献": {
+      "parts": [["十", "left"], ["冂", "left"], ["𢆉", "left"], ["犬", "right"]],
+      "why": "南 holds 𢆉, as 幸 and 報 do."
+    },
+    "卵": {
+      "parts": [["卯", "outer"], ["丶", "inner"], ["丶", "inner"]],
+      "why": "卵 has two dots; KanjiVG counts one of them inside 卯."
+    },
+    "良": {
+      "parts": [["丶", "top"], ["艮", "bottom"]],
+      "why": "The top stroke is written and taught as a dot."
+    },
+    "娘": {
+      "parts": [["女", "left"], ["丶", "right"], ["艮", "right"]],
+      "why": "良's top stroke is a dot."
+    },
+    "慈": {
+      "parts": [["丷", "top"], ["一", "top"], ["幺", "top"], ["幺", "top"], ["心", "bottom"]],
+      "why": "茲's top is 丷 over 一, not 艹, over 幺 twice; KanjiVG names the top 艹."
+    },
+    "滋": {
+      "parts": [["氵", "left"], ["丷", "right"], ["一", "right"], ["幺", "right"], ["幺", "right"]],
+      "why": "茲's top is 丷 over 一, not 艹, over 幺 twice."
+    },
+    "磁": {
+      "parts": [["石", "left"], ["丷", "right"], ["一", "right"], ["幺", "right"], ["幺", "right"]],
+      "why": "茲's top is 丷 over 一, not 艹, over 幺 twice."
+    },
+    "左": {
+      "parts": [["ナ", "top"], ["工", "bottom"]],
+      "why": "ナ over 工, as 右 is ナ over 口; an enclosure place read oddly in Guided."
+    },
+    "友": {
+      "parts": [["ナ", "top"], ["又", "bottom"]],
+      "why": "ナ over 又, as 有 is ナ over 月."
+    },
+    "者": {
+      "parts": [["耂", "top"], ["日", "bottom"]],
+      "why": "耂 is a crown, not an enclosure."
+    },
+    "考": {
+      "parts": [["耂", "top"], ["丂", "bottom"]],
+      "why": "耂 is a crown, not an enclosure."
+    },
+    "貫": {
+      "parts": [["毌", "top", [1, 2, 3, 4]], ["貝", "bottom"]],
+      "why": "貫's top is 毌 (a straight vertical), not 毋. 毌 is only here and in 慣, so its strokes are listed for its stroke count."
+    },
+    "慣": {
+      "parts": [["忄", "left"], ["毌", "right"], ["貝", "right"]],
+      "why": "貫's top is 毌, not 毋."
     }
   }
 }

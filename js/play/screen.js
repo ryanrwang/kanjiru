@@ -1119,8 +1119,9 @@ export function openGame(root, ctx) {
       const tile = tileOf.get(id);
       const on = isOn(id);
       const mark = marks.get(id);
-      // The most used other form (氵 for 水) shows small in the corner.
-      const variants = tile.forms.filter((f) => f.glyph !== id).sort((a, b) => b.uses - a.uses).slice(0, 1);
+      // The two most used other forms (亻 and 𠆢 for 人) show small in the
+      // corner, so every shape the key stands for is on it.
+      const variants = tile.forms.filter((f) => f.glyph !== id && f.uses > 0).sort((a, b) => b.uses - a.uses).slice(0, 2);
       const cells = answer && answer.get(id);
       return el('button', {
         class: `tile is-cell palette-tile${mark ? ` is-${mark}` : ''}${on ? '' : ' is-out'}`,

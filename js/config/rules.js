@@ -11,8 +11,13 @@ export const RULES = {
   // (modes.js) is reached. A daily's palette comes from its puzzle number,
   // so everyone gets the same one.
   palette: {
-    // Always shown: the single strokes, which fill gaps in many kanji.
-    always: ['一', '丨', '丶', '丿', '乙', '亅'],
+    // Always shown: 一, a real part of many answers.
+    always: ['一'],
+    // Shown too at a level with `strokeKeys` (Hard): the other single
+    // strokes. No answer has one (compile_game.py LOOSE_STROKES), but a Hard
+    // guess must make real kanji, and some need them. Elsewhere they were
+    // dead keys (native audit, 2026-11-12).
+    strokeKeys: ['丨', '丶', '丿', '乙', '亅'],
     // A decoy's chance = byUses × the jōyō kanji it appears in
     //                  + byNeighbour × the kanji it shares with an answer part.
     // Neighbours make more real kanji buildable from the palette.
