@@ -1,6 +1,7 @@
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
-import { buildPalette, buildable, narrow, tilesForPlace } from '../js/engine/palette.js';
+import { buildPalette, buildable, narrow, tilesForPlace, keyCorners } from '../js/engine/palette.js';
 import { seeded } from '../js/engine/random.js';
 import { RULES } from '../js/registry.js';
 import { fixtureData } from './helpers.js';
@@ -85,4 +86,54 @@ test('tilesForPlace: the palette tiles some kanji has in that place, in palette 
   const right = tilesForPlace(data, pal, 'right');
   ['月', '土', '寸'].forEach((id) => assert.ok(right.includes(id), id));
   assert.deepEqual(right, pal.filter((id) => right.includes(id)));
+});
+
+// Keys' corner forms (rules.js palette.corner), on made-up tiles.
+const cornerData = (answers = {}) => ({
+  kanji: {
+    '物': { parts: [{ el: '牛', pos: 'left', form: '牜' }, { el: '勿', pos: 'right' }] },
+    '休': { parts: [{ el: '人', pos: 'left', form: '亻' }, { el: '木', pos: 'right' }] }
+  },
+  tiles: [
+    { id: '人', forms: [{ glyph: '人', uses: 24 }, { glyph: '亻', uses: 113 }, { glyph: '𠆢', uses: 40 }] },
+    { id: '牛', forms: [{ glyph: '牛', uses: 5 }, { glyph: '⺧', uses: 5 }, { glyph: '牜', uses: 5 }] },
+    { id: '匚', forms: [{ glyph: '匚', uses: 8 }, { glyph: '匸', uses: 4 }] },
+    { id: '己', forms: [{ glyph: '己', uses: 10 }, { glyph: '巳', uses: 9 }] },
+    { id: '竜', forms: [{ glyph: '竜', uses: 2 }, { glyph: '龍', uses: 2 }] },
+    { id: '木', forms: [{ glyph: '木', uses: 159 }] },
+    { id: '口' }
+  ],
+  answers
+});
+const cornerRules = { palette: { corner: { minUses: 5, skip: ['巳'] } } };
+
+test('a key shows one other form in its corner: the one most kanji use', () => {
+  const corners = keyCorners(cornerData(), cornerRules);
+  assert.equal(corners.get('人'), '亻', 'not 𠆢 as well');
+  assert.equal(corners.get('木'), null, 'one form, no corner');
+  assert.equal(corners.get('口'), null, 'a tile with no forms listed');
+});
+
+test('a form in too few kanji, or one a reader takes for the key, stays off the corner', () => {
+  const corners = keyCorners(cornerData(), cornerRules);
+  assert.equal(corners.get('匚'), null, '匸 is in only 4');
+  assert.equal(corners.get('己'), null, '巳 is skipped');
+  assert.equal(corners.get('竜'), null, '龍 is in only 2');
+});
+
+test('a tie goes to the form the answers use more', () => {
+  assert.equal(keyCorners(cornerData({ main: ['物'] }), cornerRules).get('牛'), '牜');
+  assert.equal(keyCorners(cornerData({}), cornerRules).get('牛'), '⺧', 'no answers: the first listed');
+});
+
+test('the corners are the same whatever the puzzle', () => {
+  const data = cornerData({ main: ['物', '休'] });
+  assert.equal(keyCorners(data, cornerRules), keyCorners(data, cornerRules));
+});
+
+test('the real rules skip only forms the real tiles have', () => {
+  const tiles = JSON.parse(readFileSync(new URL('../data/parts.json', import.meta.url), 'utf8')).tiles;
+  const forms = new Set(tiles.flatMap((t) => t.forms.filter((f) => f.glyph !== t.id).map((f) => f.glyph)));
+  RULES.palette.corner.skip.forEach((g) => assert.ok(forms.has(g), `${g} is no tile's other form`));
+  assert.ok(RULES.palette.corner.minUses >= 1);
 });

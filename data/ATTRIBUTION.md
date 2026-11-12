@@ -54,6 +54,7 @@ Because they adapt CC BY-SA material, both files are shared under **CC BY-SA 4.0
 - **URL:** <https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400&family=Noto+Serif+JP:wght@700&display=swap>, fetched as a browser so it lists each font's `unicode-range`
 - **Used for:** knowing which palette glyphs those fonts can draw (`font: false` in `data/parts.json`). Nothing from it is copied into the data. The fonts themselves are SIL Open Font License 1.1, and the app loads them from Google Fonts.
 - **The coin:** the points' coin (`js/coin.js`) carries the outline of 金 from Noto Serif JP Black (weight 900, Google Fonts' v34), under the same SIL Open Font License 1.1, so it looks the same before the fonts load.
+- **The parts Noto lacks:** 龵 龶 㐄 业 𢆉 are cut from Noto Serif JP Bold kanji that have them (看 青 降 並 幸; 㐄 at weight 450, scaled up) by `tools/make_outlines.py`, and their outlines copied into `data/part-outlines.json` and `data/parts.json` (`outline`), under the same SIL Open Font License 1.1, so they match the font on the keys.
 
 ## Hand edits
 

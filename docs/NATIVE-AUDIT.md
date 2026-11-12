@@ -15,7 +15,7 @@
 
 - **Green cells show the answer's form.** A green cell is that part of the answer, so it shows the glyph the answer has there: a solved 会議 reads 𠆢 二 厶 言 ⺷ 我, not 人 二 厶 言 羊 我. Yellow and grey cells keep the key's glyph. `scoreOrder()` in `js/engine/score.js`.
 - **Only 一 is on every keyboard.** 丨 丶 丿 乙 亅 are in no answer (`LOOSE_STROKES`), so at Normal and Guided they were dead keys. They stay at Hard and Guided · Hard, where a guess must make real kanji (`strokeKeys` in `js/config/levels.js`, `palette.strokeKeys` in `js/config/rules.js`), and they are never decoys elsewhere.
-- **A key shows up to two other forms.** 人 shows 亻 and 𠆢; 水 shows 氵 and 氺.
+- **A key shows up to two other forms.** 人 shows 亻 and 𠆢; 水 shows 氵 and 氺. (Later the same day: one form only, `docs/DESIGN.md`, "Key forms".)
 - **A one-kanji stem shows its word.** 選 is not said alone, so the result card shows 選ぶ above its meaning (`data/one-kanji.json`, `forms` in `answers.json`). The round isn't called "a kanji" up front: that would tell the player the answer has one kanji, which Normal keeps hidden.
 
 ### Parts

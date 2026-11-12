@@ -60,4 +60,5 @@ jobs:
             data/meanings-ja.json
             data/meanings-en.json
             data/one-kanji.json
+            data/part-outlines.json
             **/*.md
