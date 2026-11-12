@@ -21,7 +21,14 @@ export const RULES = {
     // A decoy's chance = byUses × the jōyō kanji it appears in
     //                  + byNeighbour × the kanji it shares with an answer part.
     // Neighbours make more real kanji buildable from the palette.
-    decoyWeight: { byUses: 1, byNeighbour: 20 }
+    decoyWeight: { byUses: 1, byNeighbour: 20 },
+    // A key whose part has other forms shows one of them small in its
+    // corner (亻 on 人, 忄 on 心), the same at every level and in every game,
+    // so it never gives the answer away (docs/DESIGN.md, "Key forms"). It's
+    // the form the most jōyō kanji use, in at least minUses of them; a tie
+    // goes to the one the answers use more (牜 on 牛, for 物). Never one in
+    // skip: forms a reader takes for the key's own glyph (匸 for 匚, 巳 for 己).
+    corner: { minUses: 5, skip: ['匸', '巳', '㔾', '母', '毌', '⺷', '夾', '氺'] }
   },
 
   // A guess must be built only from the palette's parts.

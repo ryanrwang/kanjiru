@@ -10,7 +10,7 @@ Builds `data/candidates.json` (the Kanjiru answers, with each kanji's info and p
    - `kanji`: every jōyō kanji with strokes, grade, JLPT level, frequency, meanings, readings, `parts`, `atomic` (it is a tile itself) and `override` (its parts come from the overrides file).
    - `parts`: a list of `{el, pos}` in stroke order. `el` is the tile, `pos` is where it sits in the whole kanji, and `form` is added when the glyph shown differs from the tile (氵 for 水).
    - `words`: every N5 to N3 kanji that isn't a tile itself, plus the common JMdict words of 2 to 4 kanji that use only N5 to N3 kanji.
-4. Writes `data/parts.json`: `tiles`, each with `id`, `strokes`, `uses` (jōyō kanji containing it) and `forms`. Each form has a `glyph`, its own `strokes` and `uses`, `jis: false` when it's not in JIS X 0213, and `font: false` when it's not in Noto Sans/Serif JP, with `svg`: KanjiVG's strokes to draw instead (`viewBox` and `paths`; stroke them, no fill). The game loads Noto, so only glyphs Noto lacks are drawn (`DRAW_NON_JIS` brings back drawings for glyphs outside JIS X 0213).
+4. Writes `data/parts.json`: `tiles`, each with `id`, `strokes`, `uses` (jōyō kanji containing it) and `forms`. Each form has a `glyph`, its own `strokes` and `uses`, `jis: false` when it's not in JIS X 0213, and `font: false` when it's not in Noto Sans/Serif JP, with `svg`: KanjiVG's strokes to draw instead (`viewBox` and `paths`; stroke them, no fill), and `outline` when `data/part-outlines.json` has it (see make_outlines.py below), which the game draws in their place. The game loads Noto, so only glyphs Noto lacks are drawn (`DRAW_NON_JIS` brings back drawings for glyphs outside JIS X 0213).
 5. Prints a summary: the palette, parts per kanji, positions, single strokes, atomic answers, look-alike kanji, hand overrides, the kanji flagged on the review page (from `data/review.json`, read only), counts per length, and run time.
 
 Python 3.10 or later, standard library only. Run it from the project folder (`-X utf8` lets Windows print the kanji in the summary):
@@ -129,6 +129,17 @@ Both save to `data/review.json` through `review.php`.
 Source versions are pinned in the script (`KANJIVG_RELEASE`, `JMDICT_RELEASE`, `JLPT_VOCAB_RELEASE`, `WALLER_KANJI_SNAPSHOTS`). To move to a newer release, change the constant, delete the old file from `tools/sources/`, rerun, and update `data/ATTRIBUTION.md`. KANJIDIC2 has no versioned address: delete `tools/sources/kanjidic2.xml.gz` to fetch the current one.
 
 `tools/sources/` is not committed.
+
+## make_outlines.py
+
+Cuts the parts Noto lacks (`font: false`) out of Noto Serif JP itself, so they match the font on the keys: its weight, thick and thin strokes, serifs and brush ends. Each comes from a kanji that has it (龵 from 看, 龶 from 青, 㐄 from 降, 业 from 並, 𢆉 from 幸), as the outlines of the strokes it's made of (`PARTS` at the top):
+
+```
+python -I -X utf8 tools/make_outlines.py [--serif PATH]
+python -I -X utf8 tools/make_outlines.py --list 看   # number a kanji's outlines
+```
+
+It writes `data/part-outlines.json` and copies each outline into `data/parts.json`; `build_data.py` copies them too on a rebuild. It needs fontTools (`pip install fonttools`; run it without `-I` if fontTools is in a folder on `PYTHONPATH`) and the Noto Serif JP variable font (Windows has it in `C:/Windows/Fonts`). A new part Noto lacks needs an entry in `PARTS`: its host kanji and which outlines are the part. The test `RealOutlines` fails until it has one.
 
 ## make_images.py
 

@@ -42,6 +42,34 @@ export function tilesForPlace(data, palette, pos) {
   return palette.filter((id) => places.has(id) && places.get(id).has(pos));
 }
 
+// Per data set and rules: tile → the one other form its key shows small in
+// the corner (亻 for 人), or null (rules.js palette.corner). It never depends
+// on the puzzle, so it gives nothing away.
+const keyCornerCache = new WeakMap();
+export function keyCorners(data, rules) {
+  if (!keyCornerCache.has(data)) keyCornerCache.set(data, new Map());
+  const cache = keyCornerCache.get(data);
+  if (!cache.has(rules)) {
+    const { minUses = 1, skip = [] } = rules.palette.corner || {};
+    // How often the answers use each form, for a tie (牜 over ⺧ on 牛).
+    const answerUses = new Map();
+    Object.values(data.answers || {}).flat().forEach((word) => [...word].forEach((ch) => {
+      const k = data.kanji[ch];
+      if (k) k.parts.forEach((p) => answerUses.set(p.form || p.el, (answerUses.get(p.form || p.el) || 0) + 1));
+    }));
+    const uses = (glyph) => answerUses.get(glyph) || 0;
+    const map = new Map();
+    data.tiles.forEach((tile) => {
+      const pick = (tile.forms || [])
+        .filter((f) => f.glyph !== tile.id && f.uses >= Math.max(minUses, 1) && !skip.includes(f.glyph))
+        .sort((a, b) => b.uses - a.uses || uses(b.glyph) - uses(a.glyph))[0];
+      map.set(tile.id, pick ? pick.glyph : null);
+    });
+    cache.set(rules, map);
+  }
+  return cache.get(rules);
+}
+
 // answerKanji: the answer's kanji, e.g. ['日', '本'].
 // Returns tile ids in data.tiles order (fewest strokes first).
 export function buildPalette({ data, answerKanji, size, rules, rng, always = rules.palette.always || [], never = [] }) {

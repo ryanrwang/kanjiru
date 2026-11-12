@@ -54,11 +54,11 @@
  * in its place; with a mouse each key shows its letter, labelKeys()). Once
  * the result card has arrived, Enter is New game and Escape is Done.
  */
-import { MODES, POWER, LEVEL, ECONOMY } from '../registry.js';
+import { MODES, POWER, LEVEL, ECONOMY, RULES } from '../registry.js';
 import { t } from '../i18n.js';
 import { el } from '../dom.js';
 import * as store from '../store.js';
-import { tilesForPlace } from '../engine/palette.js';
+import { tilesForPlace, keyCorners } from '../engine/palette.js';
 import { MARKS } from '../engine/score.js';
 import { stats, games } from '../engine/stats.js';
 import { localDate, answersFor } from '../engine/daily.js';
@@ -1109,19 +1109,18 @@ export function openGame(root, ctx) {
   //   after    nodes that close the last row (Delete and Guess)
   //   answer   debug mode: id → the cells (from 1) it fills in the answer
   function palette({ ids, marks, pressed, usable = null, onTap, label, after = [], answer = null }) {
-    const tileOf = new Map(data.tiles.map((tile) => [tile.id, tile]));
+    const corners = keyCorners(data, RULES);
     const isOn = (id) => !usable || pressed(id) || usable.has(id);
     // One key takes Tab into the keyboard: the last one focused, if it can
     // still be tapped, else the first that can.
     const onIds = ids.filter(isOn);
     const roving = onIds.includes(ui.keyFocus) ? ui.keyFocus : onIds[0];
     const key = (id) => {
-      const tile = tileOf.get(id);
       const on = isOn(id);
       const mark = marks.get(id);
-      // The two most used other forms (亻 and 𠆢 for 人) show small in the
-      // corner, so every shape the key stands for is on it.
-      const variants = tile.forms.filter((f) => f.glyph !== id && f.uses > 0).sort((a, b) => b.uses - a.uses).slice(0, 2);
+      // One other form shows small in the corner (亻 on 人), the same in
+      // every game and at every level, so it gives nothing away.
+      const corner = corners.get(id);
       const cells = answer && answer.get(id);
       return el('button', {
         class: `tile is-cell palette-tile${mark ? ` is-${mark}` : ''}${on ? '' : ' is-out'}`,
@@ -1133,7 +1132,7 @@ export function openGame(root, ctx) {
         onclick: () => onTap(id)
       },
         glyph(id),
-        variants.length ? el('span', { class: 'palette-variant', 'aria-hidden': 'true' }, variants.map((f) => glyph(f.glyph))) : null,
+        corner ? el('span', { class: 'palette-variant', 'aria-hidden': 'true' }, glyph(corner)) : null,
         cells ? el('span', { class: 'key-dots', 'aria-hidden': 'true' },
           cells.map((n) => el('span', { class: 'key-dot' }, String(n)))) : null);
     };

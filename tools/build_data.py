@@ -309,6 +309,7 @@ SOURCES_DIR = PROJECT_DIR / "tools" / "sources"
 OUTPUT_FILE = PROJECT_DIR / "data" / "candidates.json"
 PARTS_FILE = PROJECT_DIR / "data" / "parts.json"
 OVERRIDES_FILE = PROJECT_DIR / "data" / "parts-overrides.json"  # hand-edited
+OUTLINES_FILE = PROJECT_DIR / "data" / "part-outlines.json"     # tools/make_outlines.py
 REVIEW_FILE = PROJECT_DIR / "data" / "review.json"              # the review page's; only read
 
 # The Waller levels the game accepts, easiest first: [5, 4, 3]
@@ -1229,6 +1230,11 @@ def build_parts(trees: dict, others: dict, wanted: set, kanjidic: dict, fonts: d
         for form in {p["form"] for p in parts}:
             form_uses[form] = form_uses.get(form, 0) + 1
 
+    # Noto Serif JP's own outlines for parts Noto lacks (tools/make_outlines.py).
+    outlines = {}
+    if OUTLINES_FILE.exists():
+        outlines = json.loads(OUTLINES_FILE.read_text(encoding="utf-8"))["outlines"]
+
     palette = []
     drawn, not_in_noto = [], []
     for tile in tiles:
@@ -1244,6 +1250,8 @@ def build_parts(trees: dict, others: dict, wanted: set, kanjidic: dict, fonts: d
             if not in_noto or (DRAW_NON_JIS and not is_jis(glyph)):
                 form["svg"] = fallback_drawing(glyph, occurrences.get(glyph, []), others)
                 drawn.append(glyph)
+            if not in_noto and glyph in outlines:
+                form["outline"] = {k: outlines[glyph][k] for k in ("viewBox", "d")}
             forms.append(form)
         palette.append({"id": tile, "strokes": forms[0]["strokes"], "uses": tile_uses[tile], "forms": forms})
     palette.sort(key=lambda entry: (entry["strokes"], -entry["uses"], entry["id"]))
@@ -1386,7 +1394,9 @@ def write_outputs(sources: dict, kanji: dict, words: list, palette: list) -> Non
                      "are the glyphs it covers (氵 counts as 水). strokes and uses (joyo kanji "
                      "containing it) come from the part breakdowns in candidates.json.",
             "fonts": "font: false = not in Noto Sans JP or Noto Serif JP, which the game loads, "
-                     "so svg holds KanjiVG's strokes to draw instead (stroke them, no fill). "
+                     "so outline holds the shape cut from a Noto Serif JP kanji that has it (fill it; "
+                     "tools/make_outlines.py), and svg KanjiVG's strokes (stroke them, no fill), "
+                     "drawn where there's no outline. "
                      "jis: false = not in JIS X 0213, so a phone's own fonts may lack it; "
                      "it shows as text in Noto all the same.",
             "positions": POSITIONS,

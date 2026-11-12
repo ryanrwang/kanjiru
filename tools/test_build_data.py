@@ -245,6 +245,7 @@ class PartsOnly(unittest.TestCase):
             PROJECT_DIR=self.dir, SOURCES_DIR=sources,
             OUTPUT_FILE=data / "candidates.json", PARTS_FILE=data / "parts.json",
             OVERRIDES_FILE=data / "parts-overrides.json", REVIEW_FILE=data / "review.json",
+            OUTLINES_FILE=data / "part-outlines.json",
             PALETTE="一 丨 丶 丿 乙 亅 日 月", VARIANT_FORMS={}, DRAWN_AS={}, COMPONENT_SPLITS={},
         )
         self.patches.start()
@@ -292,6 +293,23 @@ class PartsOnly(unittest.TestCase):
         self.assertEqual(form["龶"].get("font"), False)
         self.assertIn("svg", form["龶"])
         self.assertNotIn("svg", form["日"])
+        self.assertNotIn("outline", form["龶"], "no outline file")
+
+    def test_a_part_noto_lacks_takes_its_outline(self):
+        # tools/make_outlines.py cuts 龶 from Noto Serif JP; ⺌ is in Noto, so it stays text.
+        with zipfile.ZipFile(bd.SOURCES_DIR / bd.KANJIVG_FILE, "a") as z:
+            for glyph in "⺌龶":
+                z.writestr(f"kanji/{ord(glyph):05x}.svg", kanjivg_svg(glyph, [(None, None, [("㇑", line(50, 10, 50, 90))])]))
+        css = bd.SOURCES_DIR / bd.NOTO_CSS_FILE
+        css.write_text(css.read_text(encoding="utf-8").replace("U+6708", "U+6708, U+2E8C"), encoding="utf-8")
+        outline = {"from": "青", "weight": 700, "scale": 1, "viewBox": "0 0 1000 1000", "d": "M0 0H10V10Z"}
+        bd.OUTLINES_FILE.write_text(json.dumps({"outlines": {"龶": outline, "⺌": outline}}, ensure_ascii=False), encoding="utf-8")
+        with mock.patch.object(bd, "PALETTE", "一 丨 丶 丿 乙 亅 日 月 ⺌ 龶"):
+            self.run_parts_only()
+        tiles = json.loads((self.dir / "data" / "parts.json").read_text(encoding="utf-8"))["tiles"]
+        form = {f["glyph"]: f for t in tiles for f in t["forms"]}
+        self.assertEqual(form["龶"]["outline"], {"viewBox": "0 0 1000 1000", "d": "M0 0H10V10Z"})
+        self.assertNotIn("outline", form["⺌"], "the game's Noto shows it")
 
     def test_never_writes_the_review_file(self):
         self.run_parts_only()
@@ -307,6 +325,20 @@ class PartsOnly(unittest.TestCase):
             bd.main([])
         full.assert_called_once()
         parts.assert_not_called()
+
+
+
+class RealOutlines(unittest.TestCase):
+    """The real data/parts.json: every part Noto lacks is drawn from its own outline."""
+
+    def test_every_part_noto_lacks_has_an_outline(self):
+        data = Path(__file__).resolve().parent.parent / "data"
+        tiles = json.loads((data / "parts.json").read_text(encoding="utf-8"))["tiles"]
+        lacking = [f["glyph"] for t in tiles for f in t["forms"] if f.get("font") is False and "outline" not in f]
+        self.assertEqual(lacking, [], "run tools/make_outlines.py (add the part to PARTS)")
+        outlines = json.loads((data / "part-outlines.json").read_text(encoding="utf-8"))["outlines"]
+        for f in (f for t in tiles for f in t["forms"] if "outline" in f):
+            self.assertEqual(f["outline"]["d"], outlines[f["glyph"]]["d"], f"{f['glyph']}: parts.json is behind")
 
 
 if __name__ == "__main__":

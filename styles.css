@@ -1682,7 +1682,8 @@ a.btn { text-decoration: none; }
 
 .loading { color: var(--color-text-muted); }
 
-/* KanjiVG strokes for glyphs the fonts may lack: 1em square, like text. */
+/* Glyphs the fonts lack, 1em square like text: Noto Serif JP's own outline,
+   filled (js/play/glyph.js), or KanjiVG's strokes where there's none. */
 .glyph-svg {
   width: 1em;
   height: 1em;
@@ -1696,6 +1697,11 @@ a.btn { text-decoration: none; }
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
+}
+
+.glyph-svg.is-outline path {
+  fill: currentColor;
+  stroke: none;
 }
 
 /* ── Game screen ───────────────────────────────────────────────────── */
@@ -3422,10 +3428,13 @@ button.clue-chip {
   opacity: var(--opacity-soft);
 }
 
+/* A key's one other form (亻 on 人), tucked into its top-right corner so
+   the key's own glyph stays centred and clear (js/engine/palette.js
+   keyCorners()). */
 .palette-variant {
   position: absolute;
-  top: var(--stroke-thick);
-  right: var(--spacing-xs);
+  top: 0;
+  right: var(--stroke-thin);
   display: inline-flex;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-regular);
