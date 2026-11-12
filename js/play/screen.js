@@ -49,7 +49,10 @@
  * between keys (by row too) and between cells, which selects the cell;
  * Enter or Space puts a part in, Backspace or Delete takes one out, and
  * Enter away from a button guesses. A redraw puts the focus back on the
- * same key or cell, and the result takes it when the game ends.
+ * same key or cell, and the result takes it when the game ends. A letter
+ * types the key it's on (js/play/keys.js: each key takes the physical key
+ * in its place; with a mouse each key shows its letter, labelKeys()). Once
+ * the result card has arrived, Enter is New game and Escape is Done.
  */
 import { MODES, POWER, LEVEL, ECONOMY } from '../registry.js';
 import { t } from '../i18n.js';
@@ -65,6 +68,7 @@ import { kanjiFrame, strokesLine, frameLabel, guideShown as framesShow, knownKan
 import { showCard, playOnBoard } from './reveal.js';
 import { renderResult } from './result.js';
 import { describe } from './rewards.js';
+import { keyCodes, keyLabel, matchKey, readLayout } from './keys.js';
 import { powerOffer, buyPower } from '../shop.js';
 import { toast } from '../toast.js';
 import { ask, closeAsk } from '../confirm.js';
@@ -175,6 +179,10 @@ export function openGame(root, ctx) {
   let doneArrows = false;
   let doneGrouped = false;
   let byKeyboard = false;  // the last move came from the keyboard
+  let keyCols = 0;         // the keyboard's columns (fitKeys), for its letters
+  // When the result card has arrived (glideToResult), so Enter and Escape
+  // act on it: a quick second Enter on the last guess mustn't skip it.
+  let resultReadyAt = Infinity;
 
   // Parts that stay put between redraws.
   let guessButton;
@@ -420,8 +428,7 @@ export function openGame(root, ctx) {
   // the selected cell lights up: the keys that stay bright are for it.
   function placeLabel({ pos, n, from }) {
     const tk = window.TOKENS.active();
-    const size = CELL_SIZES.find(([id]) => id === board.dataset.cell);
-    const cell = parseFloat(tk.layout[size ? size[1] : 'cell']);
+    const cell = parseFloat(tk.layout[board.dataset.cell ? sizeKey('cell', board.dataset.cell) : 'cell']);
     const wide = n * cell + (n - 1) * parseFloat(tk.spacing.xs) >= parseFloat(tk.layout.cell);
     const on = playing() && ui.active >= from && ui.active < from + n;
     const node = el('span', { class: `shape-place${on ? ' is-active' : ''}`, title: t(`pos.${pos}`) }, t(`${wide ? 'pos' : 'posShort'}.${pos}`));
@@ -460,6 +467,20 @@ export function openGame(root, ctx) {
   const CELL_SIZES = [['xl', 'cellXl'], ['lg', 'cellLg'], ['md', 'cellMd'], ['base', 'cell'], ['sm', 'cellSm'], ['xs', 'cellXs']];
   const FRAME_SIZES = [['base', 'frame'], ['sm', 'frameSm']];
   const KEY_SIZES = [['base', 'key'], ['sm', 'keySm']];
+  // With a mouse (a desktop; 2026-11-11, the user agreed), once the sizes
+  // above are chosen, each of these goes a size up if everything still
+  // fits with the kanji guide and its strokes line showing, so nothing
+  // moves when they first show: the keys, then the guide's frames (a hint
+  // card's size, no longer held to a cell's), then the cells.
+  const DESKTOP_SIZES = { keys: ['lg', 'keyLg'], frame: ['lg', 'frameLg'], cell: ['2xl', 'cell2xl'] };
+  const withMouse = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  // A size's layout token from its id (data-cell, data-frame, data-keys),
+  // the desktop's included; the base size when it's unknown.
+  const SIZE_LISTS = { cell: CELL_SIZES, frame: FRAME_SIZES, keys: KEY_SIZES };
+  const sizeKey = (kind, id) => {
+    const list = [DESKTOP_SIZES[kind], ...SIZE_LISTS[kind]];
+    return (list.find(([k]) => k === id) || SIZE_LISTS[kind][0])[1];
+  };
   // When the keyboard isn't up (the game is over), the rows may take this
   // share of the screen's height.
   const ROWS_HEIGHT = 0.5;
@@ -479,8 +500,12 @@ export function openGame(root, ctx) {
     }
     const rows = Math.ceil((n + 3) / cols);
     picker.style.setProperty('--key-cols', cols);
+    if (cols !== keyCols) { keyCols = cols; labelKeys(); }
     deleteButton.style.gridColumn = 'span 1';
-    guessButton.style.gridColumn = `span ${Math.min(rows * cols - n - 1, cols)}`;
+    const span = Math.min(rows * cols - n - 1, cols);
+    guessButton.style.gridColumn = `span ${span}`;
+    // Its Enter badge needs four keys' room (styles.css .key-hint).
+    guessButton.classList.toggle('is-wide', span >= 4);
     return rows;
   }
 
@@ -560,7 +585,7 @@ export function openGame(root, ctx) {
     let others = () => 0;
     if (keyboard) {
       const keyRows = fitKeys(tk, px);
-      const keyNow = px(tk.layout[(KEY_SIZES.find(([id]) => id === picker.dataset.keys) || KEY_SIZES[0])[1]]);
+      const keyNow = px(tk.layout[sizeKey('keys', picker.dataset.keys)]);
       // Everything above the board (the site header), the gap to the
       // keyboard, and the keyboard.
       const above = Math.max(0, board.getBoundingClientRect().top + window.scrollY);
@@ -609,6 +634,27 @@ export function openGame(root, ctx) {
       for (const c of narrow) { pick = choose(c, lines(c.px)); if (pick) break; }
       if (!pick) pick = least(narrow.length ? narrow[narrow.length - 1] : cells[cells.length - 1]);
       pick.wrap = true;
+    }
+    // A desktop's sizes up (DESKTOP_SIZES), each kept only if everything
+    // fits with the guide and a strokes line showing (the line is
+    // spacing.lg high under the large frames, styles.css).
+    if (keyboard && !pick.wrap && withMouse()) {
+      const lg = px(tk.spacing.lg);
+      const margin = parseFloat(getComputedStyle(frames).marginBottom) || 0;
+      // The guide's room as framesHeight() counts it, with a strokes line.
+      const all = (c, f, k, line) => others(k) + f + xs + line + xs + margin + rowsHeight(c, 1) <= window.innerHeight;
+      const c = px(tk.layout[sizeKey('cell', pick.cell)]);
+      let f = px(tk.layout[sizeKey('frame', pick.frame)]);
+      let k = px(tk.layout[sizeKey('keys', pick.keys)]);
+      let line = md;
+      const [keysId, keysKey] = DESKTOP_SIZES.keys;
+      const [frameId, frameKey] = DESKTOP_SIZES.frame;
+      const [cellId, cellKey] = DESKTOP_SIZES.cell;
+      if (all(c, f, px(tk.layout[keysKey]), line)) { pick.keys = keysId; k = px(tk.layout[keysKey]); }
+      const big = px(tk.layout[frameKey]);
+      if (kanjiCount * big + (kanjiCount - 1) * lg <= width && all(c, big, k, lg)) { pick.frame = frameId; f = big; line = lg; }
+      const huge = px(tk.layout[cellKey]);
+      if (rowWidth(huge) <= width && all(huge, f, k, line)) pick.cell = cellId;
     }
     board.dataset.cell = pick.cell;
     board.dataset.frame = pick.frame;
@@ -674,12 +720,12 @@ export function openGame(root, ctx) {
         return frameShown !== null && !frameShown.has(id);
       };
       return el('button', {
-        class: 'frame-slot', type: 'button', 'data-id': `frame-${slot}`, title: t('game.clue.again'),
+        class: 'frame-slot', type: 'button', 'data-id': `frame-${slot}`, title: t('game.frameOpen'),
         onclick: () => openClue('kanji')
       },
         kanjiFrame(k, { glyph, isNew, label: frameLabel(k, { slot, many: known.length > 1 }) }),
         k.strokes !== null ? strokesLine(k.strokes) : null,
-        el('span', { class: 'visually-hidden' }, t('game.clue.again')));
+        el('span', { class: 'visually-hidden' }, t('game.frameOpen')));
     });
     frames.classList.add('is-centred');
     frames.dataset.effects = 'revealStrokes revealLayout revealKanji';
@@ -890,10 +936,12 @@ export function openGame(root, ctx) {
   }
 
   function makeKeys() {
-    guessButton = el('button', { class: 'btn btn-primary', type: 'button', 'data-id': 'guess', onclick: submit }, t('game.guess'));
+    // With a mouse, Guess names its key (styles.css .key-hint).
+    guessButton = el('button', { class: 'btn btn-primary', type: 'button', 'data-id': 'guess', 'aria-keyshortcuts': 'Enter', onclick: submit },
+      t('game.guess'), el('span', { class: 'key-hint', 'aria-hidden': 'true' }, t('game.key.enter')));
     deleteButton = el('button', {
       class: 'btn btn-secondary key-delete', type: 'button', 'data-id': 'delete', title: t('game.delete'), 'aria-label': t('game.delete'),
-      onclick: deletePart
+      'aria-keyshortcuts': 'Backspace', onclick: deletePart
     });
     deleteButton.innerHTML = DELETE;
   }
@@ -999,12 +1047,13 @@ export function openGame(root, ctx) {
 
   function onKey(event) {
     byKeyboard = true;
-    if (!playing() || !partsMode() || event.defaultPrevented) return;
+    if (!partsMode() || event.defaultPrevented) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
     if (document.querySelector('dialog[open]')) return;   // a sheet has the keys
     const target = event.target instanceof Element ? event.target : null;
     if (target && target.closest('input, textarea, select, [contenteditable]')) return;
     const onBody = !target || target === document.body;
+    if (!playing()) { onResultKey(event, target, onBody); return; }
     const key = target && target.closest('.palette button');
     const cell = target && target.closest('[data-index]');
     switch (event.key) {
@@ -1025,8 +1074,29 @@ export function openGame(root, ctx) {
         if (key) { event.preventDefault(); moveKey(key, event.key); }
         else if (cell || onBody) { event.preventDefault(); moveCell(event.key, !!cell); }
         return;
-      default:
+      default: {
+        // A letter types the key it's on (labelKeys).
+        if (event.repeat) return;
+        const typed = typedKey(event);
+        if (!typed) return;
+        event.preventDefault();
+        addPart(typed.dataset.key);
+      }
     }
+  }
+
+  // The result card, once it has arrived (resultReadyAt): Enter is New
+  // game and Escape is Done, as their badges say (2026-11-11, the user
+  // agreed). Not while a button, link or fold has the focus: its keys are
+  // its own.
+  function onResultKey(event, target, onBody) {
+    if (event.repeat || performance.now() < resultReadyAt) return;
+    const id = event.key === 'Enter' ? 'result-again' : event.key === 'Escape' ? 'result-done' : null;
+    if (!id || (!onBody && target.closest('button, a, summary'))) return;
+    const button = result.querySelector(`[data-id="${id}"]`);
+    if (!button) return;
+    event.preventDefault();
+    button.click();
   }
 
   // The palette's keys, in palette order (fewest strokes first).
@@ -1113,6 +1183,40 @@ export function openGame(root, ctx) {
   function renderChoices() {
     if (!playing() || !partsMode()) { choices.replaceChildren(); return; }
     choices.replaceChildren(partsChoices());
+    labelKeys();
+  }
+
+  // Letters for typing (js/play/keys.js): each key takes the physical key
+  // in its place at the keyboard's columns now (fitKeys), and shows it with
+  // a mouse (styles.css .key-letter). Drawn again when the columns change
+  // or the browser names the player's layout.
+  function labelKeys() {
+    const keys = [...choices.querySelectorAll('.palette-tile')];
+    const codes = keyCodes(keys.length, keyCols);
+    keys.forEach((node, i) => {
+      const letter = keyLabel(codes[i]);
+      let badge = node.querySelector('.key-letter');
+      if (!letter) {
+        ['data-code', 'data-letter', 'aria-keyshortcuts'].forEach((a) => node.removeAttribute(a));
+        if (badge) badge.remove();
+        return;
+      }
+      node.dataset.code = codes[i];
+      node.dataset.letter = letter;
+      node.setAttribute('aria-keyshortcuts', letter);
+      if (!badge) {
+        badge = el('span', { class: 'key-letter', 'aria-hidden': 'true' });
+        node.append(badge);
+      }
+      badge.textContent = letter;
+    });
+  }
+
+  // The key a keypress types (matchKey), if it can be tapped now.
+  function typedKey(event) {
+    const keys = [...choices.querySelectorAll('.palette-tile[data-code]')];
+    const i = matchKey(keys.map((node) => ({ letter: node.dataset.letter, code: node.dataset.code })), event);
+    return i >= 0 && !keys[i].disabled ? keys[i] : null;
   }
 
   // A keyboard at the bottom, as in Wordle: floating above it any message
@@ -1240,6 +1344,8 @@ export function openGame(root, ctx) {
     stopGlide();
     const tr = window.TOKENS.active().transition;
     const time = reducedMotion() ? 0 : parseFloat(tr.long) || 0;
+    // Its keys work once it's in place, even if the glide is called off.
+    resultReadyAt = performance.now() + wait + time;
     const events = ['wheel', 'touchstart', 'keydown'];
     const off = () => stopGlide();
     let pending = 0;
@@ -1342,7 +1448,10 @@ export function openGame(root, ctx) {
   function renderResultCard({ arriving = false } = {}) {
     clearInterval(timer);
     result.classList.toggle('is-arriving', arriving);
-    if (playing()) { result.replaceChildren(); return; }
+    if (playing()) { result.replaceChildren(); resultReadyAt = Infinity; return; }
+    // Shown again (not just finished): its keys work at once; drawn again
+    // while it glides in (a refresh), they keep their wait.
+    if (!arriving && resultReadyAt === Infinity) resultReadyAt = 0;
     // Just finished: its rewards, shown once as toasts too. A daily shown
     // again: its rewards from the ledger.
     const fresh = !!ui.rewards && !ui.again;
@@ -1426,6 +1535,8 @@ export function openGame(root, ctx) {
   }
 
   build();
+  // The keys' letters follow the player's layout where the browser says.
+  const stopLayout = readLayout(labelKeys);
   // A turned phone or a resized window may fit other sizes.
   let resizeFrame = 0;
   const onResize = () => { cancelAnimationFrame(resizeFrame); resizeFrame = requestAnimationFrame(renderBoard); };
@@ -1450,6 +1561,7 @@ export function openGame(root, ctx) {
       window.removeEventListener('resize', onResize);
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerdown', onPointer);
+      stopLayout();
     }
   };
 }

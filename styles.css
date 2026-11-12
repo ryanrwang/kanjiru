@@ -15,6 +15,18 @@ html, body { margin: 0; padding: 0; }
    Overlay scrollbars (phones, macOS) take no room either way. */
 html { scrollbar-gutter: stable; }
 
+/* A modal's backdrop, and a header tip's dimming, stop short of that kept
+   room, which shows the root's background: while either shows, the root
+   takes the same dimming over the page, so the whole screen dims
+   (2026-11-11; seen with classic scrollbars, as on Windows). */
+html:has(.head-tip) { --gutter-dim: color-mix(in srgb, var(--color-bg-overlay) calc(var(--opacity-soft) * 100%), transparent); }
+/* After the tip's, so a modal opened over a tip dims the gutter as its own
+   backdrop does. */
+html:has(dialog:modal) { --gutter-dim: var(--color-bg-overlay); }
+html:is(:has(dialog:modal), :has(.head-tip)) {
+  background: linear-gradient(var(--gutter-dim), var(--gutter-dim)), var(--color-bg-page);
+}
+
 /* A phone turned on its side enlarges text it thinks is small, unevenly
    (iOS Safari). Sizes stay as the tokens set them; pinch zoom still works. */
 html {
@@ -738,6 +750,19 @@ body:not([data-page="play"]) .app-footer { display: none; }
 }
 
 .howto-text { color: var(--color-text-secondary); }
+
+/* With a mouse, a line under the little game: the keys can be typed. */
+.howto-keys {
+  display: none;
+  font-size: var(--font-size-xs);
+  line-height: var(--font-lineHeight-snug);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .howto-keys { display: block; }
+}
 
 /* Japanese lines break between phrases, not mid-word, where the browser
    can (2026-11-11: 当てよ / う。 read badly). */
@@ -1786,6 +1811,13 @@ a.btn { text-decoration: none; }
   --board-kanji: var(--font-size-3xl);
 }
 
+/* With a mouse and the room (fitBoard()'s DESKTOP_SIZES). */
+:is(.board, .game-result)[data-cell="2xl"] {
+  --board-cell: var(--layout-cell2xl);
+  --board-font: var(--font-size-3xl);
+  --board-kanji: var(--font-size-3xl);
+}
+
 :is(.board, .game-result)[data-cell="xl"] {
   --board-cell: var(--layout-cellXl);
   --board-font: var(--font-size-2xl);
@@ -2059,6 +2091,29 @@ a.btn { text-decoration: none; }
 /* A frame opens the kanji card (js/play/reveal.js). */
 button.frame-slot { cursor: pointer; }
 
+/* A frame opens the kanji card, so with a mouse it lifts under the pointer,
+   like the cards elsewhere; the keyboard's focus rings the frame itself
+   (2026-11-11). */
+@media (hover: hover) {
+  button.frame-slot .kanji-frame {
+    transition:
+      border-color var(--transition-hover) var(--transition-ease),
+      box-shadow var(--transition-hover) var(--transition-ease),
+      transform var(--transition-hover) var(--transition-ease);
+  }
+  button.frame-slot:hover .kanji-frame {
+    box-shadow: var(--shadow-sm);
+    transform: translateY(calc(var(--stroke-thick) * -1));
+  }
+  button.frame-slot:hover .kanji-frame:not(.is-solved) { border-color: var(--color-border-strong); }
+}
+
+button.frame-slot:focus-visible { outline: none; }
+button.frame-slot:focus-visible .kanji-frame {
+  outline: var(--stroke-thick) solid var(--color-border-focus);
+  outline-offset: var(--stroke-thick);
+}
+
 .frame-slot {
   flex: 0 0 auto;
   min-width: 0;
@@ -2300,6 +2355,50 @@ button.frame-slot { cursor: pointer; }
 }
 
 .picker.is-keyboard[data-keys="sm"] { --key-height: var(--layout-keySm); }
+/* With a mouse and the room; the glyphs keep their size, so a key's letter
+   has its own room under its part. */
+.picker.is-keyboard[data-keys="lg"] { --key-height: var(--layout-keyLg); }
+
+/* Typing (js/play/keys.js): with a mouse, each key shows the letter that
+   types it in its bottom-left corner, the one corner free (the other form
+   has the top right, debug mode's dots the top left, and a part not in the
+   answer is crossed from top left to bottom right); Guess names Enter. The
+   letter sits on a chip of the page's surface, so it keeps its contrast
+   (4.5:1) on a green, yellow or grey key too. */
+.key-letter,
+.key-hint { display: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  .key-letter {
+    position: absolute;
+    left: var(--stroke-thick);
+    bottom: var(--stroke-thick);
+    display: block;
+    padding: 0 var(--stroke-thick);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-raised);
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--font-lineHeight-tight);
+    color: var(--color-text-muted);
+    pointer-events: none;
+  }
+  /* On Guess only where it's four keys wide (fitKeys(), .is-wide). */
+  .key-hint,
+  [data-id="guess"]:not(.is-wide) .key-hint { display: none; }
+  .result-actions .key-hint,
+  [data-id="guess"].is-wide .key-hint {
+    display: inline-block;
+    margin-left: var(--spacing-sm);
+    padding: 0 var(--spacing-xs);
+    border: var(--stroke-thin) solid currentColor;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--font-lineHeight-normal);
+  }
+}
 
 .picker.is-keyboard .palette {
   display: grid;
@@ -2961,8 +3060,12 @@ button.clue-chip {
 
 /* The kanji guide's frames (js/play/frame.js), bigger: 96 px for one or
    two kanji; three or four take 64 px, so they fit a phone, and four sit
-   two by two. */
-.reveal-items {
+   two by two. With a mouse and the room, the guide over the rows takes the
+   same size (fitBoard()'s DESKTOP_SIZES; 2026-11-11), so after a hint's
+   card the guide matches it: its frames as far apart as the rows' kanji,
+   and its strokes line a step up. */
+.reveal-items,
+.board[data-frame="lg"] {
   --board-frame: var(--layout-frameLg);
   --frame-1: var(--font-size-2xl);
   --frame-2: var(--font-size-xl);
@@ -2972,6 +3075,24 @@ button.clue-chip {
   --frame-inner: var(--font-size-md);
   --frame-inset: var(--spacing-lg);
   --frame-solved: var(--font-size-3xl);
+}
+
+.board[data-frame="lg"] .frame-row { gap: var(--spacing-lg); }
+
+.board[data-frame="lg"] .frame-strokes {
+  height: var(--spacing-lg);
+  font-size: var(--font-size-md);
+  line-height: var(--spacing-lg);
+}
+
+/* Their dots a size up, but never more than half the room a crowded
+   place gives each part. */
+:is(.reveal-items, .board[data-frame="lg"]) .frame-part.is-hidden::before {
+  width: max(var(--spacing-sm), min(var(--layout-dotLg), 0.5em));
+  height: max(var(--spacing-sm), min(var(--layout-dotLg), 0.5em));
+}
+
+.reveal-items {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -4579,7 +4700,8 @@ html[data-move]::view-transition-new(app-header) {
   .segment:active:not(:disabled), .ask-option:hover:not(:disabled),
   .ask-option:active:not(:disabled), .swatch:hover, .swatch:active,
   button.clue-chip:active, .palette-tile:active:not(:disabled),
-  .board-row.is-next button.tile:active, summary.history-summary:hover { transform: none; }
+  .board-row.is-next button.tile:active, summary.history-summary:hover,
+  button.frame-slot:hover .kanji-frame { transform: none; }
   .tile.is-typed,
   .swatch-badge.is-new,
   .history-item.is-new,

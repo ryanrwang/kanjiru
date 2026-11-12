@@ -34,6 +34,8 @@ export default {
     hit: 'Right part, right spot',
     near: 'Right part, wrong spot',
     miss: 'Not in the answer',
+    // Under the little game, with a mouse only (2026-11-11).
+    keys: 'On a keyboard, press the letter on a key to type its part.',
     // The lines under the little game, one per step (js/howto.js).
     step: {
       type: 'Tap parts to fill a row, in writing order.',
@@ -121,7 +123,14 @@ export default {
     guess: 'Guess',
     delete: 'Delete',
     palette: 'Parts',
-    keysHelp: 'Arrow keys move between parts. Enter or Space puts one in the selected cell; Backspace takes it out.',
+    keysHelp: 'Arrow keys move between parts. Enter or Space puts one in the selected cell; Backspace takes it out. On a keyboard, a key\'s letter types its part.',
+    // A key's name on a button, with a mouse (2026-11-11).
+    key: {
+      enter: 'Enter',
+      esc: 'Esc'
+    },
+    // A kanji guide frame's tooltip: it opens the kanji card.
+    frameOpen: 'Open the kanji card',
     cellsHelp: 'Left and right arrows pick a cell.',
     debugCells: 'answer cell {cells}',
     soon: 'This mode is coming soon: its words need reviewing first.',

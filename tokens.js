@@ -355,15 +355,21 @@
       cellMd:    s[48],
       cellLg:    s[56],
       cellXl:    s[64],
+      // With a mouse, when everything still fits (a desktop's tall screen).
+      cell2xl:   s[80],
       // The kanji guide's frames (js/play/frame.js): above the cells, and
-      // bigger on a hint's card.
+      // bigger on a hint's card, and above the cells on a desktop with room.
       frameSm:   s[56],
       frame:     s[64],
       frameLg:   s[96],
+      // A hidden part's dot in those bigger frames (spacing.sm in the rest).
+      dotLg:     s[12],
       // The keyboard's keys: their height, and their least width. The game
-      // screen drops to the small height only to keep cells at 32 px or more.
+      // screen drops to the small height only to keep cells at 32 px or more,
+      // and takes the large one with a mouse when everything still fits.
       keySm:     s[32],
       key:       s[40],
+      keyLg:     s[48],
       // The play card's hanko seal, and a switch's track (its knob is
       // spacing.md, inset by spacing.xs).
       seal:      s[56],

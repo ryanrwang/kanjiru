@@ -149,11 +149,14 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
 
     mode.daily ? el('p', { class: 'countdown' }, t('result.nextDaily'), ' ', countdown) : null,
 
-    // Done on the left, New game on the right, on top when they stack.
+    // Done on the left, New game on the right, on top when they stack. With
+    // a mouse each names its key (js/play/screen.js onResultKey()).
     el('div', { class: 'btn-row result-actions' },
-      el('button', { class: 'btn btn-ghost', type: 'button', 'data-id': 'result-done', onclick: onHome }, t('result.done')),
-      el('button', { class: 'btn btn-primary', type: 'button', 'data-id': 'result-again', onclick: onPractice },
-        state.daily ? t('result.practice') : t('result.again')))
+      el('button', { class: 'btn btn-ghost', type: 'button', 'data-id': 'result-done', 'aria-keyshortcuts': 'Escape', onclick: onHome },
+        t('result.done'), el('span', { class: 'key-hint', 'aria-hidden': 'true' }, t('game.key.esc'))),
+      el('button', { class: 'btn btn-primary', type: 'button', 'data-id': 'result-again', 'aria-keyshortcuts': 'Enter', onclick: onPractice },
+        state.daily ? t('result.practice') : t('result.again'),
+        el('span', { class: 'key-hint', 'aria-hidden': 'true' }, t('game.key.enter'))))
   );
 
   // EDRDG asks for its credit where its words show: under the card.
