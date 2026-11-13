@@ -586,14 +586,20 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
     };
   }
 
-  // The random bonus hint after a win: a power id, or null. inventory is
-  // the save's { powerId: count }; powers held at their limit are skipped.
+  // The most guesses a win can take and still roll a bonus hint: the
+  // economy's share of the mode's rows (3 of 6).
+  function quickSolve(modeOrId) {
+    const mode = typeof modeOrId === 'string' ? MODE[modeOrId] : modeOrId;
+    return Math.floor(mode.guesses * economy.drops.perfectShare);
+  }
+
+  // The random bonus hint after a quick solve: a power id, or null.
+  // inventory is the save's { powerId: count }; powers held at their limit
+  // are skipped.
   function rollDrop(state, inventory = {}, rng = Math.random) {
     if (state.status !== 'won') return null;
-    const mode = modeOf(state);
-    const perfect = state.guesses.length <= mode.guesses * economy.drops.perfectShare;
-    const chance = perfect ? economy.drops.chanceOnPerfect : economy.drops.chanceOnWin;
-    if (!(rng() < chance)) return null;
+    if (state.guesses.length > quickSolve(modeOf(state))) return null;
+    if (!(rng() < economy.drops.chanceOnPerfect)) return null;
     const open = config.powers.filter((p) => p.drop > 0 && (inventory[p.id] || 0) < p.hold);
     const i = weightedIndex(open.map((p) => p.drop), rng);
     return i < 0 ? null : open[i].id;
@@ -601,6 +607,6 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
 
   return {
     newGame, guess, checkGuess, usePower, canUse, giveUp, clues, arrows, shownCells, answerInfo,
-    replay, points, record, rollDrop, fits, effects: Object.keys(EFFECTS)
+    replay, points, record, rollDrop, quickSolve, fits, effects: Object.keys(EFFECTS)
   };
 }

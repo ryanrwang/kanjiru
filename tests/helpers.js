@@ -24,7 +24,7 @@ export function testConfig(overrides = {}) {
       solve: { base: 100, perUnusedGuess: 10 },
       dailyMultiplier: 1,
       practiceMultiplier: 0.5,
-      drops: { chanceOnWin: 0.3, chanceOnPerfect: 0.6, perfectShare: 0.5 }
+      drops: { chanceOnPerfect: 0.6, perfectShare: 0.5 }
     },
     rules: clone(RULES),
     // Easy pays ×1 here, so the kanji-guess tests read plain numbers.

@@ -253,14 +253,15 @@ test('the history entry has what stats need', () => {
     { date: '2026-11-07', guesses: ['間', '明'], won: true, powers: ['strokes'], answer: '明', level: 'easy' });
 });
 
-test('bonus drops: only on a win, at the economy\'s chances, within hold limits', () => {
+test('bonus drops: only on a quick solve, at the economy\'s chance, within hold limits', () => {
   const engine = setup();
   const rngOf = (...values) => () => values.shift();
   const perfect = play(engine, engine.newGame(start('k1', '明')), '間', '時', '明');   // 3 of 6 rows
   const slow = play(engine, engine.newGame(start('k1', '明')), '間', '時', '林', '明');
   const lost = play(engine, engine.newGame(start('k1', '明')), '間', '月', '時', '林', '森', '品');
   assert.equal(engine.rollDrop(lost, {}, rngOf(0)), null);
-  assert.equal(engine.rollDrop(slow, {}, rngOf(0.5, 0)), null, '0.5 misses the 0.3 chance');
+  assert.equal(engine.rollDrop(slow, {}, rngOf(0, 0)), null, 'a win that isn\'t quick never drops');
+  assert.equal(engine.rollDrop(perfect, {}, rngOf(0.7, 0)), null, '0.7 misses the 0.6 chance');
   assert.notEqual(engine.rollDrop(perfect, {}, rngOf(0.5, 0)), null, '0.5 is inside 0.6');
   // Everything held at its limit but one power: that one drops.
   const full = Object.fromEntries(POWERS.map((p) => [p.id, p.hold]));
