@@ -24,7 +24,8 @@
  * rewards), and the user asked that a win buy about two hints. So the
  * hints cost 50 to 120 (two of the five cheapest come to about 140, the
  * mean of all eight to about 95), and Reveal a kanji, which gives away a
- * whole kanji, 200.
+ * whole kanji, 200. Meaning went to 120 (2026-11-13, the user asked): in
+ * Japanese it as good as names the word.
  *
  * Fields
  *   id         stable key used in saves (never rename)
@@ -51,7 +52,7 @@ export const POWERS = [
   { id: 'layout', icon: '📐', art: 'split', badge: 'fuji', effect: 'revealLayout', params: {},
     when: ['before', 'during'], cost: 60, hold: 5, drop: 25, minLength: 1 },
   { id: 'meaning', icon: '💬', art: 'book', badge: 'sakura', effect: 'revealMeaning', params: {},
-    when: ['before', 'during'], cost: 70, hold: 5, drop: 20, minLength: 1 },
+    when: ['before', 'during'], cost: 120, hold: 5, drop: 20, minLength: 1 },
   // Arrows (2026-11-10, the user asked): for the rest of the game, each
   // yellow tile points the way to its part.
   { id: 'arrows', icon: '🧭', art: 'arrows', badge: 'near', effect: 'pointNear', params: {},

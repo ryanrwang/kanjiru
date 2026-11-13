@@ -196,6 +196,10 @@ export function validate() {
   ['chanceOnPerfect', 'perfectShare'].forEach((k) => {
     if (!(ECONOMY.drops[k] >= 0 && ECONOMY.drops[k] <= 1)) say(`economy.drops.${k} needs a number from 0 to 1`);
   });
+  if (typeof ECONOMY.drops.afterHints !== 'boolean') say('economy.drops.afterHints needs true or false');
+  ['base', 'perUnusedGuess', 'perUnusedGuessHinted'].forEach((k) => {
+    if (!(ECONOMY.solve[k] >= 0)) say(`economy.solve.${k} needs a number from 0`);
+  });
   ECONOMY.streakRewards.forEach((r) => {
     if (r.power && !POWER[r.power]) say(`streak reward at ${r.wins} wins gives unknown power "${r.power}"`);
     if (retired(r.power)) say(`streak reward at ${r.wins} wins gives retired power "${r.power}"`);

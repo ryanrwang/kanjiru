@@ -122,11 +122,20 @@ test('points: parts a power reveals pay nothing later', () => {
   const engine = setup();
   const game = play(engine, engine.newGame(start('k1', '明')), '!head-start', '明');
   assert.equal(engine.points(game).parts, 0);
-  assert.equal(engine.points(game).solve, 150);
+});
+
+test('points: a win that used a hint pays nothing for unused rows', () => {
+  const engine = setup();
+  const hinted = play(engine, engine.newGame(start('k1', '明')), '!meaning', '明');
+  assert.equal(engine.points(hinted).solve, 100);
+  const clean = play(engine, engine.newGame(start('k1', '明')), '明');
+  assert.equal(engine.points(clean).solve, 100 + 10 * 5);
 });
 
 test('points: an extra row never adds to the win bonus', () => {
-  const engine = setup();
+  const config = bigPalette();
+  config.economy = { ...config.economy, solve: { ...config.economy.solve, perUnusedGuessHinted: 10 } };
+  const engine = setup(config);
   const game = play(engine, engine.newGame(start('k1', '明')), '!extra-guess', '間', '明');
   assert.equal(game.rows, 7);
   assert.equal(engine.points(game).solve, 100 + 10 * 4);
@@ -262,6 +271,8 @@ test('bonus drops: only on a quick solve, at the economy\'s chance, within hold 
   assert.equal(engine.rollDrop(lost, {}, rngOf(0)), null);
   assert.equal(engine.rollDrop(slow, {}, rngOf(0, 0)), null, 'a win that isn\'t quick never drops');
   assert.equal(engine.rollDrop(perfect, {}, rngOf(0.7, 0)), null, '0.7 misses the 0.6 chance');
+  const hinted = play(engine, engine.newGame(start('k1', '明')), '!strokes', '明');
+  assert.equal(engine.rollDrop(hinted, {}, rngOf(0, 0)), null, 'a game that used a hint never drops');
   assert.notEqual(engine.rollDrop(perfect, {}, rngOf(0.5, 0)), null, '0.5 is inside 0.6');
   // Everything held at its limit but one power: that one drops.
   const full = Object.fromEntries(POWERS.map((p) => [p.id, p.hold]));
