@@ -7,11 +7,12 @@
  * now; the share text (while rules.js share.show is on), a countdown to
  * the next daily (in a mode with dailies), and Done and New game. The
  * dictionary credit sits under the card. Just finished (fresh), the points
- * rise in.
+ * rise in. A bonus hint (gifts) has a panel of its own under the title:
+ * just won, a gift wiggles and bursts open into the hint, with sparks.
  *
  *   const card = renderResult({ ... });   // card.node (the card and its credit), card.tick()
  */
-import { RULES, LEVEL } from '../registry.js';
+import { RULES, LEVEL, ECONOMY } from '../registry.js';
 import { t, lang } from '../i18n.js';
 import { el } from '../dom.js';
 import { bump } from '../toast.js';
@@ -19,6 +20,7 @@ import { withCoin } from '../coin.js';
 import { msToNextDaily } from '../engine/daily.js';
 import { shareText } from './share.js';
 import { readingNodes, partTile } from './hints.js';
+import { hintIcon } from './hint-art.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -58,6 +60,28 @@ async function shareOut(text) {
   return (await copy(text)) ? 'copied' : 'failed';
 }
 
+// How many sparks fly from a bonus hint's gift, evenly round it.
+const SPARKS = 8;
+
+// A bonus hint, won by a quick solve (2026-11-13, the user asked for it to
+// be a celebration so players notice it). fresh: just won, so the gift
+// wiggles and bursts into the hint once the card has glided into sight
+// (--gift-wait, set by js/play/screen.js glideToResult()). Screen readers
+// hear it from the toast; here it reads as a heading and its text.
+function giftPanel(power, quick, fresh) {
+  const name = t(`power.${power.id}.name`);
+  return el('section', { class: `result-gift${fresh ? ' is-new' : ''}`, 'aria-labelledby': `result-gift-${power.id}` },
+    el('div', { class: 'gift-burst', 'aria-hidden': 'true' },
+      el('span', { class: 'gift-glow' }),
+      fresh ? el('span', { class: 'gift-box' }, ECONOMY.rewardIcons.drop) : null,
+      el('span', { class: 'gift-hint' }, hintIcon(power, { size: 'lg' })),
+      fresh ? Array.from({ length: SPARKS }, (_, i) => el('span', { class: 'gift-spark', style: { '--turn': `${i / SPARKS}turn` } })) : null),
+    el('div', { class: 'gift-text' },
+      el('p', { class: 'gift-title', id: `result-gift-${power.id}` }, t('result.gift.title')),
+      el('p', { class: 'gift-name' }, name),
+      el('p', { class: 'gift-why' }, t('result.gift.why', { n: quick }))));
+}
+
 // A game not solved: the answer atop the card, its parts as the row the
 // board never got, in green (2026-11-10, the user asked). Each kanji's
 // parts keep together, as on the board. reveal: just finished, so the
@@ -70,7 +94,7 @@ function solutionRow(answer, data, glyph, tiles, reveal) {
       data.kanji[ch].parts.map((p) => el('span', { class: 'tile is-cell is-hit', lang: 'ja', style: { '--i': i++ } }, glyph(p.form || p.el))))));
 }
 
-export function renderResult({ engine, data, mode, game, points, streak, glyph, rewards = [], balance = null, fresh = false, tiles = null, reveal = false, onPractice, onHome }) {
+export function renderResult({ engine, data, mode, game, points, streak, glyph, rewards = [], gifts = [], quick = 0, balance = null, fresh = false, tiles = null, reveal = false, onPractice, onHome }) {
   const { state } = game;
   const won = state.status === 'won';
   const info = engine.answerInfo(state.answer);
@@ -109,6 +133,8 @@ export function renderResult({ engine, data, mode, game, points, streak, glyph, 
       el('h2', { class: `result-title${won ? ' is-won' : ''}`, id: 'result-title' },
         won ? t('result.won', { n: state.guesses.length }) : state.gaveUp ? t('result.gaveUp') : t('result.lost')),
       el('span', { class: 'pill' }, t(`level.${state.level}.name`))),
+
+    ...gifts.map((power) => giftPanel(power, quick, fresh)),
 
     el('div', { class: 'answer' },
       el('span', { class: 'answer-kanji kanji', lang: 'ja' }, state.answer),

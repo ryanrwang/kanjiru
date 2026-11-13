@@ -3674,6 +3674,135 @@ button.clue-chip {
   100% { transform: scale(1); opacity: var(--opacity-full); }
 }
 
+/* A bonus hint, won by a quick solve (js/play/result.js giftPanel(),
+   2026-11-13): a panel tinted with the accent, the hint's icon in a glow.
+   Just won (.is-new), once the card is in sight (--gift-wait): the panel
+   pops in, a gift wiggles, then bursts into the hint as sparks fly out. */
+.result-gift {
+  --gift-at: calc(var(--gift-wait, 0ms) + var(--transition-reveal));
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: var(--stroke-thin) solid color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-soft) * 100%), transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-tint) * 100%), var(--color-bg-surface));
+}
+
+.gift-burst {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: var(--spacing-3xl);
+  height: var(--spacing-3xl);
+}
+
+.gift-burst > * { grid-area: 1 / 1; }
+
+.gift-glow {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-text-accent) calc(var(--opacity-faint) * 100%), transparent) 0%, transparent 70%);
+}
+
+.gift-box {
+  font-size: var(--font-size-3xl);
+  line-height: var(--font-lineHeight-tight);
+  opacity: var(--opacity-hidden);
+}
+
+.gift-spark {
+  width: var(--spacing-sm);
+  height: var(--spacing-sm);
+  border-radius: var(--radius-full);
+  background: var(--color-text-accent);
+  opacity: var(--opacity-hidden);
+}
+
+.gift-spark:nth-of-type(even) { background: var(--color-feedback-near); }
+
+.gift-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.gift-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-black);
+  color: var(--color-text-accent);
+}
+
+.gift-name { font-weight: var(--font-weight-bold); }
+
+.gift-why {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.result-gift.is-new {
+  animation: gift-in var(--transition-reveal) var(--transition-bounce) var(--gift-wait, 0ms) backwards;
+}
+
+.result-gift.is-new .gift-box {
+  animation:
+    gift-wiggle var(--transition-long) var(--transition-ease) var(--gift-wait, 0ms) backwards,
+    gift-open var(--transition-base) var(--transition-exit) calc(var(--gift-at) + var(--transition-slow));
+}
+
+.result-gift.is-new .gift-hint {
+  animation: gift-hint-in var(--transition-reveal) var(--transition-bounce) calc(var(--gift-at) + var(--transition-reveal)) backwards;
+}
+
+.result-gift.is-new .gift-glow {
+  animation: gift-glow var(--transition-long) var(--transition-ease) calc(var(--gift-at) + var(--transition-reveal)) backwards;
+}
+
+.result-gift.is-new .gift-spark {
+  animation: gift-spark var(--transition-long) var(--transition-exit) calc(var(--gift-at) + var(--transition-reveal));
+}
+
+.result-gift.is-new .gift-title {
+  animation: points-pop var(--transition-reveal) var(--transition-bounce) calc(var(--gift-at) + var(--transition-reveal)) backwards;
+}
+
+@keyframes gift-in {
+  from { opacity: var(--opacity-hidden); transform: scale(var(--scale-enter)); }
+}
+
+/* The gift shows from the start of its wiggle until it opens; the sparks
+   only while they fly (no fill: they're hidden until then). */
+@keyframes gift-wiggle {
+  0%, 100% { opacity: var(--opacity-full); transform: rotate(0); }
+  20%      { transform: rotate(-12deg); }
+  40%      { transform: rotate(12deg); }
+  60%      { transform: rotate(-8deg); }
+  80%      { transform: rotate(8deg); }
+}
+
+@keyframes gift-open {
+  from { opacity: var(--opacity-full); transform: scale(1); }
+  to   { opacity: var(--opacity-hidden); transform: scale(1.5); }
+}
+
+@keyframes gift-hint-in {
+  0%  { opacity: var(--opacity-hidden); transform: scale(0) rotate(-20deg); }
+  60% { opacity: var(--opacity-full); transform: scale(1.2) rotate(6deg); }
+}
+
+@keyframes gift-glow {
+  0%  { transform: scale(0.4); opacity: var(--opacity-hidden); }
+  40% { transform: scale(1.3); opacity: var(--opacity-full); }
+}
+
+@keyframes gift-spark {
+  0%   { opacity: var(--opacity-full); transform: rotate(var(--turn)) translateY(calc(-1 * var(--spacing-md))) scale(1); }
+  100% { opacity: var(--opacity-hidden); transform: rotate(var(--turn)) translateY(calc(-1 * var(--spacing-2xl))) scale(0.4); }
+}
+
 /* The rewards, a part of the box like the points: its label, then each
    reward (the list itself sits inside the part's padding). */
 .result-rewards-part {
@@ -4732,6 +4861,8 @@ html[data-move]::view-transition-new(app-header) {
   .points-bump,
   .toast,
   .result-points.is-new { animation: none; }
+  .result-gift.is-new,
+  .result-gift.is-new * { animation: none; }
 }
 
 /* ── Home-screen tip (app.js) and steps (js/install.js) ────────────── */

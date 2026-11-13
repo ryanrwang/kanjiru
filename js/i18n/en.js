@@ -248,6 +248,10 @@ export default {
   },
 
   result: {
+    gift: {
+      title: 'Bonus hint!',
+      why: 'For solving in {n} guesses or fewer. Use it in any game.'
+    },
     won: 'Solved in {n}!',
     lost: 'Out of guesses',
     gaveUp: 'You gave up',

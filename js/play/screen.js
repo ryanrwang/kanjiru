@@ -1346,6 +1346,8 @@ export function openGame(root, ctx) {
     const time = reducedMotion() ? 0 : parseFloat(tr.long) || 0;
     // Its keys work once it's in place, even if the glide is called off.
     resultReadyAt = performance.now() + wait + time;
+    // A bonus hint's gift bursts open once the card is in sight.
+    result.style.setProperty('--gift-wait', `${wait + time}ms`);
     const events = ['wheel', 'touchstart', 'keydown'];
     const off = () => stopGlide();
     let pending = 0;
@@ -1460,7 +1462,11 @@ export function openGame(root, ctx) {
       engine, data, mode, game, glyph,
       points: ui.points || engine.points(state()),
       streak: streak(),
-      rewards: rewards.map(describe),
+      // A bonus hint gets a gift of its own on the card (2026-11-13, the
+      // user asked for it to feel like a celebration); the rest list.
+      rewards: rewards.filter((e) => e.why !== 'drop').map(describe),
+      gifts: rewards.filter((e) => e.why === 'drop').flatMap((e) => Object.keys(e.hints || {})).filter((id) => POWER[id]).map((id) => POWER[id]),
+      quick: engine.quickSolve(mode),
       balance: store.points(),
       fresh,
       // The tile reveal in use: the answer's row (a game not solved) plays

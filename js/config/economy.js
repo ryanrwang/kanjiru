@@ -44,11 +44,12 @@ export const ECONOMY = {
     { wins: 25, points: 2000 }
   ],
 
-  // Random bonus hint after a win; which one is picked by each power's
-  // `drop` weight in powers.js, skipping powers already held at their limit.
+  // Random bonus hint after a quick solve only (2026-11-13, the user asked:
+  // the 30% on any win went, so a drop feels earned and the result card
+  // celebrates it). Which one is picked by each power's `drop` weight in
+  // powers.js, skipping powers already held at their limit.
   drops: {
-    chanceOnWin: 0.3,
-    chanceOnPerfect: 0.6,  // a perfect solve: ...
+    chanceOnPerfect: 0.6,  // a quick solve: ...
     perfectShare: 0.5      // ...using this share of the mode's rows or fewer
   }
 };

@@ -193,7 +193,7 @@ export function validate() {
     if ('retired' in a && typeof a.retired !== 'boolean') say(`achievement "${a.id}" needs retired: true or false`);
   });
   if (!(ECONOMY.startingPoints >= 0)) say('economy.startingPoints needs a number');
-  ['chanceOnWin', 'chanceOnPerfect', 'perfectShare'].forEach((k) => {
+  ['chanceOnPerfect', 'perfectShare'].forEach((k) => {
     if (!(ECONOMY.drops[k] >= 0 && ECONOMY.drops[k] <= 1)) say(`economy.drops.${k} needs a number from 0 to 1`);
   });
   ECONOMY.streakRewards.forEach((r) => {
