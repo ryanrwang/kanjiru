@@ -21,10 +21,10 @@ export function testConfig(overrides = {}) {
     economy: {
       ...clone(ECONOMY),
       perPart: { hit: 10, near: 4, other: 1 },
-      solve: { base: 100, perUnusedGuess: 10 },
+      solve: { base: 100, perUnusedGuess: 10, perUnusedGuessHinted: 0 },
       dailyMultiplier: 1,
       practiceMultiplier: 0.5,
-      drops: { chanceOnPerfect: 0.6, perfectShare: 0.5 }
+      drops: { chanceOnPerfect: 0.6, perfectShare: 0.5, afterHints: false }
     },
     rules: clone(RULES),
     // Easy pays ×1 here, so the kanji-guess tests read plain numbers.

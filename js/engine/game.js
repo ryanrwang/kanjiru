@@ -561,11 +561,14 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
     return state;
   }
 
-  // Points so far; the total is what the game pays once it's over.
+  // Points so far; the total is what the game pays once it's over. A win
+  // that used a hint pays the economy's hinted rate for its unused rows.
   function points(state) {
     const mode = modeOf(state);
+    const { solve: pay } = economy;
+    const perUnused = state.powers.length && 'perUnusedGuessHinted' in pay ? pay.perUnusedGuessHinted : pay.perUnusedGuess;
     const solve = state.status === 'won'
-      ? economy.solve.base + economy.solve.perUnusedGuess * Math.max(0, mode.guesses - state.guesses.length)
+      ? pay.base + perUnused * Math.max(0, mode.guesses - state.guesses.length)
       : 0;
     const multiplier = (mode.points || 1) * (levelOf(state).points || 1)
       * (state.daily ? economy.dailyMultiplier : economy.practiceMultiplier);
@@ -595,9 +598,11 @@ export function createEngine(data, config = DEFAULT_CONFIG, options = {}) {
 
   // The random bonus hint after a quick solve: a power id, or null.
   // inventory is the save's { powerId: count }; powers held at their limit
-  // are skipped.
+  // are skipped. A game that used a hint drops none (economy drops.afterHints),
+  // so a hint can't pay for the next.
   function rollDrop(state, inventory = {}, rng = Math.random) {
     if (state.status !== 'won') return null;
+    if (state.powers.length && !economy.drops.afterHints) return null;
     if (state.guesses.length > quickSolve(modeOf(state))) return null;
     if (!(rng() < economy.drops.chanceOnPerfect)) return null;
     const open = config.powers.filter((p) => p.drop > 0 && (inventory[p.id] || 0) < p.hold);

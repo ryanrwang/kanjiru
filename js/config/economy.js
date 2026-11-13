@@ -28,7 +28,10 @@ export const ECONOMY = {
 
   // Earned on a win: fewer guesses used = more points. Unused rows are
   // counted from the mode's own rows, so an extra-guess row never pays.
-  solve: { base: 80, perUnusedGuess: 20 },
+  // A win that used any hint pays perUnusedGuessHinted for each instead
+  // (2026-11-13, the user asked: Meaning before the first guess won in one
+  // and paid more than it cost, so a hint was a strategy, not a rescue).
+  solve: { base: 80, perUnusedGuess: 20, perUnusedGuessHinted: 0 },
 
   // The daily, and every puzzle played after it ("keep playing"). They pay
   // the same: more puzzles earn normally, with no limit.
@@ -50,6 +53,7 @@ export const ECONOMY = {
   // powers.js, skipping powers already held at their limit.
   drops: {
     chanceOnPerfect: 0.6,  // a quick solve: ...
-    perfectShare: 0.5      // ...using this share of the mode's rows or fewer
+    perfectShare: 0.5,     // ...using this share of the mode's rows or fewer
+    afterHints: false      // a game that used a hint never drops one (2026-11-13)
   }
 };
