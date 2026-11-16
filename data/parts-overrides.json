@@ -38,8 +38,8 @@
       "why": "立 over 厂 and 生: the stroke down the left and 立's last line draw 厂; KanjiVG leaves the stroke loose."
     },
     "着": {
-      "parts": [["羊", "top"], ["目", "bottom"]],
-      "why": "羊 over 目; the long stroke is part of 羊 here, and KanjiVG leaves it loose."
+      "parts": [["⺷", "top"], ["丿", "bottom"], ["目", "bottom"]],
+      "why": "Split like 差: 羊's vertical stops (⺷) and the long sweep is its own stroke beside 目. Native readers (2026-11-16) don't see a whole 羊 here."
     },
     "表": {
       "parts": [["龶", "top"], ["衣", "bottom"]],

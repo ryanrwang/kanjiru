@@ -49,6 +49,8 @@ Rules, in `tools/build_data.py`: `DRAWN_AS` gains 冂 → 冖, 玄 → 幺 and �
 
 442 answers (460 before). Left: 景 漢 商 館 観 院 給 報 験 演 婦 警 (never said alone; each lives on in longer answers such as 漢字 and 報告), 歳 舞 (stroke salads), 一人一人 (four whole-kanji cells), 図書 (Maybe: it lives in 図書館), and 南 and 構成, which fell to 3 parts.
 
+Follow-up (2026-11-16): native readers didn't see a whole 羊 on top of 着, so it now splits like 差, ⺷ 丿 目. The loose 丿 takes 到着 着物 上着 下着 out: 438 answers.
+
 Kept, the user's call: the 22 words that run above N3 in practice (相続 破産 供給 見解 …), all on Waller's N3 list; and the dated 下宿 飛行場 上等 書物.
 
 ### Meanings and readings
