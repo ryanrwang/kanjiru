@@ -46,7 +46,7 @@ A part shows the glyph a reader sees. These are forms of the same tile, so they 
 | ⺧ | 牛 | 5 | 先告洗造酷 |
 | ⻊ | 足 | 11 | 路踏躍露跡距踊践跳蹴踪 |
 | ⺮ | 竹 | 24 | 答等笑箱第策算管筋築籍節簡範筆簿筒符笛篤箸箇箋籠 |
-| ⺷ | 羊 | 10 | 議差美義儀養犠窯羨羞 |
+| ⺷ | 羊 | 11 | 議差美義儀養犠窯羨羞着 |
 | 龵 | 手 | 1 | 看 |
 | 巳 | 己 | 9 | 選港抱包砲胞飽泡遷 |
 | 㔾 | 卩 | 8 | 犯危範腕厄怨氾宛 |
@@ -57,7 +57,7 @@ A part shows the glyph a reader sees. These are forms of the same tile, so they 
 - **牜 and ⺧:** 牛 ending in a rising stroke is 牜 (物 特 牧). 牛 whose vertical stops at the last line is ⺧ (告 造 酷), as 先 already was. 件 and 解 keep a full 牛.
 - **⻊:** 足 ending in a rising stroke (路 距 跡). 促 and 捉 keep a full 足.
 - **⺮:** 竹 with short ticks for verticals: every 竹 on top (答 第 等 箱).
-- **⺷:** 羊 whose vertical stops above the last line (美 義 差 養). 洋 群 善 keep 羊.
+- **⺷:** 羊 whose vertical stops above the last line (美 義 差 養), and 着 (by hand, 2026-11-16). 洋 群 善 keep 羊.
 - **龵:** 手 on top, ending in ㇒ (看).
 - **巳:** 己 inside 包 (包 抱 砲 胞 泡 飽), 港's 巷, 選's 巽 and 遷. KanjiVG draws 巳 and 己 the same, so this goes by the element around it.
 - **㔾:** 卩 with a curled foot, ㇆ ㇟ (危 厄 範 宛 怨 腕 氾 犯).
@@ -131,7 +131,7 @@ Shapes that recur, or are well-known kanji, whose split was wrong or a stroke sa
 | 無 | 𠂉:top 卌:top 一:top 灬:bottom | KanjiVG leaves the top as eight loose strokes. 卌 isn't in JIS, so its strokes are listed for the drawing. |
 | 舞 | 𠂉:top 卌:top 一:top 夕:bottom 㐄:bottom | Same top as 無, which KanjiVG leaves as loose strokes. |
 | 産 | 立:top 厂:bottom 生:bottom | 立 over 厂 and 生: the stroke down the left and 立's last line draw 厂; KanjiVG leaves the stroke loose. |
-| 着 | 羊:top 目:bottom | 羊 over 目; the long stroke is part of 羊 here, and KanjiVG leaves it loose. |
+| 着 | ⺷:top 丿:bottom 目:bottom | Split like 差: 羊's vertical stops (⺷) and the long sweep is its own stroke beside 目. Was 羊 over 目 until native readers objected (2026-11-16). |
 | 表 | 龶:top 衣:bottom | KanjiVG splits 衣 around 龶, which left 二 and a loose stroke on top. |
 | 号 | 口:top 丂:bottom | The bottom is 丂; KanjiVG leaves it as a line and a loose stroke. |
 | 母 | 毋:whole | The shape is the 毋 tile, as in 毎 and 海; KanjiVG leaves its two dots loose. |
